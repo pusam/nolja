@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>스윙 테니스 · 놀자</title>
+<link rel="stylesheet" href="../../shared/nolja.css">
+<style>
+#gl,#hud{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+#hud{pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="hud"></canvas>
+
+<div id="menu" class="overlay">
+  <div class="panel">
+    <div class="title"><h1>🎾 스윙 테니스</h1><span class="small">조이콘을 라켓처럼 휘둘러서 치는 2인 테니스</span></div>
+    <p class="sub">캐릭터 고르고 둘이 대결! 이동은 자동, 공이 내 앞에 왔을 때 휘두르기만 하면 돼요.
+      <b>일찍 치면 왼쪽, 늦게 치면 오른쪽</b> · 세게 치면 빠른 공 · 살살 치면 로브 · 높이 뜬 공은 세게 → 스매시 · 긴 랠리 중 나이스 타이밍 → 필살 샷</p>
+    <div class="grid">
+      <div class="card">
+        <h3>컨트롤러</h3>
+        <div class="row"><button id="btnConnect">🎮 조이콘 연결</button><button id="btnSwap">P1 ↔ P2 바꾸기</button></div>
+        <div class="small" style="margin-top:8px;line-height:1.6">먼저 윈도우 블루투스에서 조이콘 페어링(측면 동그란 버튼 길게) → 여기서 연결. 두 개면 버튼을 두 번 눌러 하나씩.</div>
+        <div id="hidWarn" class="warn hidden"></div>
+        <div id="slots" style="margin-top:6px"></div>
+      </div>
+      <div class="card">
+        <h3>게임</h3>
+        <div class="row" id="modeRow"><button data-mode="2p">2인 대전</button><button data-mode="cpu">1인 vs CPU</button></div>
+        <div class="row" id="lvRow" style="margin-top:10px"><span class="small">CPU 실력</span><button data-lv="0">쉬움</button><button data-lv="1">보통</button><button data-lv="2">어려움</button></div>
+        <div class="row" id="gwRow" style="margin-top:10px"><span class="small">먼저 이기는 게임 수</span><button data-gw="1">1</button><button data-gw="2">2</button><button data-gw="3">3</button></div>
+      </div>
+      <div class="card">
+        <h3>설정</h3>
+        <div class="row seg" id="qRow"><span class="small" style="min-width:44px">그래픽</span><button data-q="auto">자동</button><button data-q="high">높음</button><button data-q="mid">보통</button><button data-q="low">낮음</button><button data-q="2d">2D</button></div>
+        <div id="gfxInfo" class="small" style="margin:6px 0 2px;min-height:18px"></div>
+        <label class="set">스윙 감도 <input id="sens" type="range" min="0.6" max="1.6" step="0.05"><span id="sensV" class="small" style="min-width:48px"></span></label>
+        <label class="set">타이밍 보정 <input id="lat" type="range" min="0" max="200" step="10"><span id="latV" class="small" style="min-width:48px"></span></label>
+        <label class="set"><input id="guide" type="checkbox"> 타이밍 가이드 (칠 자리에 줄어드는 원)</label>
+        <div class="small">자꾸 "늦음"이 나면 타이밍 보정을 올리고, "빠름"이 나면 내려요.</div>
+      </div>
+      <div class="card">
+        <h3>키보드 · 게임패드</h3>
+        <div class="small" style="line-height:1.95">
+          P1 <kbd>A</kbd> 살살 <kbd>S</kbd> 보통 <kbd>D</kbd> 세게 &nbsp; P2 <kbd>J</kbd> 살살 <kbd>K</kbd> 보통 <kbd>L</kbd> 세게<br>
+          <kbd>Enter</kbd> 시작 · <kbd>Esc</kbd> 일시정지 · <kbd>F</kbd> 전체화면 · 조이콘 버튼 = 시작<br>
+          게임패드: A 보통 · X 살살 · Y/RB/RT 세게
+        </div>
+      </div>
+    </div>
+    <div class="foot">
+      <div class="row"><button id="btnHome">🏠 놀자 홈</button><span class="small">⚠ 조이콘 스트랩 꼭 끼고, TV와 거리 두고 휘두르기!</span></div>
+      <div class="row"><button id="btnFull">⛶ 전체화면</button><button id="btnStart" class="primary">캐릭터 선택 ▶</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="select" class="overlay sel hidden">
+  <div>
+    <div class="seltitle">캐릭터 선택</div>
+    <div id="roster" class="roster"></div>
+    <div class="center" style="margin-top:8px"><span class="hint">클릭 = P1 · 우클릭 = P2 · 같은 캐릭터를 둘이 골라도 돼요</span></div>
+  </div>
+  <div class="selbottom">
+    <div class="selcard" id="selc0">
+      <div class="row"><span class="badge b1" id="selb0">P1</span><b class="nm" id="seln0"></b><span class="st" id="sels0"></span></div>
+      <div class="row"><button data-p="0" data-d="-1">◀</button><button data-p="0" data-d="1">▶</button><button data-p="0">준비</button></div>
+      <div class="small" id="selh0" style="margin-top:6px"></div>
+    </div>
+    <div class="selmid"><div id="selMsg" class="selmsg"></div><button id="btnSelBack">← 메뉴</button></div>
+    <div class="selcard" id="selc1">
+      <div class="row"><span class="badge b2" id="selb1">P2</span><b class="nm" id="seln1"></b><span class="st" id="sels1"></span></div>
+      <div class="row"><button data-p="1" data-d="-1">◀</button><button data-p="1" data-d="1">▶</button><button data-p="1">준비</button></div>
+      <div class="small" id="selh1" style="margin-top:6px"></div>
+    </div>
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden"><div class="panel center" style="width:min(460px,100%)">
+  <div class="big">일시정지</div>
+  <div class="row" style="justify-content:center;margin-top:10px"><button id="btnResume" class="primary">계속</button><button id="btnQuit">메뉴로</button></div>
+  <div id="pauseInfo" class="small" style="margin-top:12px"></div>
+</div></div>
+
+<div id="result" class="overlay bottom hidden"><div class="panel center" style="width:min(620px,100%)">
+  <div id="resTitle" class="big"></div>
+  <div id="resBody" class="sub" style="font-size:19px;line-height:1.8"></div>
+  <div class="row" style="justify-content:center;margin-top:6px"><button id="btnAgain" class="primary">다시 하기</button><button id="btnReselect">캐릭터 바꾸기</button><button id="btnMenu">메뉴로</button></div>
+  <div class="small" style="margin-top:10px">조이콘 버튼 / Enter = 다시 하기</div>
+</div></div>
+
+<script src="../../shared/vendor/three.min.js"></script>
+<script src="../../shared/store.js"></script>
+<script src="../../shared/audio.js"></script>
+<script src="../../shared/joycon.js"></script>
+<script src="../../shared/characters.js"></script>
+<script src="tennis.js"></script>
+</body>
+</html>

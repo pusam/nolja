@@ -1,0 +1,8 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+# 기타
+node_modules/
+.DS_Store
+Thumbs.db
