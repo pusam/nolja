@@ -36,9 +36,15 @@ function mkEl(id) {
 }
 const el = id => els[id] || (els[id] = mkEl(id));
 const errors = [];
+const windowEvents = {};
+// CPU 랠리 길이 때문에 테스트 결과가 실행마다 달라지지 않도록 고정한다.
+let randomSeed = 0x12345678;
+const testMath = Object.create(Math);
+testMath.random = () => { randomSeed = (1664525 * randomSeed + 1013904223) >>> 0; return randomSeed / 4294967296; };
 let pads = [];
 const sandbox = {
   __ST_HEADLESS: '3d',
+  Math: testMath,
   document: { getElementById: el, createElement: () => mkEl(''), querySelectorAll: () => [], body: mkEl('body'),
     addEventListener: noop, documentElement: { requestFullscreen: noop }, fullscreenElement: null, hidden: false, exitFullscreen: noop },
   navigator: { getGamepads: () => pads },
@@ -46,7 +52,8 @@ const sandbox = {
   requestAnimationFrame: noop, localStorage: { getItem: () => null, setItem: noop },
   innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1,
   console: { log: (...a) => console.log(...a), warn: noop, error: (...a) => errors.push(a.map(String).join(' ')) },
-  setTimeout: noop, setInterval: noop, location: { protocol: 'https:' }, addEventListener: noop,
+  setTimeout: noop, setInterval: noop, location: { protocol: 'https:' },
+  addEventListener: (name, fn) => { (windowEvents[name] || (windowEvents[name] = [])).push(fn); },
 };
 sandbox.window = sandbox;
 vm.createContext(sandbox);
@@ -86,6 +93,29 @@ assert(ST.gfx.mode3d && G3.built, `3D 장면 생성 (단계 ${ST.gfx.level})`);
 let meshCount = 0; G3.scene.traverse(o => { if (o.isMesh || o.isPoints || o.isSprite) meshCount++; });
 console.log('   그릴 물체 수(메시·점·스프라이트):', meshCount);
 
+// 처음부터 모션을 끈 경우에도 첫 프레임과 그래픽 전환은 정지 장면을 그린다.
+ST.setDemoPaused(true); ST.render();
+assert(G3.camera.position.z > 10 && G3.ball.visible, '첫 프레임 전에 데모를 정지해도 카메라와 공을 초기화해 표시함');
+const initialPauseT = ST.T();
+ST.applyQuality('2d'); ST.render(); ST.applyQuality('mid'); ST.render();
+assert(G3.camera.position.z > 10 && G3.ball.visible && ST.T() === initialPauseT, '정지 중 2D에서 3D로 바꿔도 시간이 흐르지 않고 장면이 표시됨');
+ST.setDemoPaused(false);
+
+// 메뉴 미리보기 정지: 경기 일시정지와 분리하고 시계·장면을 함께 멈춘다.
+step(0.5);
+const demoPauseT = ST.T(), demoPauseState = G.state;
+const demoPausePositions = JSON.stringify(G3.players.map(p => p.root.position.toArray()));
+assert(ST.setDemoPaused(true) && !G.paused, '데모 정지는 경기 일시정지 상태를 바꾸지 않음');
+step(1); ST.setDemoPaused(true); step(2);
+assert(ST.T() === demoPauseT && G.state === demoPauseState, '데모 정지 중 시간이 흐르거나 CPU가 서브하지 않음');
+assert(JSON.stringify(G3.players.map(p => p.root.position.toArray())) === demoPausePositions, '정지된 데모를 다시 그려도 선수 위치가 움직이지 않음');
+assert(!ST.setDemoPaused(false) && Math.abs(ST.T() - demoPauseT) < 1e-8, '중복 정지 호출 후 재생해도 게임 시간이 뛰지 않음');
+step(0.5);
+assert(Math.abs(ST.T() - demoPauseT - 0.5) < 1e-8, '데모 재생 시 멈춘 시점부터 시간이 다시 흐름');
+ST.setDemoPaused(true); step(2);
+ST.toMenu(); const menuResumeT = ST.T(); step(0.25);
+assert(Math.abs(ST.T() - menuResumeT - 0.25) < 1e-8, '메뉴로 돌아가면 데모 정지가 자동 해제됨');
+
 // 1) 메뉴 뒤 데모 (CPU vs CPU) 10분, 3D 갱신 포함
 step(120);
 step(8 * 60, { each: null });
@@ -98,13 +128,25 @@ assert(draw.nan === 0, `HUD 그리기 좌표에 NaN 없음 (${draw.calls}회 호
 
 // 2) 캐릭터 선택 → 2인 대결
 ST.settings.mode = '2p';
-ST.openSelect();
+ST.setDemoPaused(true); step(2);
+const selectResumeT = ST.T();
+for (const fn of windowEvents.keydown || []) fn({ code: 'Enter', preventDefault: noop });
 assert(G.state === 'select' && !el('select').classList.contains('hidden'), '캐릭터 선택 화면 열림');
+assert(!G.paused, '정지된 데모에서도 Enter로 캐릭터 선택 화면을 열 수 있음');
+let rosterEnterPrevented = false;
+for (const fn of windowEvents.keydown || []) fn({ code: 'Enter', target: { closest: s => s === '#roster .tile' }, preventDefault: () => { rosterEnterPrevented = true; } });
+assert(!rosterEnterPrevented && !ST.sel[0].ready && !ST.sel[1].ready, '캐릭터 버튼의 Enter는 전체 준비 단축키와 충돌하지 않음');
 const before = ST.settings.chars.slice();
 ST.selMove(0, 1); ST.selMove(1, -1); ST.selMove(1, -1);
 assert(ST.settings.chars[0] === (before[0] + 1) % 8 && ST.settings.chars[1] === (before[1] + 6) % 8, `캐릭터 바꾸기 → P1 ${ST.CHARS[ST.settings.chars[0]].name}, P2 ${ST.CHARS[ST.settings.chars[1]].name}`);
 step(0.5);
+assert(Math.abs(ST.T() - selectResumeT - 0.5) < 1e-8, '정지된 데모에서 선택 화면을 열면 시간이 정상 진행됨');
 assert(G3.players[0].ch === ST.CHARS[ST.settings.chars[0]] && G3.players[1].ch === ST.CHARS[ST.settings.chars[1]], '3D 캐릭터 모델도 교체됨');
+const desktopAspect = G3.camera.aspect;
+G3.camera.aspect = 375 / 812; G3.camera.updateProjectionMatrix(); step(2);
+const portraitEdges = [-1.5, 1.5].map(x => new sandbox.THREE.Vector3(x, 1, -2.2).project(G3.camera).x);
+assert(portraitEdges.every(x => Math.abs(x) < 1), '세로 화면에서도 선택 화면의 두 캐릭터가 좌우로 잘리지 않음');
+G3.camera.aspect = desktopAspect; G3.camera.updateProjectionMatrix(); step(1.5);
 // 모든 캐릭터 모델 만들어 보기 (P2로 8명 차례로)
 const keep = ST.settings.chars[1];
 for (let k = 0; k < 8; k++) { if (k !== ST.sel[1].idx) ST.selSet(1, k); step(0.2); const f = sceneFinite(); if (f.bad) { assert(false, ST.CHARS[k].name + ' 모델 좌표 이상'); } }
@@ -128,8 +170,8 @@ const bot = () => {
   const s = G.shot;
   if (G.state === 'serve' && ST.T() - G.stateT > 0.6) ST.emitSwing(G.server, 0.6, now);
   else if (G.state === 'rally' && s && !s.resolved && s.reachable && !s.out) {
-    if (s._aim === undefined) s._aim = (Math.random() - 0.5) * 2.6 * s.W;   // 가끔 판정 창 밖 → 실수
-    if (ST.T() >= s.hit.t + lat() + s._aim) ST.emitSwing(s.receiver, 0.3 + Math.random() * 0.7, now);
+    if (s._aim === undefined) s._aim = (testMath.random() - 0.5) * 2.6 * s.W;   // 가끔 판정 창 밖 → 실수
+    if (ST.T() >= s.hit.t + lat() + s._aim) ST.emitSwing(s.receiver, 0.3 + testMath.random() * 0.7, now);
   }
 };
 while (G.state !== 'matchEnd' && guard++ < 60 * 60 * 30) { now += 1 / 60; bot(); ST.update(); if (guard % 2 === 0) ST.render(); }
@@ -205,6 +247,90 @@ pads = [pad([15])]; step(1 / 60, { render: false }); pads = [pad([])]; step(1 / 
 assert(ST.settings.chars[0] === (c0 + 1) % 8, '게임패드 → 방향키로 캐릭터 바꾸기');
 pads = [pad([0])]; step(1 / 60, { render: false }); pads = [];
 assert(ST.sel[0].ready, '게임패드 A → 준비');
+
+ST.toMenu(); ST.setDemoPaused(true); step(2);
+const matchResumeT = ST.T(); ST.startMatch(); step(0.25);
+assert(!G.demo && !G.paused && Math.abs(ST.T() - matchResumeT - 0.25) < 1e-8, '정지된 데모에서 바로 경기 시작 시 정지가 자동 해제됨');
+assert(!ST.setDemoPaused(true), '실제 경기 중에는 데모 정지를 적용하지 않음');
+
+// 8) 공 물리: 착지 정확도 · 네트 통과 · 공기저항 · 스핀별 궤적과 바운드
+{
+  const C = ST.C, from = { x: 0.3, y: -0.9, z: 1.0 }, to = { x: -1.5, y: C.net + 0.75 * C.net };
+  const shots = { top: ST.planShot(from, to, 1.05, 0.8), flat: ST.planShot(from, to, 1.05, 0.15), slice: ST.planShot(from, to, 1.05, -0.8) };
+  const info = s => {
+    const P = s.path, z = i => P[3 * i + 2], dt = 1 / 240, i1 = Math.ceil(s.T1 / dt), i2 = s.bounces[1] ? Math.floor(s.bounces[1].t / dt) : s.n;
+    let netZ = 0, apex1 = 0, apex2 = 0;
+    for (let i = 1; i < i1; i++) { apex1 = Math.max(apex1, z(i)); if ((P[3 * i - 2] - C.net) * (P[3 * i + 1] - C.net) <= 0) netZ = z(i); }
+    for (let i = i1; i < i2; i++) apex2 = Math.max(apex2, z(i));
+    const hv = i => Math.hypot(P[3 * i + 3] - P[3 * i], P[3 * i + 4] - P[3 * i + 1]) / dt;
+    return { netZ, apex1, apex2, v0: hv(0), vLand: hv(i1 - 2), vOut: hv(i1 + 1) };
+  };
+  const I = {}; for (const k in shots) I[k] = info(shots[k]);
+  for (const k in shots) console.log(`   ${k.padEnd(5)} ${shots[k].speed.toFixed(0)}km/h · 네트 위 ${(I[k].netZ - C.netH).toFixed(2)}m · 최고 ${I[k].apex1.toFixed(2)}m · 바운드 후 최고 ${I[k].apex2.toFixed(2)}m · 수평 ${(I[k].v0 * 3.6).toFixed(0)}→${(I[k].vLand * 3.6).toFixed(0)}→${(I[k].vOut * 3.6).toFixed(0)}km/h`);
+  assert(Object.values(shots).every(s => Math.hypot(s.xb - to.x, s.yb - to.y) < 0.05), '공이 노린 자리에 떨어짐 (스핀과 공기저항을 넣어도 조준 정확)');
+  assert(Object.values(I).every(o => o.netZ > C.netH + 0.2), '모든 스핀에서 네트를 넘음');
+  assert(Object.values(I).every(o => o.vLand < o.v0 * 0.85), '공기저항으로 날아가며 느려짐');
+  assert(I.top.apex1 > I.flat.apex1 && I.flat.apex1 > I.slice.apex1, '탑스핀은 높게 떠서 뚝 떨어지고, 슬라이스는 낮게 깔림');
+  assert(I.top.apex2 > I.flat.apex2 && I.flat.apex2 > I.slice.apex2, '바운드 뒤 탑스핀은 높게 튀고(킥) 슬라이스는 낮게 미끄러짐');
+  assert(I.top.vOut > I.flat.vOut, '탑스핀은 바운드 뒤에도 속도가 덜 줄어듦');
+  assert(Object.values(shots).every(s => s.speed > 60 && s.speed < 200), '친 순간 속도가 실제 테니스 범위 (60~200km/h)');
+}
+
+// 9) 조이콘 휘두른 방향 → 스핀. 어깨를 중심으로 기울어진 평면에서 라켓을 휘두를 때 조이콘이 보낼 IMU 리포트를 만들어 넣음
+//    (포핸드·백핸드 × 조이콘을 어느 쪽으로 쥐었나 × 손목 돌림, 가속도 ±8g · 자이로 ±2000도/초에서 잘림)
+function swingReports({ beta, side, head, roll, peakDps = 1400 }) {
+  const R = Math.PI / 180, V = (x, y, z) => ({ x, y, z });
+  const add = (a, b) => V(a.x + b.x, a.y + b.y, a.z + b.z), mul = (a, k) => V(a.x * k, a.y * k, a.z * k);
+  const dot = (a, b) => a.x * b.x + a.y * b.y + a.z * b.z, cross = (a, b) => V(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+  const rot = (v, k, a) => add(add(mul(v, Math.cos(a)), mul(cross(k, v), Math.sin(a))), mul(k, dot(k, v) * (1 - Math.cos(a))));
+  const n = mul(V(0, -Math.sin(beta * R), Math.cos(beta * R)), side), e = V(side, 0, 0);   // 회전축 · 타점에서 팔 방향 (x 오른쪽, y 앞, z 위)
+  const X0 = mul(e, head), Z0 = add(mul(n, Math.cos(roll * R)), mul(cross(X0, n), Math.sin(roll * R))), Y0 = cross(Z0, X0);
+  const phi0 = -100 * R, span = 170 * R, D = 2 * span / (peakDps * R), out = [];
+  const sample = (phi, w, wd) => {
+    const X = rot(X0, n, phi), Y = rot(Y0, n, phi), Z = rot(Z0, n, phi), r = mul(rot(e, n, phi), 0.6), Om = mul(n, w);
+    const f = add(mul(add(cross(mul(n, wd), r), cross(Om, cross(Om, r))), 1 / 9.8), V(0, 0, 1));   // 가속도계 = 운동 가속도 + 중력 반대
+    out.push([dot(f, X), dot(f, Y), dot(f, Z), dot(Om, X) / R, dot(Om, Y) / R, dot(Om, Z) / R]);
+  };
+  for (let t = 0; t < 0.6; t += 0.005) sample(phi0, 0, 0);
+  for (let t = 0; t < D; t += 0.005) { const u = t / D, c = 2 * Math.PI * u; sample(phi0 + span * (u - Math.sin(c) / (2 * Math.PI)), span / D * (1 - Math.cos(c)), span / D / D * 2 * Math.PI * Math.sin(c)); }
+  for (let t = 0; t < 0.4; t += 0.005) sample(phi0 + span, 0, 0);
+  const i16 = v => Math.max(-32768, Math.min(32767, Math.round(v))), reps = [];
+  for (let i = 0; i + 3 <= out.length; i += 3) {
+    const dv = new DataView(new ArrayBuffer(48)); dv.setUint8(1, 0x80);
+    for (let k = 0; k < 3; k++) { const s = out[i + k], o = 12 + k * 12; for (let a = 0; a < 6; a++) dv.setInt16(o + 2 * a, i16(s[a] / (a < 3 ? 0.000244 : 0.061)), true); }
+    reps.push(dv);
+  }
+  return reps;
+}
+{
+  G.paused = true;   // 판정만 보고 경기에는 안 넘김
+  const cases = { top: [30, s => s >= 0.6], flat: [0, s => ST.spinLabel(s) === '플랫'], slice: [-25, s => s <= -0.5] };
+  const bad = [];
+  for (const side of [1, -1]) for (const head of [1, -1]) for (const roll of [0, 140]) for (const k in cases) {
+    const j = { player: 0, gyro: 0, armed: true, swinging: false, swingStart: 0, peak: 0, peakT: 0, cool: 0, prevBtn: 0, simple: 0, lastReport: 0, lastPow: 0, lastSwingT: -9, ok: true, device: {} };
+    for (const dv of swingReports({ beta: cases[k][0], side, head, roll })) { now += 0.015; ST.joycon.report(j, { reportId: 0x30, data: dv }); }
+    if (j.lastSpin == null || !cases[k][1](j.lastSpin)) bad.push(`${k} ${side > 0 ? '포핸드' : '백핸드'} 머리${head > 0 ? '+' : '-'}X 롤${roll}: ${j.lastSpin}`);
+  }
+  G.paused = false;
+  assert(bad.length === 0, '조이콘 올려 치기 → 탑스핀, 수평 → 플랫, 깎아 치기 → 슬라이스 (포핸드·백핸드, 쥔 방향·손목 돌림 상관없이 24가지)' + (bad.length ? ' — ' + bad.join(', ') : ''));
+}
+
+// 10) 키보드 쉼표(P2) = 슬라이스로 받아 침
+{
+  ST.toMenu(); ST.settings.mode = '2p'; ST.startMatch();
+  let got = null;
+  for (let tries = 0; tries < 6 && !got; tries++) {
+    step(0.6, { render: false });
+    ST.emitSwing(G.server, 0.6, now);
+    const s = G.shot;
+    if (!s || s.receiver !== 1 || !s.reachable) { step(4, { render: false }); continue; }
+    while (ST.T() < s.hit.t + lat()) step(1 / 60, { render: false });
+    for (const fn of windowEvents.keydown || []) fn({ code: 'Comma', preventDefault: noop });
+    if (G.shot !== s) got = G.shot;
+    step(4, { render: false });
+  }
+  assert(got && got.hitter === 1 && got.spin < -0.5 && got.kind === 'drive', `키보드 쉼표로 슬라이스 리턴 (스핀 ${got ? got.spin : '-'})`);
+}
 
 assert(errors.length === 0, '전체 예외 없음' + (errors[0] ? ' — ' + errors[0] : ''));
 assert(draw.nan === 0, '전체 HUD NaN 없음');

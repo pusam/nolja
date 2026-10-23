@@ -3,65 +3,105 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>놀자</title>
-<link rel="stylesheet" href="shared/nolja.css">
-<style>
-body{overflow:auto;background:radial-gradient(ellipse at top, #12305f, #06122a 70%)}
-.home{max-width:1100px;margin:0 auto;padding:6vh 24px 40px}
-.logo{font-size:64px;font-weight:900;letter-spacing:-.04em;margin:0}
-.logo span{color:var(--accent)}
-.channels{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px;margin-top:28px}
-.ch{display:flex;flex-direction:column;justify-content:flex-end;min-height:190px;border-radius:24px;padding:20px;
-  color:#fff;text-decoration:none;border:3px solid transparent;box-shadow:0 12px 40px rgba(0,0,0,.35);transition:transform .12s}
-.ch:hover,.ch.focus{transform:translateY(-4px);border-color:#fff}
-.ch .em{font-size:64px;line-height:1}
-.ch .nm{font-size:28px;font-weight:900;margin-top:10px}
-.ch .ds{font-size:15px;opacity:.85}
-.ch.soon{filter:grayscale(.7);opacity:.55;cursor:default}
-.ch.soon:hover{transform:none;border-color:transparent}
-.plaza{display:flex;gap:10px;justify-content:center;margin-top:36px;flex-wrap:wrap}
-.plaza canvas{width:64px;height:64px;animation:hop 1.6s ease-in-out infinite}
-@keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-</style>
+<meta name="theme-color" content="#173d30">
+<meta name="description" content="우리 집이 플레이 그라운드가 되는 시간. 조이콘이나 키보드로 함께 즐기는 놀자 게임 클럽.">
+<title>놀자 · 우리 집 게임 클럽</title>
+<link rel="stylesheet" href="shared/home.css">
 </head>
 <body>
+<a class="skip-link" href="#games">게임 고르기로 바로 가기</a>
+<svg class="icon-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+  <symbol id="i-controller" viewBox="0 0 24 24"><path d="m8 7-2.1.6a3 3 0 0 0-2.1 2.3L2.5 17a2.2 2.2 0 0 0 3.7 2l3-3h5.6l3 3a2.2 2.2 0 0 0 3.7-2l-1.3-7.1a3 3 0 0 0-2.1-2.3L16 7Z"/><path d="M6 11h4m-2-2v4m7-2h.01m3 2h.01"/></symbol>
+  <symbol id="i-bowling" viewBox="0 0 64 64"><path d="M18 8h8l-1 12c-1 6 5 12 5 20 0 7-3 14-8 14s-8-7-8-14c0-8 6-14 5-20Zm-1 19h10M17 32h10"/><circle cx="44" cy="42" r="13"/><path d="M42 35h.01m6 2h.01m-5 4h.01"/></symbol>
+  <symbol id="i-baseball" viewBox="0 0 64 64"><circle cx="32" cy="32" r="23"/><path d="M17 15c15 8 15 26 0 34m30-34c-15 8-15 26 0 34M18 19l6-2m-1 9 6-1m-5 10 6 1m-10 7 6 3m20-27-6-2m1 9-6-1m5 10-6 1m10 7-6 3"/></symbol>
+  <symbol id="i-racing" viewBox="0 0 64 64"><path d="m15 24 5-11h24l5 11m-35 1h36l5 12v13H9V37Zm-5 13h46M15 50v5m34-5v5M17 32h4m22 0h4M26 44h12"/></symbol>
+</svg>
 <div class="home">
-  <h1 class="logo">놀자 <span>🎮</span></h1>
-  <div class="sub">거실 TV에서 조이콘 들고 같이 노는 게임 모음 · PC 크롬/엣지에서 열기</div>
-  <div class="channels" id="channels"></div>
-  <div class="plaza" id="plaza"></div>
-  <p class="small center" style="margin-top:28px">←→ 고르기 · Enter 시작 · 조이콘 연결은 각 게임 메뉴에서</p>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="놀자 홈"><span class="brand-name">NOLJA<span class="brand-dot"></span></span><span class="brand-tagline">PLAY TOGETHER</span></a>
+    <nav class="header-nav" aria-label="홈 메뉴"><span class="club-status"><i></i> 우리 집 게임 클럽</span><a class="how-link" href="#how-to-play">플레이 방법 <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></nav>
+  </header>
+  <main>
+    <section id="games" aria-labelledby="page-title">
+      <div class="intro"><div><p class="eyebrow">LITTLE GAMES. BIG MOMENTS.</p><h1 id="page-title">같이 놀면, 더 재밌으니까.</h1></div><p class="intro-note">오늘의 플레이 메이트를 부르고,<br>우리 집을 플레이 그라운드로.</p></div>
+      <div id="channels" class="channels">
+        <a class="ch hero focus" data-i="0" href="games/tennis/index.html" aria-label="스윙 테니스 시작하기. 1인 CPU 대전 또는 2인 대전">
+          <div class="hero-copy">
+            <span class="available"><i></i> 지금 플레이 가능</span><p class="hero-kicker">YOUR COURT, YOUR GAME.</p>
+            <h2>스윙<br>테니스<span class="title-dot">.</span></h2>
+            <p class="hero-desc">가볍게 휘두르고, 시원하게 스매시.<br>거실에서 시작하는 우리만의 랠리.</p>
+            <div class="game-tags"><span>1–2 PLAYERS</span><span>조이콘 · 키보드 · 게임패드</span></div>
+            <span class="play-button">코트에 입장하기 <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="art-orbit"></div>
+            <svg class="court-art" viewBox="0 0 680 490" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="court-shade" x1="211" y1="162" x2="538" y2="424" gradientUnits="userSpaceOnUse"><stop stop-color="#72a68b"/><stop offset="1" stop-color="#4f876c"/></linearGradient>
+                <pattern id="racket-strings" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(-7)"><path d="M0 0h12M0 0v12" stroke="#e8eee1" stroke-opacity=".8" stroke-width="1.3"/></pattern>
+                <linearGradient id="ball-shade" x1="510" y1="60" x2="560" y2="117" gradientUnits="userSpaceOnUse"><stop stop-color="#e3f397"/><stop offset="1" stop-color="#b3d851"/></linearGradient>
+              </defs>
+              <ellipse cx="369" cy="414" rx="239" ry="27" fill="#0c2f23" opacity=".4"/>
+              <path d="m84 270 265-143 269 146-265 151Z" fill="#123f2e"/><path d="m84 253 265-143 269 146-265 151Z" fill="#a6bc9a"/><path d="m105 253 244-131 248 134-244 133Z" fill="url(#court-shade)"/>
+              <g stroke="#eff2df" stroke-width="3" stroke-linejoin="round"><path d="m133 254 216-116 220 119-216 116Z"/><path d="m154 242 219 120m-43-214 219 119M241 196l219 120m-220 0 215-116"/><path d="m293 227 109 59"/></g>
+              <path d="m240 307 222-118v40L240 347Z" fill="#143d30" fill-opacity=".38" stroke="#deeadb" stroke-width="1.5"/>
+              <g stroke="#dce7d8" stroke-opacity=".5" stroke-width="1"><path d="m251 304 1 37m12-44 1 37m12-44 1 37m12-44 1 37m12-44 1 37m12-44 1 37m12-44 1 37m12-44 1 37m12-44 1 37m12-44 1 37m12-44 1 37m12-44 1 37m12-44 1 37m12-44 1 37m12-44 1 37m12-44 1 37"/><path d="m240 319 222-118m-222 130 222-118"/></g>
+              <path d="m239 306 224-120" stroke="#f2f1df" stroke-width="5"/><path d="M239 304v47m225-167v48" stroke="#f2f1df" stroke-width="5" stroke-linecap="round"/>
+              <g transform="rotate(35 402 198)"><path d="M402 260v110" stroke="#0f3024" stroke-width="17" stroke-linecap="round"/><path d="M402 319v48" stroke="#e7e9cf" stroke-width="19" stroke-linecap="round"/><path d="m392 329 20 6m-20 5 20 6m-20 5 20 6" stroke="#b6bea7" stroke-width="2"/><path d="m378 239 24 44 25-44" stroke="#e8ecdc" stroke-width="8"/><ellipse cx="402" cy="183" rx="53" ry="72" fill="#173d30"/><ellipse cx="402" cy="183" rx="50" ry="69" fill="url(#racket-strings)" stroke="#eff0dc" stroke-width="8"/><path d="M361 142c9-17 20-25 38-27" stroke="#d4ed72" stroke-width="5" stroke-linecap="round"/></g>
+              <ellipse cx="543" cy="151" rx="33" ry="7" fill="#0f3024" opacity=".3"/><circle cx="539" cy="92" r="39" fill="url(#ball-shade)"/><path d="M513 63c19 5 31 21 31 39 0 11-4 20-10 29m33-66c-17 4-28 19-28 35 0 13 4 22 10 29" stroke="#f8fadf" stroke-width="2.8"/>
+              <path d="m568 28 8-15m10 30 16-8m-48-15 2-16" stroke="#d4ed72" stroke-width="3" stroke-linecap="round"/><path d="m135 113 6 15 16 5-16 6-6 15-5-15-16-6 16-5Z" fill="#d4ed72"/><circle cx="573" cy="397" r="5" stroke="#d4ed72" stroke-width="2"/><circle cx="175" cy="375" r="4" fill="#d4ed72"/>
+            </svg>
+            <div class="court-label"><span>THE LIVING ROOM OPEN</span><span>EST. 2026</span></div>
+          </div>
+          <span class="hero-number" aria-hidden="true">NO. 01</span>
+        </a>
+        <div class="coming-heading"><span>NEXT UP</span><p>다음 경기도 준비 중이에요.</p></div>
+        <div class="coming-games">
+          <article class="ch soon bowling" data-i="1" aria-label="볼링, 준비 중"><div class="soon-icon"><svg aria-hidden="true"><use href="#i-bowling"/></svg></div><div class="soon-copy"><h2>볼링</h2><p>스트라이크의 기분 좋은 한 방.</p></div><span class="soon-label">준비 중</span></article>
+          <article class="ch soon baseball" data-i="2" aria-label="야구, 준비 중"><div class="soon-icon"><svg aria-hidden="true"><use href="#i-baseball"/></svg></div><div class="soon-copy"><h2>야구</h2><p>담장 너머로, 시원한 홈런.</p></div><span class="soon-label">준비 중</span></article>
+          <article class="ch soon racing" data-i="3" aria-label="레이싱, 준비 중"><div class="soon-icon"><svg aria-hidden="true"><use href="#i-racing"/></svg></div><div class="soon-copy"><h2>레이싱</h2><p>나란히 출발해서, 짜릿하게 추월.</p></div><span class="soon-label">준비 중</span></article>
+        </div>
+      </div>
+      <p id="gameHint" class="keyboard-hint" aria-live="polite"><span><kbd>←</kbd><kbd>→</kbd> 게임 고르기</span><span><kbd>Enter</kbd> 시작하기</span></p>
+    </section>
+    <section id="how-to-play" class="club-lounge" aria-labelledby="lounge-title">
+      <div class="lounge-copy"><p class="eyebrow">EVERYONE'S INVITED.</p><h2 id="lounge-title">준비물은, 같이 놀 마음.</h2><p>PC 크롬이나 엣지에서 열고 조이콘, 키보드, 게임패드로 즐겨요.<br>큰 화면에 연결하면 거실이 우리만의 게임 클럽이 돼요.</p><span class="controller-note"><svg class="icon" aria-hidden="true"><use href="#i-controller"/></svg> 조이콘 연결은 각 게임 메뉴에서 할 수 있어요.</span></div>
+      <div class="plaza-wrap"><div class="plaza" id="plaza" aria-label="함께할 수 있는 8명의 캐릭터"></div><span class="plaza-label">MEET YOUR PLAY MATES</span></div>
+    </section>
+  </main>
+  <footer class="site-footer"><span>NOLJA CLUB</span><p>좋은 시간은, 함께 플레이할 때.</p><span>MADE FOR TOGETHER.</span></footer>
 </div>
 <script src="shared/store.js"></script>
 <script src="shared/characters.js"></script>
 <script>
 (() => {
   'use strict';
-  // 게임 목록: 새 게임은 games/폴더명/index.html 만들고 여기에 한 줄 추가
-  const GAMES = [
-    { name: '테니스', emoji: '🎾', desc: '휘둘러서 치기 · 2인 대결', href: 'games/tennis/index.html', bg: 'linear-gradient(135deg,#1d4ed8,#0ea5e9)' },
-    { name: '볼링', emoji: '🎳', desc: '곧 나와요', soon: true, bg: 'linear-gradient(135deg,#7c3aed,#c026d3)' },
-    { name: '야구', emoji: '⚾', desc: '곧 나와요', soon: true, bg: 'linear-gradient(135deg,#15803d,#65a30d)' },
-    { name: '레이싱', emoji: '🏎️', desc: '곧 나와요', soon: true, bg: 'linear-gradient(135deg,#b91c1c,#ea580c)' },
-  ];
-  const box = document.getElementById('channels');
-  box.innerHTML = GAMES.map((g, i) => `<a class="ch${g.soon ? ' soon' : ''}" data-i="${i}" style="background:${g.bg}" ${g.soon ? '' : `href="${g.href}"`}>
-    <div class="em">${g.emoji}</div><div class="nm">${g.name}</div><div class="ds">${g.desc}</div></a>`).join('');
-  // 캐릭터 광장
+  const GAMES = [{ name: '스윙 테니스', href: 'games/tennis/index.html' }, { name: '볼링', soon: true }, { name: '야구', soon: true }, { name: '레이싱', soon: true }];
   const plaza = document.getElementById('plaza');
   window.Nolja.characters.CHARS.forEach((ch, k) => {
-    const c = document.createElement('canvas'); c.width = c.height = 128; c.style.animationDelay = (k * 0.18) + 's';
-    window.Nolja.characters.portrait(c, ch); c.title = ch.name; plaza.appendChild(c);
+    const figure = document.createElement('span'); figure.className = 'play-mate';
+    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
+    canvas.style.animationDelay = (k * 0.18) + 's'; canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', ch.name); canvas.title = ch.name;
+    window.Nolja.characters.portrait(canvas, ch); figure.appendChild(canvas); plaza.appendChild(figure);
   });
-  // 키보드로 고르기
-  let focus = 0;
-  const tiles = [...box.querySelectorAll('.ch')];
-  const show = () => tiles.forEach((t, i) => t.classList.toggle('focus', i === focus));
-  show();
+  let choice = 0;
+  const tiles = [...document.querySelectorAll('#channels .ch')];
+  const hint = document.getElementById('gameHint');
+  const showChoice = () => {
+    tiles.forEach((tile, i) => tile.classList.toggle('focus', i === choice));
+    hint.textContent = GAMES[choice].soon ? GAMES[choice].name + '은 준비 중이에요. ← → 키로 다른 게임을 골라 보세요.' : '스윙 테니스 선택됨 · ← → 게임 고르기 · Enter 시작하기';
+  };
+  tiles[0].addEventListener('focus', () => { choice = 0; showChoice(); });
   window.addEventListener('keydown', e => {
-    if (e.key === 'ArrowRight') { focus = (focus + 1) % tiles.length; show(); }
-    if (e.key === 'ArrowLeft') { focus = (focus - 1 + tiles.length) % tiles.length; show(); }
-    if (e.key === 'Enter' && !GAMES[focus].soon) location.href = GAMES[focus].href;
+    if (e.altKey || e.ctrlKey || e.metaKey || e.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault(); choice = (choice + (e.key === 'ArrowRight' ? 1 : -1) + tiles.length) % tiles.length; showChoice(); tiles[choice].scrollIntoView({ block: 'nearest', behavior: 'auto' });
+    }
+    if (e.key === 'Enter' && (!e.target.closest('a, button') || e.target.closest('.ch'))) {
+      e.preventDefault();
+      if (!GAMES[choice].soon) location.href = GAMES[choice].href;
+    }
   });
 })();
 </script>

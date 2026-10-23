@@ -3,100 +3,67 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#173d30">
 <title>스윙 테니스 · 놀자</title>
 <link rel="stylesheet" href="../../shared/nolja.css">
-<style>
-#gl,#hud{position:fixed;inset:0;width:100vw;height:100vh;display:block}
-#hud{pointer-events:none}
-</style>
+<link rel="stylesheet" href="tennis.css">
 </head>
 <body>
-<canvas id="gl"></canvas>
-<canvas id="hud"></canvas>
+<svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+  <symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.4 5.8c7.5 1.4 7.5 11 0 12.4M18.6 5.8c-7.5 1.4-7.5 11 0 12.4"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m1-15a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3"/><path d="M9 1v4m6-4v4M9 19v4m6-4v4M1 9h4m-4 6h4m14-6h4m-4 6h4M9 9h6v6H9z"/></symbol>
+  <symbol id="i-pad" viewBox="0 0 24 24"><path d="M8 6h8c3 0 4 3 5 9 1 5-3 5-6 1H9c-3 4-7 4-6-1C4 9 5 6 8 6Z"/><path d="M8 9v6m-3-3h6m5-2h.01m2 3h.01"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h6m4 0h6M4 17h10m4 0h2"/><circle cx="12" cy="7" r="2"/><circle cx="16" cy="17" r="2"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"/></symbol>
+  <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 15h10"/></symbol>
+</defs></svg>
+<div id="courtStage"><canvas id="gl" aria-label="테니스 코트"></canvas><canvas id="hud" aria-hidden="true"></canvas></div>
 
-<div id="menu" class="overlay">
-  <div class="panel">
-    <div class="title"><h1>🎾 스윙 테니스</h1><span class="small">조이콘을 라켓처럼 휘둘러서 치는 2인 테니스</span></div>
-    <p class="sub">캐릭터 고르고 둘이 대결! 이동은 자동, 공이 내 앞에 왔을 때 휘두르기만 하면 돼요.
-      <b>일찍 치면 왼쪽, 늦게 치면 오른쪽</b> · 세게 치면 빠른 공 · 살살 치면 로브 · 높이 뜬 공은 세게 → 스매시 · 긴 랠리 중 나이스 타이밍 → 필살 샷</p>
-    <div class="grid">
-      <div class="card">
-        <h3>컨트롤러</h3>
-        <div class="row"><button id="btnConnect">🎮 조이콘 연결</button><button id="btnSwap">P1 ↔ P2 바꾸기</button></div>
-        <div class="small" style="margin-top:8px;line-height:1.6">먼저 윈도우 블루투스에서 조이콘 페어링(측면 동그란 버튼 길게) → 여기서 연결. 두 개면 버튼을 두 번 눌러 하나씩.</div>
-        <div id="hidWarn" class="warn hidden"></div>
-        <div id="slots" style="margin-top:6px"></div>
-      </div>
-      <div class="card">
-        <h3>게임</h3>
-        <div class="row" id="modeRow"><button data-mode="2p">2인 대전</button><button data-mode="cpu">1인 vs CPU</button></div>
-        <div class="row" id="lvRow" style="margin-top:10px"><span class="small">CPU 실력</span><button data-lv="0">쉬움</button><button data-lv="1">보통</button><button data-lv="2">어려움</button></div>
-        <div class="row" id="gwRow" style="margin-top:10px"><span class="small">먼저 이기는 게임 수</span><button data-gw="1">1</button><button data-gw="2">2</button><button data-gw="3">3</button></div>
-      </div>
-      <div class="card">
-        <h3>설정</h3>
-        <div class="row seg" id="qRow"><span class="small" style="min-width:44px">그래픽</span><button data-q="auto">자동</button><button data-q="high">높음</button><button data-q="mid">보통</button><button data-q="low">낮음</button><button data-q="2d">2D</button></div>
-        <div id="gfxInfo" class="small" style="margin:6px 0 2px;min-height:18px"></div>
-        <label class="set">스윙 감도 <input id="sens" type="range" min="0.6" max="1.6" step="0.05"><span id="sensV" class="small" style="min-width:48px"></span></label>
-        <label class="set">타이밍 보정 <input id="lat" type="range" min="0" max="200" step="10"><span id="latV" class="small" style="min-width:48px"></span></label>
-        <label class="set"><input id="guide" type="checkbox"> 타이밍 가이드 (칠 자리에 줄어드는 원)</label>
-        <div class="small">자꾸 "늦음"이 나면 타이밍 보정을 올리고, "빠름"이 나면 내려요.</div>
-      </div>
-      <div class="card">
-        <h3>키보드 · 게임패드</h3>
-        <div class="small" style="line-height:1.95">
-          P1 <kbd>A</kbd> 살살 <kbd>S</kbd> 보통 <kbd>D</kbd> 세게 &nbsp; P2 <kbd>J</kbd> 살살 <kbd>K</kbd> 보통 <kbd>L</kbd> 세게<br>
-          <kbd>Enter</kbd> 시작 · <kbd>Esc</kbd> 일시정지 · <kbd>F</kbd> 전체화면 · 조이콘 버튼 = 시작<br>
-          게임패드: A 보통 · X 살살 · Y/RB/RT 세게
-        </div>
-      </div>
+<div id="menu" class="overlay lobby">
+  <header class="club-header">
+    <a class="brand" href="../../index.html" aria-label="놀자 홈"><span class="brand-symbol"><svg aria-hidden="true"><use href="#i-ball"/></svg></span><span class="brand-word">nolja<span class="brand-dot">.</span></span><span class="brand-tag">PLAY<br>TOGETHER</span></a>
+    <nav class="club-nav" aria-label="메인 메뉴"><a href="../../index.html">게임 라운지</a><span class="nav-divider"></span><span class="current-game">스윙 테니스</span></nav>
+    <button id="btnFull" class="header-button"><svg aria-hidden="true" class="icon"><use href="#i-expand"/></svg><span>전체화면</span><kbd>F</kbd></button>
+  </header>
+  <main class="lobby-main">
+    <div class="page-heading"><div><p class="eyebrow">A LITTLE SWING, A LOT OF FUN</p><h1>우리 집이 테니스 코트가 되는 순간<span>.</span></h1></div><button id="btnGuide" class="text-button">플레이 가이드 <span aria-hidden="true">↗</span></button></div>
+    <div class="lobby-grid">
+      <section class="game-feature" aria-labelledby="gameTitle">
+        <div class="feature-copy"><div class="feature-topline"><span class="sport-badge"><span></span> NOLJA SPORTS CLUB</span><span class="feature-edition">VOL. 01 / TENNIS</span></div><h2 id="gameTitle">스윙 테니스<span>SWING <em>TENNIS</em></span></h2><p>라켓 대신 조이콘을 들고, 오늘의 한 판을 즐겨요.<br>혼자서 가볍게, 둘이라면 더 신나게!</p><svg class="hero-ball" viewBox="0 0 180 180" aria-hidden="true"><circle cx="90" cy="90" r="84" fill="currentColor"/><path d="M36 26C123 47 123 133 36 154M144 26C57 47 57 133 144 154" fill="none" stroke="#173d30" stroke-width="5"/></svg></div>
+        <div id="courtPreview" class="court-preview"><div class="preview-caption"><span class="live-dot"></span> CLUB GREEN <span class="caption-divider">/</span> 시범 경기</div><button id="btnPreview" class="preview-toggle" aria-pressed="false" aria-label="시범 경기 일시정지">Ⅱ</button><span class="court-watermark" aria-hidden="true">SEE YOU ON THE COURT.</span></div>
+        <div class="feature-perks"><span><svg aria-hidden="true" class="icon"><use href="#i-pad"/></svg> 조이콘 · 키보드 · 게임패드</span><span><svg aria-hidden="true" class="icon"><use href="#i-users"/></svg> 1–2인 플레이</span><span><svg aria-hidden="true" class="icon"><use href="#i-spark"/></svg> 이동은 자동으로</span></div>
+      </section>
+      <section class="match-setup" aria-labelledby="setupTitle">
+        <div class="setup-heading"><div><p class="eyebrow">LET’S PLAY</p><h2 id="setupTitle">오늘의 매치</h2></div><svg class="setup-ball" aria-hidden="true"><use href="#i-ball"/></svg></div>
+        <fieldset class="setup-group"><legend><span class="step-number">01</span> 누구와 플레이할까요?</legend><div id="modeRow" class="mode-options" aria-label="경기 모드"><button data-mode="2p"><svg aria-hidden="true" class="icon"><use href="#i-users"/></svg><strong>함께 대결</strong><span>친구와 나란히, 2인 대전</span><i class="choice-dot"></i></button><button data-mode="cpu"><svg aria-hidden="true" class="icon"><use href="#i-cpu"/></svg><strong>혼자 연습</strong><span>나만의 페이스로, vs CPU</span><i class="choice-dot"></i></button></div><div id="lvRow" class="level-options"><span>CPU 난이도</span><div class="row"><button data-lv="0">쉬움</button><button data-lv="1">보통</button><button data-lv="2">어려움</button></div></div></fieldset>
+        <fieldset class="setup-group win-group"><legend><span class="step-number">02</span> 몇 게임으로 승부할까요?</legend><div id="gwRow" class="win-options" aria-label="승리에 필요한 게임 수"><button data-gw="1">1<span>게임</span></button><button data-gw="2">2<span>게임</span></button><button data-gw="3">3<span>게임</span></button></div><p class="field-hint">선택한 게임 수를 먼저 이기면 승리해요.</p></fieldset>
+        <div class="start-area"><button id="btnStart" class="primary start-button">캐릭터 선택하기 <svg aria-hidden="true" class="icon"><use href="#i-arrow"/></svg></button><span class="start-hint"><kbd>Enter</kbd> 키로도 시작할 수 있어요</span></div>
+      </section>
     </div>
-    <div class="foot">
-      <div class="row"><button id="btnHome">🏠 놀자 홈</button><span class="small">⚠ 조이콘 스트랩 꼭 끼고, TV와 거리 두고 휘두르기!</span></div>
-      <div class="row"><button id="btnFull">⛶ 전체화면</button><button id="btnStart" class="primary">캐릭터 선택 ▶</button></div>
+    <section class="connection-card" aria-labelledby="controllerTitle"><span class="connection-icon"><svg aria-hidden="true" class="icon"><use href="#i-pad"/></svg></span><div class="connection-copy"><h2 id="controllerTitle">휘두르는 재미, 조이콘과 함께</h2><p id="connectionStatus">키보드만으로도 바로 플레이할 수 있어요.</p></div><div class="connection-actions"><button id="btnSwap" class="text-button">P1 ↔ P2 바꾸기</button><button id="btnConnect" class="connect-button"><span class="plus-icon" aria-hidden="true">+</span> 조이콘 연결</button></div></section>
+    <div class="secondary-grid">
+      <details class="club-details" id="controllerDetails"><summary><span><svg aria-hidden="true" class="icon"><use href="#i-pad"/></svg> 컨트롤러 상태 · 연결 방법</span><svg aria-hidden="true" class="icon chevron"><use href="#i-chevron"/></svg></summary><div class="details-content"><p class="small">윈도우 블루투스에서 조이콘 측면의 동그란 버튼을 길게 눌러 페어링한 뒤, ‘조이콘 연결’을 눌러주세요. 두 개를 연결하려면 한 번씩 눌러주세요.</p><div id="hidWarn" class="warn hidden" role="status"></div><div id="slots" aria-live="polite"></div></div></details>
+      <details class="club-details" id="settingsDetails"><summary><span><svg aria-hidden="true" class="icon"><use href="#i-sliders"/></svg> 그래픽 · 플레이 설정</span><svg aria-hidden="true" class="icon chevron"><use href="#i-chevron"/></svg></summary><div class="details-content"><div class="setting-title">그래픽 품질</div><div id="qRow" class="row seg"><button data-q="auto">자동</button><button data-q="high">높음</button><button data-q="mid">보통</button><button data-q="low">낮음</button><button data-q="2d">2D</button></div><div id="gfxInfo" class="small gfx-info"></div><label class="set" for="sens">스윙 감도 <input id="sens" type="range" min="0.6" max="1.6" step="0.05"><span id="sensV" class="small"></span></label><label class="set" for="lat">타이밍 보정 <input id="lat" type="range" min="0" max="200" step="10"><span id="latV" class="small"></span></label><label class="set guide-setting"><input id="guide" type="checkbox"> 타이밍 가이드 표시</label><p class="small">공을 칠 자리에 줄어드는 원이 나타나요. 자꾸 ‘늦음’이 나면 타이밍 보정을 올려보세요.</p></div></details>
     </div>
-  </div>
+    <footer class="club-footer"><button id="btnHome" class="text-button">← 놀자 라운지</button><span>조이콘 스트랩을 꼭 끼고, 주변 공간을 확보해 주세요.</span><span class="footer-signoff">GOOD GAMES. GREAT TIMES.</span></footer>
+  </main>
 </div>
 
-<div id="select" class="overlay sel hidden">
-  <div>
-    <div class="seltitle">캐릭터 선택</div>
-    <div id="roster" class="roster"></div>
-    <div class="center" style="margin-top:8px"><span class="hint">클릭 = P1 · 우클릭 = P2 · 같은 캐릭터를 둘이 골라도 돼요</span></div>
-  </div>
-  <div class="selbottom">
-    <div class="selcard" id="selc0">
-      <div class="row"><span class="badge b1" id="selb0">P1</span><b class="nm" id="seln0"></b><span class="st" id="sels0"></span></div>
-      <div class="row"><button data-p="0" data-d="-1">◀</button><button data-p="0" data-d="1">▶</button><button data-p="0">준비</button></div>
-      <div class="small" id="selh0" style="margin-top:6px"></div>
-    </div>
-    <div class="selmid"><div id="selMsg" class="selmsg"></div><button id="btnSelBack">← 메뉴</button></div>
-    <div class="selcard" id="selc1">
-      <div class="row"><span class="badge b2" id="selb1">P2</span><b class="nm" id="seln1"></b><span class="st" id="sels1"></span></div>
-      <div class="row"><button data-p="1" data-d="-1">◀</button><button data-p="1" data-d="1">▶</button><button data-p="1">준비</button></div>
-      <div class="small" id="selh1" style="margin-top:6px"></div>
-    </div>
-  </div>
-</div>
+<dialog id="guideDialog" class="guide-dialog" aria-labelledby="guideTitle"><div class="dialog-heading"><div><p class="eyebrow">READY, SET, SWING!</p><h2 id="guideTitle">처음이어도 괜찮아요.</h2></div><button id="btnGuideClose" class="close-button" aria-label="플레이 가이드 닫기">×</button></div><p class="sub">이동은 자동! 공이 내 앞에 왔을 때 휘두르기만 하면 돼요.</p><div class="guide-steps"><div><span>01</span><h3>타이밍에 맞춰</h3><p>일찍 치면 왼쪽, 늦게 치면 오른쪽으로 날아가요.</p></div><div><span>02</span><h3>힘과 방향으로 구질을</h3><p>살살 치면 로브, 세게 치면 빠른 공. 아래에서 위로 올려 치면 탑스핀, 위에서 아래로 깎으면 슬라이스!</p></div><div><span>03</span><h3>랠리를 이어가요</h3><p>긴 랠리 중 나이스 타이밍을 맞추면 특별한 필살 샷!</p></div></div><div class="keyboard-guide"><h3><svg aria-hidden="true" class="icon"><use href="#i-keyboard"/></svg> 키보드로 플레이</h3><div class="keyboard-players"><div><span class="badge b1">P1</span><kbd>A</kbd> 살살 <kbd>S</kbd> 보통 <kbd>D</kbd> 세게 <kbd>X</kbd> 슬라이스</div><div><span class="badge b2">P2</span><kbd>J</kbd> 살살 <kbd>K</kbd> 보통 <kbd>L</kbd> 세게 <kbd>,</kbd> 슬라이스</div></div><p class="small"><kbd>Enter</kbd> 시작 · <kbd>Esc</kbd> 일시정지 · <kbd>F</kbd> 전체화면</p><p class="small">게임패드: A 보통 · X 살살 · Y / RB / RT 세게 · B 슬라이스</p></div></dialog>
 
-<div id="pause" class="overlay hidden"><div class="panel center" style="width:min(460px,100%)">
-  <div class="big">일시정지</div>
-  <div class="row" style="justify-content:center;margin-top:10px"><button id="btnResume" class="primary">계속</button><button id="btnQuit">메뉴로</button></div>
-  <div id="pauseInfo" class="small" style="margin-top:12px"></div>
-</div></div>
-
-<div id="result" class="overlay bottom hidden"><div class="panel center" style="width:min(620px,100%)">
-  <div id="resTitle" class="big"></div>
-  <div id="resBody" class="sub" style="font-size:19px;line-height:1.8"></div>
-  <div class="row" style="justify-content:center;margin-top:6px"><button id="btnAgain" class="primary">다시 하기</button><button id="btnReselect">캐릭터 바꾸기</button><button id="btnMenu">메뉴로</button></div>
-  <div class="small" style="margin-top:10px">조이콘 버튼 / Enter = 다시 하기</div>
-</div></div>
-
+<div id="select" class="overlay sel hidden"><div class="selection-top"><p class="eyebrow">MEET YOUR MATCH</p><div class="seltitle">코트 위의 나를 골라요<span>.</span></div><div id="roster" class="roster"></div><div class="center selection-hint"><span class="hint">클릭 = P1 · 우클릭 = P2 · 아래 화살표 버튼으로도 고를 수 있어요</span></div></div><div class="selbottom"><div class="selcard" id="selc0"><div class="row"><span class="badge b1" id="selb0">P1</span><b class="nm" id="seln0"></b><span class="st" id="sels0"></span></div><div class="row"><button data-p="0" data-d="-1" aria-label="P1 이전 캐릭터">←</button><button data-p="0" data-d="1" aria-label="P1 다음 캐릭터">→</button><button data-p="0">준비</button></div><div class="small" id="selh0"></div></div><div class="selmid"><div id="selMsg" class="selmsg" role="status"></div><button id="btnSelBack">← 매치 설정</button></div><div class="selcard" id="selc1"><div class="row"><span class="badge b2" id="selb1">P2</span><b class="nm" id="seln1"></b><span class="st" id="sels1"></span></div><div class="row"><button data-p="1" data-d="-1" aria-label="P2 이전 캐릭터">←</button><button data-p="1" data-d="1" aria-label="P2 다음 캐릭터">→</button><button data-p="1">준비</button></div><div class="small" id="selh1"></div></div></div></div>
+<div id="pause" class="overlay hidden"><div class="panel center pause-panel"><p class="eyebrow">TAKE A BREATHER</p><div class="big">잠깐, 쉬어갈까요?</div><p class="sub">코트는 그대로 기다리고 있어요.</p><div class="row modal-actions"><button id="btnResume" class="primary">계속 플레이</button><button id="btnQuit">매치 설정으로</button></div><div id="pauseInfo" class="small"></div></div></div>
+<div id="result" class="overlay bottom hidden"><div class="panel center result-panel"><p class="eyebrow">WHAT A MATCH!</p><div id="resTitle" class="big"></div><div id="resBody" class="sub"></div><div class="row modal-actions"><button id="btnAgain" class="primary">한 판 더!</button><button id="btnReselect">캐릭터 바꾸기</button><button id="btnMenu">매치 설정</button></div><div class="small result-hint">조이콘 버튼 / Enter = 다시 하기</div></div></div>
 <script src="../../shared/vendor/three.min.js"></script>
 <script src="../../shared/store.js"></script>
 <script src="../../shared/audio.js"></script>
 <script src="../../shared/joycon.js"></script>
 <script src="../../shared/characters.js"></script>
 <script src="tennis.js"></script>
+<script src="tennis-ui.js"></script>
 </body>
 </html>
