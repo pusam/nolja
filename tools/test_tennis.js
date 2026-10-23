@@ -151,6 +151,9 @@ G3.camera.aspect = desktopAspect; G3.camera.updateProjectionMatrix(); step(1.5);
 const keep = ST.settings.chars[1];
 for (let k = 0; k < 8; k++) { if (k !== ST.sel[1].idx) ST.selSet(1, k); step(0.2); const f = sceneFinite(); if (f.bad) { assert(false, ST.CHARS[k].name + ' 모델 좌표 이상'); } }
 assert(true, '캐릭터 8명 모델 모두 생성·표시 정상');
+const monsterCtx = fakeCtx(), monsterNaNBefore = draw.nan;
+for (const ch of ST.CHARS) for (const front of [true, false]) sandbox.Nolja.characters.drawMonster2D(monsterCtx, ch, 76, 0, 152, front);
+assert(draw.nan === monsterNaNBefore, '캐릭터 8명 앞·뒷모습 2D 그리기 좌표 모두 정상');
 if (ST.sel[1].idx !== keep) ST.selSet(1, keep);
 if (ST.sel[1].ready) ST.selReady(1, false);
 ST.emitSwing(0, 0.8, now);          // P1 휘둘러서 준비
@@ -325,8 +328,10 @@ function swingReports({ beta, side, head, roll, peakDps = 1400 }) {
 {
   const RS = [1, -1], seen = { fh: 0, bh: 0 };
   let placedOk = true;
+  // 3D 도형 UUID 생성이 난수를 쓰므로 앞선 모델 생성 수와 독립된 데모 시나리오로 확인한다.
+  randomSeed = 0x12345678;
   ST.toMenu(); step(0.1, { render: false });
-  for (let i = 0, last = null; i < 60 * 60; i++) {
+  for (let i = 0, last = null; i < 120 * 60; i++) {
     now += 1 / 60; ST.update();
     const s = G.shot;
     if (s && s !== last && s.kind !== 'serve' && s.hit.z <= 1.8) {
@@ -334,7 +339,7 @@ function swingReports({ beta, side, head, roll, peakDps = 1400 }) {
       if (((s.hit.x - s.stand.x) * RS[s.receiver] > 0) !== (s.side === 'fh')) placedOk = false;   // 포핸드면 공이 라켓 쪽에
     }
   }
-  assert(placedOk && seen.fh > 10 && seen.bh > 10, `공이 오는 쪽에 따라 포핸드·백핸드로 자리 잡음 (1분 데모: 포핸드 ${seen.fh} · 백핸드 ${seen.bh})`);
+  assert(placedOk && seen.fh > 10 && seen.bh > 10, `공이 오는 쪽에 따라 포핸드·백핸드로 자리 잡음 (2분 데모: 포핸드 ${seen.fh} · 백핸드 ${seen.bh})`);
 
   // 2인 경기에서 P2가 조이콘으로 받기: 공이 오는 쪽대로 휘두름 → 휘두르기 시작하자마자 화면 스윙 시작, 타점에서 맞음
   const j = { player: 1, gyro: 0, armed: true, swinging: false, swingStart: 0, peak: 0, peakT: 0, cool: 0, prevBtn: 0, simple: 0, lastReport: 0, lastPow: 0, lastSwingT: -9, ok: true, device: {} };

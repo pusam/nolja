@@ -556,7 +556,7 @@ function buildRoster() {
   if (rosterBuilt) return;
   rosterBuilt = true;
   const el = $('roster');
-  el.innerHTML = CHARS.map((ch, k) => `<button type="button" class="tile" data-k="${k}" aria-label="${ch.name} 캐릭터 선택"><span class="tg t1" aria-hidden="true">1P</span><span class="tg t2" aria-hidden="true">2P</span><canvas width="152" height="152" aria-hidden="true"></canvas><span class="tn">${ch.name}</span></button>`).join('');
+  el.innerHTML = CHARS.map((ch, k) => `<button type="button" class="tile" data-k="${k}" aria-label="${ch.name} 캐릭터 선택"><span class="tg t1" aria-hidden="true">1P</span><span class="tg t2" aria-hidden="true">2P</span><canvas width="200" height="200" aria-hidden="true"></canvas><span class="tn">${ch.name}</span><span class="character-type">${ch.tag || '테니스 메이트'}</span></button>`).join('');
   if (el.querySelectorAll) el.querySelectorAll('canvas').forEach((c, k) => NC.portrait(c, CHARS[k]));
   const tileOf = e => (e.target && e.target.closest) ? e.target.closest('.tile') : null;
   el.onclick = e => { const tl = tileOf(e); if (tl) selSet(0, +tl.dataset.k); };
@@ -834,6 +834,17 @@ function resize() {
   const lv = Q[gfx.level] || Q.mid;
   const stage = $('courtStage');
   const cssW = Math.max(1, stage && stage.clientWidth || window.innerWidth), cssH = Math.max(1, stage && stage.clientHeight || window.innerHeight);
+  // Frame the partners inside the gap between the roster and player controls.
+  // Reading only on resize keeps layout work out of the animation loop.
+  G3.selectFraming = null;
+  const selectScreen = $('select');
+  if (selectScreen && !selectScreen.classList.contains('hidden') && selectScreen.querySelector) {
+    const top = selectScreen.querySelector('.selection-top'), bottom = selectScreen.querySelector('.selbottom');
+    if (top && bottom && top.getBoundingClientRect && bottom.getBoundingClientRect) {
+      const a = top.getBoundingClientRect().bottom + 12, b = bottom.getBoundingClientRect().top - 14;
+      if (b - a > 90) G3.selectFraming = { height: (b - a) / cssH, center: (a + b) / (2 * cssH) };
+    }
+  }
   const dpr = window.devicePixelRatio || 1;
   const pr = Math.max(0.25, Math.min(dpr, lv.maxW / cssW));   // 4K 화면이어도 렌더 해상도는 상한까지만
   hud.width = Math.max(1, Math.round(cssW * pr)); hud.height = Math.max(1, Math.round(cssH * pr));
@@ -947,7 +958,7 @@ function drawScoreboard(g) {
   }
   const pt = pointText();
   g.textAlign = 'center'; g.fillStyle = '#7e8b77'; g.font = `800 14px ${FONT}`;
-  g.fillText('NOLJA TENNIS CLUB', VW / 2, Y + 26);
+  g.fillText('NOLJA MONSTER RALLY', VW / 2, Y + 26);
   g.fillStyle = '#173e30';
   if (pt.mid) { g.font = `900 26px ${FONT}`; g.fillText(pt.mid, VW / 2, Y + 69); }
   else { g.font = `900 49px ${FONT}`; g.fillText(`${pt.l}   ${pt.r}`, VW / 2, Y + 71); }
@@ -1089,7 +1100,7 @@ function groundLine(g, x1, y1, x2, y2, w = 0.06) {
 function buildCourt2D() {
   const c = makeLayer(), g = c.getContext('2d');
   const sky = g.createLinearGradient(0, 0, 0, VH);
-  sky.addColorStop(0, '#c8ded6'); sky.addColorStop(0.38, '#eef0d9'); sky.addColorStop(1, '#f9f0d6');
+  sky.addColorStop(0, '#cbdaf5'); sky.addColorStop(0.38, '#eee5f1'); sky.addColorStop(1, '#fff0d9');
   g.fillStyle = sky; g.fillRect(0, 0, VW, VH);
   g.fillStyle = '#fff4c9'; circ(g, 1490, 62, 40);
   g.fillStyle = 'rgba(255,255,242,0.55)';
@@ -1103,7 +1114,7 @@ function buildCourt2D() {
   }
   for (let row = 0; row < 4; row++) {
     const y = 151 + row * 21;
-    g.fillStyle = row % 2 ? '#dbceb2' : '#e7dbc0'; g.fillRect(0, y, VW, 22);
+    g.fillStyle = row % 2 ? '#d2c6e2' : '#e7dff1'; g.fillRect(0, y, VW, 22);
     g.fillStyle = 'rgba(92,92,59,0.17)'; g.fillRect(0, y + 19, VW, 3);
     for (let x = 22; x < VW; x += 22 + rng() * 20) {
       if (rng() < 0.25) continue;
@@ -1111,16 +1122,16 @@ function buildCourt2D() {
       g.fillStyle = ['#e8bb91', '#d09a74', '#8d614b'][(rng() * 3) | 0]; circ(g, x, y + 4, 4);
     }
   }
-  poly(g, [[-40, C.len + 7, 0], [40, C.len + 7, 0], [40, C.len + 7, 2.6], [-40, C.len + 7, 2.6]], '#264f3d');
+  poly(g, [[-40, C.len + 7, 0], [40, C.len + 7, 0], [40, C.len + 7, 2.6], [-40, C.len + 7, 2.6]], '#605788');
   const club = proj(0, C.len + 6.95, 1.4);
   g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `800 25px ${FONT}`; g.fillStyle = '#f6edd2';
-  g.fillText('NOLJA  /  TENNIS CLUB', club.x, club.y);
+  g.fillText('NOLJA  /  MONSTER RALLY', club.x, club.y);
   poly(g, [[-40, -9], [40, -9], [40, C.len + 7], [-40, C.len + 7]], '#91a27b');
-  poly(g, [[-9, -6.1], [9, -6.1], [9, C.len + 6.1], [-9, C.len + 6.1]], '#bb8c70');
+  poly(g, [[-9, -6.1], [9, -6.1], [9, C.len + 6.1], [-9, C.len + 6.1]], '#b8a0cf');
   poly(g, [[-C.dblHalfW - 0.12, -0.12], [C.dblHalfW + 0.12, -0.12], [C.dblHalfW + 0.12, C.len + 0.12], [-C.dblHalfW - 0.12, C.len + 0.12]], '#e7d8b2');
-  poly(g, [[-C.dblHalfW, 0], [C.dblHalfW, 0], [C.dblHalfW, C.len], [-C.dblHalfW, C.len]], '#426e53');
+  poly(g, [[-C.dblHalfW, 0], [C.dblHalfW, 0], [C.dblHalfW, C.len], [-C.dblHalfW, C.len]], '#427c75');
   for (let d = 0; d < C.len; d += C.len / 8) {
-    if (Math.round(d / (C.len / 8)) % 2 === 0) poly(g, [[-C.dblHalfW, d], [C.dblHalfW, d], [C.dblHalfW, d + C.len / 8], [-C.dblHalfW, d + C.len / 8]], '#47765a');
+    if (Math.round(d / (C.len / 8)) % 2 === 0) poly(g, [[-C.dblHalfW, d], [C.dblHalfW, d], [C.dblHalfW, d + C.len / 8], [-C.dblHalfW, d + C.len / 8]], '#4c887d');
   }
   const L = (x1, y1, x2, y2) => groundLine(g, x1, y1, x2, y2);
   L(-C.dblHalfW, 0, C.dblHalfW, 0); L(-C.dblHalfW, C.len, C.dblHalfW, C.len);
@@ -1164,33 +1175,27 @@ function groundShadow(g, x, y, r, a) {
 }
 
 function drawPlayer2D(g, p) {
-  const t = T(), ch = charOf(p.i), st = ch.style;
+  const t = T(), ch = charOf(p.i);
   const front = p.i === 1 || game.state === 'select' || game.state === 'matchEnd';   // 카메라를 바라봄
   const hand = front ? -1 : 1;            // 화면에서 라켓 손 방향
   const moving = isMoving(p);
   const won = game.state === 'matchEnd' && p.i === game.winner;
   const bob = won ? Math.abs(Math.sin(t * 6.5)) * 0.3 : moving ? Math.abs(Math.sin(t * 13)) * 0.06 : 0;
   const foot = proj(p.x, p.y, 0), s = foot.s * ch.h;
-  const hip = proj(p.x, p.y, (0.86 + bob) * ch.h), sh = proj(p.x, p.y, (1.36 + bob) * ch.h), hd = proj(p.x, p.y, (1.62 + bob) * ch.h);
-  const col = ch.shirt, skin = ch.skin, accent = COLORS[p.i], wf = ch.w;
-  const stride = moving ? Math.sin(t * 13) * 0.14 : 0;
+  const sh = proj(p.x, p.y, (0.9 + bob) * ch.h), top = proj(p.x, p.y, (1.78 + bob) * ch.h), bottom = proj(p.x, p.y, bob * ch.h);
+  const skin = ch.skin, accent = COLORS[p.i];
+  NC.drawMonster2D(g, ch, foot.x, top.y, Math.max(1, bottom.y - top.y), front);
   g.lineCap = 'round'; g.lineJoin = 'round';
-  g.strokeStyle = skin; g.lineWidth = 0.11 * s;
-  for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(hip.x + sd * 0.09 * s, hip.y); g.lineTo(foot.x + (sd * 0.12 + sd * stride) * s, foot.y - 0.05 * s); g.stroke(); }
-  g.fillStyle = '#f8fafc';
-  for (const sd of [-1, 1]) { g.beginPath(); g.ellipse(foot.x + (sd * 0.12 + sd * stride) * s, foot.y - 0.03 * s, 0.085 * s, 0.045 * s, 0, 0, Math.PI * 2); g.fill(); }
-  g.fillStyle = ch.shorts; rr(g, hip.x - 0.19 * s * wf, hip.y - 0.1 * s, 0.38 * s * wf, 0.22 * s, 0.05 * s); g.fill();
-  g.fillStyle = col; rr(g, sh.x - 0.21 * s * wf, sh.y - 0.05 * s, 0.42 * s * wf, hip.y - sh.y + 0.02 * s, 0.1 * s); g.fill();
   const shY = sh.y + 0.03 * s;
-  g.strokeStyle = skin; g.lineWidth = 0.085 * s;
-  g.beginPath(); g.moveTo(sh.x - hand * 0.17 * s, shY); g.lineTo(sh.x - hand * 0.27 * s, shY + (won ? -0.35 : 0.3) * s); g.stroke();
+  g.strokeStyle = skin; g.lineWidth = 0.16 * s;
+  g.beginPath(); g.moveTo(sh.x - hand * 0.25 * s, shY); g.lineTo(sh.x - hand * 0.36 * s, shY + (won ? -0.22 : 0.16) * s); g.stroke();
   const k = (t - p.swingT) / SWING_DUR, swinging = k >= 0 && k < 1;
   const prep = !swinging && prepFor(p, t);
   const side = hand * ((swinging ? p.anim === 'backhand' : prep && prep.anim === 'backhand') ? -1 : 1);   // 백핸드는 몸 반대쪽으로
   const a = swinging ? lerp(-1.3, 1.95, p.swingLive ? k : 1 - Math.pow(1 - k, 3)) : won ? -1.4 : 0.3;
-  const shX = sh.x + hand * 0.17 * s;
+  const shX = sh.x + hand * 0.26 * s;
   const tilt = swinging ? (k - 0.5) * 0.3 * (p.swingSpin || 0) : 0;   // 탑스핀은 아래→위, 슬라이스는 위→아래
-  const hx = shX + side * Math.cos(a) * 0.4 * s, hy = shY + (0.24 - Math.sin(a) * 0.06 - tilt) * s - (won ? 0.5 * s : 0);
+  const hx = shX + side * Math.cos(a) * 0.33 * s, hy = shY + (0.18 - Math.sin(a) * 0.06 - tilt) * s - (won ? 0.4 * s : 0);
   g.beginPath(); g.moveTo(shX, shY); g.lineTo(hx, hy); g.stroke();
   if (swinging) {
     g.strokeStyle = `rgba(255,255,255,${0.35 * (1 - k)})`; g.lineWidth = 0.12 * s; g.beginPath();
@@ -1204,24 +1209,7 @@ function drawPlayer2D(g, p) {
   g.fillStyle = 'rgba(255,255,255,0.28)'; g.strokeStyle = accent; g.lineWidth = 0.04 * s;
   g.beginPath(); g.ellipse(0, 0, 0.12 * s, 0.16 * s, 0, 0, Math.PI * 2); g.fill(); g.stroke();
   g.restore();
-  // 머리
-  const hr = 0.17 * s;
-  if (st === 'afro') { g.fillStyle = ch.hair; circ(g, hd.x, hd.y - 0.06 * s, hr * 1.4); }
-  g.fillStyle = skin; circ(g, hd.x, hd.y, hr);
-  if (st === 'cap') { g.fillStyle = ch.cap || '#0f766e'; g.beginPath(); g.arc(hd.x, hd.y - 0.02 * s, hr * 1.03, Math.PI, Math.PI * 2); g.fill(); }
-  else if (st !== 'bald' && st !== 'afro') {
-    g.fillStyle = ch.hair;
-    if (front) { g.beginPath(); g.arc(hd.x, hd.y - 0.01 * s, hr * 1.02, Math.PI * 1.05, Math.PI * 1.95); g.fill(); }
-    else circ(g, hd.x, hd.y + 0.01 * s, hr * 0.94);
-    if (st === 'bun') circ(g, hd.x, hd.y - hr * 1.05, hr * 0.38);
-    if (st === 'ponytail' && !front) { g.beginPath(); g.ellipse(hd.x, hd.y + hr * 0.9, hr * 0.28, hr * 0.5, 0, 0, Math.PI * 2); g.fill(); }
-  }
-  if (front) {
-    g.fillStyle = '#1f2937';
-    for (const ex of [-0.055, 0.055]) circ(g, hd.x + ex * s, hd.y + 0.015 * s, 0.02 * s);
-  }
-  if (ch.band) { g.fillStyle = accent; rr(g, hd.x - 0.165 * s, hd.y - 0.08 * s, 0.33 * s, 0.05 * s, 0.02 * s); g.fill(); }
-  drawTag(g, p, proj(p.x, p.y, (2.02 + bob) * ch.h), t);
+  drawTag(g, p, proj(p.x, p.y, (1.92 + bob) * ch.h), t);
 }
 
 function drawBall2D(g, b) {
@@ -1265,7 +1253,20 @@ function render2D() {
   if (!bgLayer) { bgLayer = buildCourt2D(); netLayer = buildNet2D(); }
   const g = hctx, t = T();
   g.setTransform(1, 0, 0, 1, 0, 0);
-  g.fillStyle = '#8f9f78'; g.fillRect(0, 0, hud.width, hud.height);
+  g.fillStyle = '#abc4b5'; g.fillRect(0, 0, hud.width, hud.height);
+  if (game.state === 'select') {
+    const cover = Math.max(hud.width / VW, hud.height / VH);
+    g.drawImage(bgLayer, (hud.width - VW * cover) / 2, (hud.height - VH * cover) / 2, VW * cover, VH * cover);
+    const framing = G3.selectFraming || { height: 0.42, center: 0.53 };
+    const size = Math.min(hud.height * framing.height * 0.94, hud.width * 0.46);
+    const y = hud.height * framing.center - size / 2;
+    for (const i of [0, 1]) {
+      const x = hud.width * (i === 0 ? 0.29 : 0.71);
+      g.fillStyle = '#4f42631c'; g.beginPath(); g.ellipse(x, y + size * 0.94, size * 0.24, size * 0.04, 0, 0, Math.PI * 2); g.fill();
+      NC.drawMonster2D(g, charOf(i), x, y, size, true);
+    }
+    return;
+  }
   const sx = game.shake > 0 && demoPauseAt === null ? (Math.random() - 0.5) * 14 * game.shake : 0;
   const sy = game.shake > 0 && demoPauseAt === null ? (Math.random() - 0.5) * 10 * game.shake : 0;
   g.setTransform(view.k, 0, 0, view.k, view.ox + sx * view.k, view.oy + sy * view.k);
@@ -1347,10 +1348,10 @@ function ensureScene3D() {
   const Sc = new THREE.Scene(); G3.scene = Sc;
   Sc.background = canvasTex(4, 256, (g, w, h) => {
     const gr = g.createLinearGradient(0, 0, 0, h);
-    gr.addColorStop(0, '#c6ddd5'); gr.addColorStop(0.58, '#e7e9d1'); gr.addColorStop(1, '#f5edcf');
+    gr.addColorStop(0, '#cbdaf5'); gr.addColorStop(0.58, '#eee5f1'); gr.addColorStop(1, '#fff0d9');
     g.fillStyle = gr; g.fillRect(0, 0, w, h);
   });
-  Sc.fog = new THREE.Fog(0xdce2c9, 48, 130);
+  Sc.fog = new THREE.Fog(0xf0e6e0, 48, 130);
   G3.camera = new THREE.PerspectiveCamera(42, 16 / 9, 0.3, 260);
   // 따뜻한 낮빛과 부드러운 보조광. 동적 조명 수는 기존과 동일하다.
   Sc.add(new THREE.HemisphereLight(0xf8f5dc, 0x60734d, 0.88));
@@ -1366,7 +1367,7 @@ function ensureScene3D() {
   fill.position.set(0, 6, 16); fill.target.position.set(0, 1, -4);
   Sc.add(fill, fill.target);
   // 바닥 · 코트
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(160, 160), lam(0x879b72));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(160, 160), lam(0xb0c3a5));
   ground.rotation.x = -Math.PI / 2; ground.position.set(0, -0.02, -12); ground.receiveShadow = true; Sc.add(ground);
   G3.courtTex = buildCourtTex();
   const court = new THREE.Mesh(new THREE.PlaneGeometry(18, 36), lam(0xffffff, { map: G3.courtTex }));
@@ -1384,16 +1385,16 @@ function buildCourtTex() {
   const W = 1024, H = 2048, ppm = W / 18, d1 = C.net + 18;
   const X = x => (x + 9) * ppm, Y = d => (d1 - d) * ppm;
   return canvasTex(W, H, g => {
-    g.fillStyle = '#b88a6d'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#b8a0cf'; g.fillRect(0, 0, W, H);
     g.fillStyle = '#e5d4ad'; g.fillRect(X(-C.dblHalfW - 0.12), Y(C.len + 0.12), (2 * C.dblHalfW + 0.24) * ppm, (C.len + 0.24) * ppm);
-    g.fillStyle = '#3c684b'; g.fillRect(X(-C.dblHalfW), Y(C.len), 2 * C.dblHalfW * ppm, C.len * ppm);
+    g.fillStyle = '#427c75'; g.fillRect(X(-C.dblHalfW), Y(C.len), 2 * C.dblHalfW * ppm, C.len * ppm);
     for (let band = 0; band < 8; band += 2) {
-      g.fillStyle = '#416f51'; g.fillRect(X(-C.dblHalfW), Y((band + 1) * C.len / 8), 2 * C.dblHalfW * ppm, C.len / 8 * ppm);
+      g.fillStyle = '#4c887d'; g.fillRect(X(-C.dblHalfW), Y((band + 1) * C.len / 8), 2 * C.dblHalfW * ppm, C.len / 8 * ppm);
     }
     // 코트 밖 클럽 이름도 같은 텍스처에 담아 추가 메시를 만들지 않는다.
     g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = 'rgba(255,247,223,0.66)'; g.font = `700 25px ${FONT}`;
-    g.fillText('N O L J A   T E N N I S   C L U B', W / 2, Y(-3.25));
-    g.save(); g.translate(W / 2, Y(C.len + 3.25)); g.rotate(Math.PI); g.fillText('N O L J A   T E N N I S   C L U B', 0, 0); g.restore();
+    g.fillText('N O L J A   M O N S T E R   R A L L Y', W / 2, Y(-3.25));
+    g.save(); g.translate(W / 2, Y(C.len + 3.25)); g.rotate(Math.PI); g.fillText('N O L J A   M O N S T E R   R A L L Y', 0, 0); g.restore();
     const rng = mulberry32(3);   // 표면 질감 (아주 옅은 점)
     for (let i = 0; i < 9000; i++) { g.fillStyle = rng() < 0.5 ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.035)'; g.fillRect(rng() * W, rng() * H, 2, 2); }
     const lw = Math.max(3, 0.065 * ppm);
@@ -1443,7 +1444,7 @@ function buildStadium3D(Sc) {
     for (let x = -40; x < w + 50; x += 38) {
       const y = 100 + rng() * 48, r = 45 + rng() * 32;
       g.fillStyle = '#506e50'; g.fillRect(x - 4, y + r * 0.5, 8, h);
-      g.fillStyle = ['#6b8660', '#7e956b', '#597b58', '#879d74'][(rng() * 4) | 0];
+      g.fillStyle = ['#8bb6a2', '#b4c697', '#89aa9c', '#b8accd'][(rng() * 4) | 0];
       g.beginPath(); g.ellipse(x, y, r * 0.78, r, 0, 0, Math.PI * 2); g.fill();
       g.fillStyle = 'rgba(209,220,161,0.16)'; g.beginPath(); g.ellipse(x - r * 0.15, y - r * 0.22, r * 0.48, r * 0.62, -0.3, 0, Math.PI * 2); g.fill();
     }
@@ -1456,7 +1457,7 @@ function buildStadium3D(Sc) {
     trees.rotation.y = sx * Math.PI / 2; trees.position.set(sx * 29, 9, -13); Sc.add(trees);
   }
   const crowd = canvasTex(1024, 512, (g, w, h) => {
-    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#d9cdaf'); gr.addColorStop(1, '#b8aa88');
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#e7dff1'); gr.addColorStop(1, '#bcb4cf');
     g.fillStyle = gr; g.fillRect(0, 0, w, h);
     const rows = 10, rh = h / rows;
     for (let r = 0; r < rows; r++) {
@@ -1483,10 +1484,10 @@ function buildStadium3D(Sc) {
   }
   // 광고판
   const ad = canvasTex(512, 64, (g, w, h) => {
-    g.fillStyle = '#254d39'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#605788'; g.fillRect(0, 0, w, h);
     g.fillStyle = '#c4b987'; g.fillRect(0, h - 3, w, 3); g.fillRect(0, 0, w, 3);
     g.fillStyle = '#f6edd2'; g.font = `700 25px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText('NOLJA  /  TENNIS CLUB', w / 2, h / 2);
+    g.fillText('NOLJA  /  MONSTER RALLY', w / 2, h / 2);
   });
   const adMat = len => { const t = ad.clone(); t.wrapS = THREE.RepeatWrapping; t.repeat.set(len / 7, 1); t.needsUpdate = true; return basic(0xffffff, { map: t }); };
   const backAd = new THREE.Mesh(new THREE.PlaneGeometry(35, 1), adMat(35)); backAd.position.set(0, 0.5, -(C.len + 6.3)); Sc.add(backAd);
@@ -1707,7 +1708,15 @@ function sync3D() {
   const bp = currentBall(t);
   G3.sway = lerp(G3.sway, bp ? clamp(bp.x, -4, 4) * 0.14 : 0, 1 - Math.exp(-dt * 2.5));
   const portraitDistance = clamp(1.2 / cam.aspect, 1, 2.6);
-  if (game.state === 'select') { K.tgtPos.set(0, 1.5, -2.2 + 4.9 * portraitDistance); K.tgtLook.set(0, 1.0, -2.2); }
+  if (game.state === 'select') {
+    const framing = G3.selectFraming;
+    if (framing) {
+      const tan = Math.tan(cam.fov * Math.PI / 360);
+      const distance = Math.max(4.9, 2.2 / (2 * tan * framing.height), 2 / (tan * cam.aspect));
+      const lookY = 1.05 + (framing.center - 0.5) * 2 * distance * tan;
+      K.tgtPos.set(0, lookY + 0.45, -2.2 + distance); K.tgtLook.set(0, lookY, -2.2);
+    } else { K.tgtPos.set(0, 1.5, -2.2 + 4.9 * portraitDistance); K.tgtLook.set(0, 1.0, -2.2); }
+  }
   else if (game.state === 'matchEnd') { K.tgtPos.set(0, 1.7, -2.3 + 6.7 * portraitDistance); K.tgtLook.set(0, 1.3, -2.3); }
   else if (game.demo) { K.tgtPos.set(2.6 + G3.sway * 0.45, 13.5, 15.8); K.tgtLook.set(0, 0, -10.5); }
   else { K.tgtPos.set(G3.sway, 8, 12); K.tgtLook.set(G3.sway * 1.2, 0, -7.1); }

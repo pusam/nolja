@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#173d30">
 <meta name="description" content="우리 집이 플레이 그라운드가 되는 시간. 조이콘이나 키보드로 함께 즐기는 놀자 게임 클럽.">
-<title>놀자 · 우리 집 게임 클럽</title>
+<title>놀자 · 몬스터 테니스 클럽</title>
 <link rel="stylesheet" href="shared/home.css">
 </head>
 <body>
@@ -26,15 +26,16 @@
     <section id="games" aria-labelledby="page-title">
       <div class="intro"><div><p class="eyebrow">LITTLE GAMES. BIG MOMENTS.</p><h1 id="page-title">같이 놀면, 더 재밌으니까.</h1></div><p class="intro-note">오늘의 플레이 메이트를 부르고,<br>우리 집을 플레이 그라운드로.</p></div>
       <div id="channels" class="channels">
-        <a class="ch hero focus" data-i="0" href="games/tennis/index.html" aria-label="스윙 테니스 시작하기. 1인 CPU 대전 또는 2인 대전">
+        <a class="ch hero focus" data-i="0" href="games/tennis/index.html" aria-label="몬스터 테니스 시작하기. 1인 CPU 대전 또는 2인 대전">
           <div class="hero-copy">
-            <span class="available"><i></i> 지금 플레이 가능</span><p class="hero-kicker">YOUR COURT, YOUR GAME.</p>
-            <h2>스윙<br>테니스<span class="title-dot">.</span></h2>
-            <p class="hero-desc">가볍게 휘두르고, 시원하게 스매시.<br>거실에서 시작하는 우리만의 랠리.</p>
+            <span class="available"><i></i> 새로운 친구들이 도착했어요</span><p class="hero-kicker">LITTLE MONSTERS. BIG RALLIES.</p>
+            <h2>몬스터<br>테니스<span class="title-dot">.</span></h2>
+            <p class="hero-desc">피카츄부터 아구몬까지, 코트 위에 모였어요.<br>좋아하는 친구와 신나는 랠리를 시작해요!</p>
             <div class="game-tags"><span>1–2 PLAYERS</span><span>조이콘 · 키보드 · 게임패드</span></div>
             <span class="play-button">코트에 입장하기 <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></span>
           </div>
           <div class="hero-art" aria-hidden="true">
+            <img class="home-monsters" src="games/tennis/assets/monster-team.png" alt="" width="1536" height="1024" fetchpriority="high">
             <div class="art-orbit"></div>
             <svg class="court-art" viewBox="0 0 680 490" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs>
@@ -52,7 +53,7 @@
               <ellipse cx="543" cy="151" rx="33" ry="7" fill="#0f3024" opacity=".3"/><circle cx="539" cy="92" r="39" fill="url(#ball-shade)"/><path d="M513 63c19 5 31 21 31 39 0 11-4 20-10 29m33-66c-17 4-28 19-28 35 0 13 4 22 10 29" stroke="#f8fadf" stroke-width="2.8"/>
               <path d="m568 28 8-15m10 30 16-8m-48-15 2-16" stroke="#d4ed72" stroke-width="3" stroke-linecap="round"/><path d="m135 113 6 15 16 5-16 6-6 15-5-15-16-6 16-5Z" fill="#d4ed72"/><circle cx="573" cy="397" r="5" stroke="#d4ed72" stroke-width="2"/><circle cx="175" cy="375" r="4" fill="#d4ed72"/>
             </svg>
-            <div class="court-label"><span>THE LIVING ROOM OPEN</span><span>EST. 2026</span></div>
+            <div class="court-label"><span>8 FRIENDS. ONE COURT.</span><span>LET’S PLAY!</span></div>
           </div>
           <span class="hero-number" aria-hidden="true">NO. 01</span>
         </a>
@@ -77,7 +78,7 @@
 <script>
 (() => {
   'use strict';
-  const GAMES = [{ name: '스윙 테니스', href: 'games/tennis/index.html' }, { name: '볼링', soon: true }, { name: '야구', soon: true }, { name: '레이싱', soon: true }];
+  const GAMES = [{ name: '몬스터 테니스', href: 'games/tennis/index.html' }, { name: '볼링', soon: true }, { name: '야구', soon: true }, { name: '레이싱', soon: true }];
   const plaza = document.getElementById('plaza');
   window.Nolja.characters.CHARS.forEach((ch, k) => {
     const figure = document.createElement('span'); figure.className = 'play-mate';
@@ -90,7 +91,7 @@
   const hint = document.getElementById('gameHint');
   const showChoice = () => {
     tiles.forEach((tile, i) => tile.classList.toggle('focus', i === choice));
-    hint.textContent = GAMES[choice].soon ? GAMES[choice].name + '은 준비 중이에요. ← → 키로 다른 게임을 골라 보세요.' : '스윙 테니스 선택됨 · ← → 게임 고르기 · Enter 시작하기';
+    hint.textContent = GAMES[choice].soon ? GAMES[choice].name + '은 준비 중이에요. ← → 키로 다른 게임을 골라 보세요.' : '몬스터 테니스 선택됨 · ← → 게임 고르기 · Enter 시작하기';
   };
   tiles[0].addEventListener('focus', () => { choice = 0; showChoice(); });
   window.addEventListener('keydown', e => {
