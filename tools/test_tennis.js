@@ -90,6 +90,14 @@ function step(sec, { render = true, each } = {}) {
   const n = Math.round(sec * 60);
   for (let i = 0; i < n; i++) { now += 1 / 60; if (each) each(); ST.update(); if (render) ST.render(); }
 }
+// 서브: 휘둘러 토스 → 공이 꼭대기에 올 때 다시 휘두르기 (offset초만큼 늦게(+)·일찍(-))
+function serveBall(pi, offset = 0, pow = 0.6) {
+  ST.emitSwing(pi, pow, now);
+  if (G.serveStage !== 'toss') return false;
+  while (ST.T() < G.toss.t0 + ST.TOSS.top + lat() + offset) { now += 1 / 60; ST.update(); }
+  ST.emitSwing(pi, pow, now);
+  return G.state === 'rally';
+}
 function summarize(log, label) {
   const by = {}; let sum = 0, max = 0;
   for (const e of log) { by[e.text] = (by[e.text] || 0) + 1; sum += e.rally; max = Math.max(max, e.rally); }
@@ -129,6 +137,7 @@ step(120);
 step(8 * 60, { each: null });
 summarize(G.log, '데모 10분');
 assert(G.log.length > 20, '데모에서 포인트가 계속 진행됨');
+assert(G.log.some(e => e.text === '네트!') && G.log.some(e => e.text === '아웃!'), '데모에서 네트·아웃 실수도 나옴');
 assert(errors.length === 0, '데모 중 예외 없음' + (errors[0] ? ' — ' + errors[0] : ''));
 let fin = sceneFinite();
 assert(fin.bad === 0, `3D 물체 ${fin.n}개 좌표 모두 정상` + (fin.bad ? ' — ' + fin.where : ''));
@@ -188,10 +197,13 @@ assert(fin.bad === 0, '선택 후 3D 좌표 정상');
 // 3) 2인 대결: 둘 다 (약간 흔들리는) 사람 봇으로 끝까지
 G.log.length = 0;
 let guard = 0;
+let tossAim = 0;
 const bot = () => {
   const s = G.shot;
-  if (G.state === 'serve' && ST.T() - G.stateT > 0.6) ST.emitSwing(G.server, 0.6, now);
-  else if (G.state === 'rally' && s && !s.resolved && s.reachable && !s.out) {
+  if (G.state === 'serve') {   // 토스하고, 꼭대기 근처(±0.15초)에서 치기
+    if (G.serveStage === 'ready' && ST.T() - G.stateT > 0.6) { tossAim = (testMath.random() - 0.5) * 0.3; ST.emitSwing(G.server, 0.6, now); }
+    else if (G.serveStage === 'toss' && ST.T() >= G.toss.t0 + ST.TOSS.top + lat() + tossAim) ST.emitSwing(G.server, 0.6, now);
+  } else if (G.state === 'rally' && s && !s.resolved && s.reachable && !s.out) {
     if (s._aim === undefined) s._aim = (testMath.random() - 0.5) * 2.6 * s.W;   // 가끔 판정 창 밖 → 실수
     if (ST.T() >= s.hit.t + lat() + s._aim) ST.emitSwing(s.receiver, 0.3 + testMath.random() * 0.7, now);
   }
@@ -238,7 +250,11 @@ jc.player = 0; jc.cool = 0;
 step(0.6, { render: false });
 for (let i = 0; i < 8; i++) { now += 0.015; report(1100); }
 for (let i = 0; i < 5; i++) { now += 0.015; report(5); }
-assert(G.state === 'rally', `조이콘 스윙으로 서브 (세기 ${Math.round(ST.players[0].lastPow * 100)}%)`);
+assert(G.state === 'serve' && G.serveStage === 'toss' && ST.players[0].anim === 'toss', '조이콘 스윙 → 토스 (공이 떠오름)');
+while (ST.T() < G.toss.t0 + ST.TOSS.top + lat() - 0.01) { now += 1 / 60; ST.update(); }
+for (let i = 0; i < 8; i++) { now += 0.015; report(1100); }
+for (let i = 0; i < 5; i++) { now += 0.015; report(5); }
+assert(G.state === 'rally' && G.shot.kind === 'serve' && !G.shot.out && G.shot.netT == null, `조이콘으로 꼭대기에서 쳐서 서브 성공 (세기 ${Math.round(ST.players[0].lastPow * 100)}%)`);
 const b = ST.players[0].swingT;
 for (let i = 0; i < 6; i++) { now += 0.015; report(300); }
 for (let i = 0; i < 6; i++) { now += 0.015; report(5); }
@@ -367,7 +383,7 @@ function swingReports({ beta, side, head, roll, peakDps = 1400 }) {
     for (let tries = 0; tries < 30; tries++) {
       if (G.state !== 'serve') step(3, { render: false });
       step(0.6, { render: false });
-      ST.emitSwing(G.server, 0.6, now);
+      serveBall(G.server);
       const s = G.shot;
       if (!s || s.receiver !== 1 || !s.reachable || s.hit.z > 1.8 || (want && s.side !== want)) { step(4, { render: false }); continue; }
       const side = (s.side === 'fh') !== wrongSide ? 1 : -1;   // 오른손 기준 포핸드 = 위에서 볼 때 반시계
@@ -408,7 +424,7 @@ function swingReports({ beta, side, head, roll, peakDps = 1400 }) {
   let got = null;
   for (let tries = 0; tries < 6 && !got; tries++) {
     step(0.6, { render: false });
-    ST.emitSwing(G.server, 0.6, now);
+    serveBall(G.server);
     const s = G.shot;
     if (!s || s.receiver !== 1 || !s.reachable) { step(4, { render: false }); continue; }
     while (ST.T() < s.hit.t + lat()) step(1 / 60, { render: false });
@@ -417,6 +433,73 @@ function swingReports({ beta, side, head, roll, peakDps = 1400 }) {
     step(4, { render: false });
   }
   assert(got && got.hitter === 1 && got.spin < -0.5 && got.kind === 'drive', `키보드 쉼표로 슬라이스 리턴 (스핀 ${got ? got.spin : '-'})`);
+}
+
+// 12) 서브 토스·폴트, 네트·롱 실수, 심판 콜, 포핸드·백핸드 판정 끄기
+{
+  ST.toMenu(); ST.settings.mode = '2p'; ST.startMatch(); step(0.6, { render: false });
+  // 토스만 하고 안 치면 공이 떨어지고 다시 토스 (폴트 아님)
+  ST.emitSwing(0, 0.6, now);
+  assert(G.serveStage === 'toss', '서브: 휘두르면 토스부터');
+  step(1.7, { render: false });
+  assert(G.state === 'serve' && G.serveStage === 'ready' && G.faults === 0, '토스한 공을 안 치면 떨어지고 다시 토스 (폴트 아님)');
+  // 많이 늦게(떨어지는 공) 치면 네트 폴트 → 두 번째 서브도 늦으면 더블 폴트
+  const before = G.points.slice();
+  serveBall(0, 0.33);
+  step(1.2, { render: false });
+  assert(G.state === 'fault' && G.faults === 1 && G.msg && G.msg.text === '네트 폴트!', `늦게 친 서브는 네트 폴트 (${G.msg && G.msg.text})`);
+  step(1.6, { render: false });
+  assert(G.state === 'serve' && G.faults === 1 && G.points.join() === before.join(), '폴트 뒤 점수 그대로 두 번째 서브');
+  step(0.6, { render: false });
+  serveBall(0, 0.33);
+  step(1.2, { render: false });
+  const lastLog = G.log[G.log.length - 1];
+  assert(lastLog && lastLog.text === '더블 폴트!' && G.points[1] === before[1] + 1, '두 번째도 폴트면 더블 폴트로 상대 점수');
+  // 꼭대기에서 치면 서비스 박스 안으로
+  step(2, { render: false }); step(0.6, { render: false });
+  let inCount = 0;
+  for (let k = 0; k < 6; k++) {
+    if (G.state !== 'serve') step(4, { render: false });
+    step(0.6, { render: false });
+    if (G.server !== 0) { ST.startServe(); step(0.6, { render: false }); }
+    serveBall(G.server, 0, 0.6);
+    if (G.shot && G.shot.kind === 'serve' && !G.shot.out && G.shot.netT == null) inCount++;
+    step(4, { render: false });
+  }
+  assert(inCount === 6, `꼭대기에서 친 서브는 다 들어감 (${inCount}/6)`);
+
+  // 네트에 걸리는 공: 친 사람 쪽으로 떨어짐
+  const C = ST.C, low = ST.planShot({ x: 0, y: 2, z: 0.6 }, { x: 0, y: C.net + 0.7 }, 0.45, 0.2, true);
+  const endY = low.path[3 * low.n + 1];
+  assert(low.netT != null && endY < C.net, `낮게 친 공은 네트에 걸려 친 사람 쪽에 떨어짐 (${low.netT != null ? low.netT.toFixed(2) + '초' : '-'})`);
+
+  // 심판 콜: 서버 점수부터
+  const keep = { server: G.server, points: G.points.slice() };
+  const call = (sv, pts) => { G.server = sv; G.points = pts; return ST.scoreCall(); };
+  assert(call(0, [1, 0]) === '피프틴 러브' && call(0, [2, 2]) === '서티 올' && call(1, [0, 2]) === '서티 러브' && call(0, [3, 3]) === '듀스'
+    && call(0, [3, 4]) === `어드밴티지 ${ST.CHARS[ST.settings.chars[1]].name}`, '점수 부르기: 피프틴 러브 · 서티 올 · 듀스 · 어드밴티지');
+  G.server = keep.server; G.points = keep.points;
+}
+{
+  // 포핸드·백핸드 판정을 끄면 반대쪽으로 휘둘러도 제대로 맞음
+  ST.settings.sideCheck = false;
+  ST.toMenu(); ST.settings.mode = '2p'; ST.startMatch();
+  const j = { player: 1, gyro: 0, armed: true, swinging: false, swingStart: 0, peak: 0, peakT: 0, cool: 0, prevBtn: 0, simple: 0, lastReport: 0, lastPow: 0, lastSwingT: -9, ok: true, device: {} };
+  let got = null;
+  for (let tries = 0; tries < 30 && !got; tries++) {
+    if (G.state !== 'serve') step(3, { render: false });
+    step(0.6, { render: false });
+    if (G.server !== 0) { step(4, { render: false }); continue; }
+    serveBall(0);
+    const s = G.shot;
+    if (!s || s.receiver !== 1 || !s.reachable || s.hit.z > 1.8) { step(4, { render: false }); continue; }
+    const reps = swingReports({ beta: 15, side: s.side === 'fh' ? -1 : 1, head: 1, roll: 0 });   // 일부러 반대쪽
+    while (ST.T() < s.hit.t + lat() - 0.72) { now += 1 / 60; ST.update(); }
+    for (const dv of reps) { now += 0.015; ST.joycon.report(j, { reportId: 0x30, data: dv }); ST.update(); }
+    if (G.shot !== s) got = { ns: G.shot, flash: ST.players[1].flash };
+  }
+  assert(got && got.ns.hitter === 1 && got.flash !== '반대쪽!', '포핸드·백핸드 판정을 끄면 반대쪽으로 휘둘러도 제대로 맞음');
+  ST.settings.sideCheck = true;
 }
 
 assert(errors.length === 0, '전체 예외 없음' + (errors[0] ? ' — ' + errors[0] : ''));

@@ -1,6 +1,6 @@
 # Monster Rally illustration
 
-Generated with the built-in ImageGen tool for the Nolja game. The selected asset is `monster-team.png` (1536 × 1024, RGBA). The game uses local assets and requires no image service at runtime.
+Generated with the built-in ImageGen tool for the Nolja game. The selected asset is `monster-team.png` (1536 × 1024, RGBA), kept as the lossless master. The pages load `monster-team.webp`, the same image converted with Pillow (WebP quality 86, about 430 KB instead of 2.5 MB). The game uses local assets and requires no image service at runtime.
 
 ## Final prompt
 

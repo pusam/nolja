@@ -44,9 +44,12 @@ const settings = {
   quality: P0.quality,
   chars: P0.chars,
   lefty: S.get('tennis.lefty', [false, false]),   // P1·P2 왼손잡이: 조이콘 포핸드·백핸드 방향을 반대로 봄
+  sideCheck: S.get('tennis.sideCheck', true),    // 끄면 반대쪽으로 휘둘러도 제대로 맞음 (아이들과 할 때)
+  voice: S.get('tennis.voice', true),            // 심판 목소리 (점수·아웃·폴트 부르기)
 };
 const KEYS = { mode: 'tennis.mode', cpuLevel: 'tennis.cpuLevel', gamesToWin: 'tennis.gamesToWin', guide: 'tennis.guide',
-  sensitivity: 'sensitivity', latencyMs: 'latencyMs', quality: 'quality', chars: 'chars', lefty: 'tennis.lefty' };
+  sensitivity: 'sensitivity', latencyMs: 'latencyMs', quality: 'quality', chars: 'chars', lefty: 'tennis.lefty',
+  sideCheck: 'tennis.sideCheck', voice: 'tennis.voice' };
 if (!Array.isArray(settings.chars) || settings.chars.length !== 2 || settings.chars.some(k => !Number.isInteger(k) || k < 0 || k >= CHARS.length)) settings.chars = [0, 1];
 settings.lefty = Array.isArray(settings.lefty) && settings.lefty.length === 2 ? settings.lefty.map(v => !!v) : [false, false];
 const saveSettings = () => { for (const k in settings) S.set(KEYS[k], settings[k]); JC.sensitivity = settings.sensitivity; };
@@ -61,6 +64,7 @@ const game = {
   server: 0, serveSide: 1, points: [0, 0], games: [0, 0],
   rally: 0, longest: 0, nice: [0, 0],
   stateT: 0, shot: null, cpuSwing: null, cpuServeAt: 0,
+  serveStage: 'ready', toss: null, faults: 0, cpuServePow: 0.6,   // 서브: ready → toss(공이 떠 있음) → hit, faults = 이번 포인트 폴트 수
   msg: null, shake: 0, padCount: 0, gameWon: -1, winner: -1, crowdT: -9,
   forceCPU: null,      // 테스트용: [true, true]면 둘 다 CPU
   log: [],
@@ -187,6 +191,14 @@ function traceBall(s, from, v, w, dur) {
     } else {
       const px = b.x, py = b.y, pz = b.z, pvx = b.vx, pvy = b.vy, pvz = b.vz;
       stepBall(b, dt);
+      if (s.netT == null && (py - C.net) * (b.y - C.net) < 0) {   // 네트보다 낮게 지나가면 걸려서 친 사람 쪽으로 툭 떨어짐
+        const f = (C.net - py) / (b.y - py), zx = pz + (b.z - pz) * f, xx = px + (b.x - px) * f;
+        if (zx < netTop(xx)) {
+          s.netT = (i - 1 + f) * dt;
+          b.x = xx; b.y = C.net - Math.sign(b.y - py) * 0.06; b.z = Math.max(0.02, zx);
+          b.vx *= 0.3; b.vy *= -0.12; b.vz = Math.min(0, b.vz) * 0.3; b.w = 0;
+        }
+      }
       if (b.z <= 0 && b.vz < 0) {   // 바닥에 닿은 순간으로 되돌려 바운드
         const f = pz / (pz - b.z);
         b.x = px + (b.x - px) * f; b.y = py + (b.y - py) * f; b.z = 0;
@@ -211,13 +223,17 @@ function ballPos(s, t) {
   return { x: P[o] + (P[o + 3] - P[o]) * u, y: P[o + 1] + (P[o + 4] - P[o + 1]) * u, z: P[o + 2] + (P[o + 5] - P[o + 2]) * u };
 }
 
+// 네트 윗줄 높이: 가운데 0.914m, 기둥 쪽 1.07m
+const netTop = x => C.netH + (1.07 - C.netH) * clamp(Math.abs(x) / (C.dblHalfW + 0.914), 0, 1);
+
 // 출발점 → 착지점을 flight초에 날아가는 궤적 (선수 상태는 안 건드림). 네트에 걸리면 조금 느리게(높게) 띄움
-function planShot(from, to, flight, spin) {
+// intoNet: 실수로 네트에 걸리는 공이라 높이를 고치지 않음
+function planShot(from, to, flight, spin, intoNet = false) {
   const w = spinRate(spin);
   let Tf = flight, v = null;
   for (let k = 0; k < 40; k++) {
     v = aimBall(from, to, Tf, w, v);
-    if (v.netZ >= C.netH + 0.22) break;
+    if (intoNet || v.netZ >= C.netH + 0.22) break;
     Tf += 0.035;
   }
   const s = { spin, speed: Math.hypot(v.x, v.y, v.z) * 3.6 };   // 친 순간 속도 km/h
@@ -225,10 +241,12 @@ function planShot(from, to, flight, spin) {
   return s;
 }
 
-function makeShot(hitter, from, to, flight, kind, special = false, spin = 0) {
-  const s = Object.assign(planShot(from, to, flight, spin), {
+function makeShot(hitter, from, to, flight, kind, special = false, spin = 0, intoNet = false) {
+  // 아웃: 옆줄 밖, 또는 너무 길게 (서브는 서비스 박스 밖)
+  const outY = kind === 'serve' ? Math.abs(to.y - C.net) > C.svc + 0.03 : to.y < -0.03 || to.y > C.len + 0.03;
+  const s = Object.assign(planShot(from, to, flight, spin, intoNet), {
     hitter, receiver: 1 - hitter, kind, special, t0: T(),
-    out: Math.abs(to.x) > C.halfW + 0.03,
+    out: Math.abs(to.x) > C.halfW + 0.03 || outY,
     resolved: false, miss: '', bounced: false, nb: 0, trail: [],
   });
   computeIntercept(s);
@@ -271,9 +289,9 @@ function computeIntercept(s) {
   const off = hit.z > 1.8 ? 0.35 : 0.7;
   s.stand = { x: hit.x - RACKET_SIDE[s.receiver] * off * (s.side === 'fh' ? 1 : -1), y: hit.y };
   const dist = Math.hypot(s.stand.x - r.x, s.stand.y - r.y);
-  s.reachable = !s.out && dist <= r.speed * Math.max(0, hit.t - now - REACT) + 0.35;
+  s.reachable = !s.out && s.netT == null && dist <= r.speed * Math.max(0, hit.t - now - REACT) + 0.35;
   s.W = clamp(0.26 - speed * 0.0076, 0.13, 0.23);   // 판정 창(±초): 빠른 공일수록 좁음 (speed = 타점에서 공의 수평 속도 m/s)
-  if (!s.out) { r.tx = s.stand.x; r.ty = s.stand.y; }
+  if (!s.out && s.netT == null) { r.tx = s.stand.x; r.ty = s.stand.y; }
 }
 
 // ============================================================
@@ -281,8 +299,14 @@ function computeIntercept(s) {
 // ============================================================
 function showMsg(text, color = '#fff', sub = '') { game.msg = { text, color, sub, t: T() }; }
 
-function startServe() {
+// ---------- 서브: 한 번 휘둘러 토스 → 공이 제일 높을 때 다시 휘둘러 치기. 실수하면 폴트, 두 번 연속이면 더블 폴트 ----------
+const TOSS = { z0: 1.3, vz: 5.94, top: 0.606, fall: 1.45 };   // 손 높이 1.3m에서 3.1m까지 올라갔다가 떨어짐 (초)
+const tossZ = dt => TOSS.z0 + TOSS.vz * dt - 0.5 * C.g * dt * dt;
+
+function startServe(again = false) {
+  if (!again) game.faults = 0;                 // again: 폴트 뒤 두 번째 서브 (점수·자리 그대로)
   game.state = 'serve'; game.stateT = T(); game.shot = null; game.cpuSwing = null; game.rally = 0;
+  game.serveStage = 'ready'; game.toss = null;
   game.serveSide = (game.points[0] + game.points[1]) % 2 === 0 ? 1 : -1;   // 1=듀스 코트(서버 기준 오른쪽)
   const sv = game.server, rc = 1 - sv;
   const right = i => (i === 0 ? 1 : -1);      // 각 선수 기준 오른쪽의 월드 x 방향
@@ -292,18 +316,51 @@ function startServe() {
   if (isCPU(sv)) game.cpuServeAt = T() + rand(0.9, 1.4);
 }
 
-function serve(pi, pow) {
-  const p = players[pi];
-  const right = pi === 0 ? 1 : -1;
-  const sign = -game.serveSide * right;       // 대각선 반대편 서비스 박스
-  const to = { x: sign * rand(0.7, 3.5), y: pi === 0 ? C.net + rand(3.6, 6.0) : C.net - rand(3.6, 6.0) };
-  const from = { x: p.x + RACKET_SIDE[pi] * 0.3, y: p.y, z: 2.7 };
-  const s = makeShot(pi, from, to, lerp(1.15, 0.66, pow), 'serve', false, lerp(0.5, 0.1, pow));   // 살살 넣으면 탑스핀 서브, 세게는 플랫
-  game.shot = s; game.state = 'rally'; game.stateT = T(); game.rally = 0;
+function tossBall(pi) {
+  const p = players[pi], t = T();
+  game.serveStage = 'toss';
+  game.toss = { t0: t, x: p.x + RACKET_SIDE[pi] * 0.25, y: p.y + (pi === 0 ? 0.3 : -0.3) };
+  if (isCPU(pi)) {   // CPU는 꼭대기 근처에서 침 (실력별 오차)
+    const lv = game.demo ? 2 : settings.cpuLevel;
+    game.cpuServeAt = t + TOSS.top + gauss() * [0.11, 0.08, 0.05][lv];
+    game.cpuServePow = rand(0.45, game.demo ? 1 : [0.7, 0.85, 1][lv]);
+  }
+}
+
+function serve(pi, pow, tSwing) {
+  const p = players[pi], second = game.faults > 0;
+  const dt = tSwing - settings.latencyMs / 1000 - game.toss.t0;
+  const e = clamp((dt - TOSS.top) / 0.3, -1.5, 1.5);   // 0 = 꼭대기, - 올라가는 중(일찍), + 떨어지는 중(늦게)
+  if (second) pow = Math.min(pow, 0.75);              // 두 번째 서브는 안전하게
+  const right = pi === 0 ? 1 : -1, sign = -game.serveSide * right;   // 대각선 반대편 서비스 박스
+  // 일찍 치면 길게, 늦으면 짧게(많이 늦으면 네트). 세게 칠수록 라인에 가까워져 폴트 위험
+  const depth = (second ? rand(3.2, 4.8) : rand(3.6, 5.8)) + Math.max(0, pow - 0.6) - e * 2.2;
+  const intoNet = e > 0.8 || (e > 0.4 && Math.random() < (e - 0.4) * 1.2);
+  const fromZ = clamp(tossZ(clamp(dt, 0.15, TOSS.fall)), 1.4, 3.1);
+  const from = { x: game.toss.x, y: game.toss.y, z: fromZ };
+  let to = { x: sign * (rand(0.7, 3.5) + Math.max(0, Math.abs(e) - 0.5) * 1.6), y: pi === 0 ? C.net + depth : C.net - depth };
+  let flight = lerp(1.15, 0.66, pow) * (second ? 1.12 : 1);
+  if (intoNet) {
+    const ny = pi === 0 ? C.net + 0.6 : C.net - 0.6;
+    flight *= Math.abs(ny - from.y) / Math.abs(to.y - from.y);
+    to = { x: to.x * 0.6, y: ny };
+  }
+  const s = makeShot(pi, from, to, Math.max(0.3, flight), 'serve', false, second ? 0.6 : lerp(0.5, 0.1, pow), intoNet);   // 두 번째는 킥(탑스핀)
+  game.shot = s; game.state = 'rally'; game.stateT = T(); game.rally = 0; game.serveStage = 'hit';
   p.tx = 0; p.ty = BASE[pi]; p.anim = 'serve';
   p.lastSpin = s.spin; p.lastSpeed = s.speed; p.lastSpeedT = T();
+  if (Math.abs(e) < 0.3 && !intoNet && !s.out) { p.flash = '나이스 서브!'; p.flashT = T(); }
   sfx.hit(pow); spawnSparks(from, '#fde68a', 8); rumblePlayer(pi, 0.5, 60);
   scheduleCPU(s);
+}
+
+// 서브 실수: 첫 번째면 폴트 후 두 번째 서브, 두 번째도 실수면 더블 폴트로 상대 점수
+function serveFault(s, net) {
+  s.resolved = true;
+  if (game.faults > 0) { endPoint(s.receiver, '더블 폴트!', '#fbbf24', '더블 폴트'); return; }
+  game.faults = 1; game.state = 'fault'; game.stateT = T(); game.cpuSwing = null;
+  showMsg(net ? '네트 폴트!' : '폴트!', '#fbbf24', '두 번째 서브');
+  umpire('폴트');
 }
 
 // CPU가 받을 차례면 스윙 시각을 미리 정해둠 (실력별 오차)
@@ -328,7 +385,7 @@ function scheduleCPU(s) {
 
 // 스윙 동작 종류: 서브·스매시는 머리 위, 그 밖엔 휘두른 쪽(모르면 공이 오는 쪽) 포핸드·백핸드
 function swingAnim(pi, side) {
-  if (game.state === 'serve' && game.server === pi) return 'serve';
+  if (game.state === 'serve' && game.server === pi) return game.serveStage === 'toss' ? 'serve' : 'toss';
   const s = game.shot, incoming = game.state === 'rally' && s && s.receiver === pi && !s.resolved;
   if (incoming && s.hit.z > 1.85) return 'smash';
   return (side || (incoming ? s.side : 'fh')) === 'bh' ? 'backhand' : 'drive';
@@ -366,7 +423,9 @@ function doSwing(pi, pow, tSwing, spin, side = null) {
   if (!isCPU(pi)) sfx.whoosh(pow);
   if (game.state === 'select') { selReady(pi, true); return; }   // 캐릭터 선택 화면: 휘두르면 준비
   if (game.state === 'serve') {
-    if (game.server === pi && t - game.stateT > 0.45) serve(pi, pow);
+    if (game.server !== pi) return;
+    if (game.serveStage === 'ready') { if (t - game.stateT > 0.45) tossBall(pi); }
+    else if (game.serveStage === 'toss' && t - game.toss.t0 > 0.18) serve(pi, pow, tSwing);
     return;
   }
   if (game.state !== 'rally') return;
@@ -386,7 +445,7 @@ function hitBall(pi, u, pow, spin, side) {
   const bp = ballPos(s, t);
   const from = { x: bp.x, y: bp.y, z: clamp(bp.z, 0.4, 3.2) };
   // 공은 백핸드 쪽인데 포핸드로 휘두르는 등 반대로 치면: 맞기는 하지만 힘없고 방향이 흔들림
-  const wrong = !!(side && side !== s.side && from.z <= 1.85);
+  const wrong = !!(settings.sideCheck && side && side !== s.side && from.z <= 1.85);
   if (wrong) pow = Math.min(pow, 0.3);
   const perfect = !wrong && Math.abs(u) < 0.22;
   let kind = 'drive';
@@ -395,18 +454,33 @@ function hitBall(pi, u, pow, spin, side) {
   const sp = kind === 'smash' ? 0.1 : spin;
   if (kind === 'smash') p.anim = 'smash';
   const special = game.rally >= 8 && perfect && kind !== 'lob';
-  // 방향: 일찍(u<0) → 치는 사람 기준 왼쪽, 늦게 → 오른쪽
-  const dirSign = pi === 0 ? 1 : -1;
+  // 방향: 포핸드는 일찍(u<0) 치면 치는 사람 기준 왼쪽, 늦으면 오른쪽. 백핸드는 반대 (일찍 맞히면 오른쪽 대각선)
+  const dirSign = (pi === 0 ? 1 : -1) * (s.side === 'bh' && from.z <= 1.85 ? -1 : 1);
   const spread = (kind === 'smash' ? 3.6 : kind === 'lob' ? 3.2 : 4.4) * (wrong ? 1.3 : 1);
-  const tx = u * spread * dirSign;
+  let tx = u * spread * dirSign;
   const depth = kind === 'lob' ? 0.88 : kind === 'smash' ? 0.6 : lerp(0.62, 0.88, pow);
-  const ty = pi === 0 ? C.net + depth * C.net : C.net - depth * C.net;
+  let ty = pi === 0 ? C.net + depth * C.net : C.net - depth * C.net;
   let flight = kind === 'lob' ? 1.7 : kind === 'smash' ? 0.6 : lerp(1.3, 0.8, pow);
   if (perfect && kind === 'drive') flight *= 0.9;
   flight *= Math.max(0.8, 1 - 0.012 * game.rally);   // 랠리가 길수록 빨라짐
   if (special) flight *= 0.78;
   if (sp < 0) flight *= 1 - 0.12 * sp;               // 슬라이스는 떠서 느리게 감
-  const ns = makeShot(pi, from, { x: tx, y: ty }, Math.max(0.55, flight), kind, special, sp);
+  // 실수: 판정 창 끝으로 너무 늦으면 네트, 너무 이르면 길게. 세고 평평한 공도 길어지기 쉬움 (탑스핀은 아래로 떨어져서 안전)
+  let err = '';
+  if (!perfect && (kind === 'drive' || kind === 'lob')) {
+    const late = Math.max(0, u - 0.45) / 0.55, early = Math.max(0, -u - 0.45) / 0.55;
+    const flatHard = Math.max(0, pow - 0.7) / 0.3 * (1 - clamp(sp, 0, 1));
+    const pNet = kind === 'drive' ? 0.18 * late + (wrong ? 0.2 : 0) + (sp < -0.2 && from.z < 0.45 ? 0.05 : 0) : 0;
+    const pLong = 0.14 * early + 0.07 * flatHard, r = Math.random();
+    err = r < pNet ? 'net' : r < pNet + pLong ? 'long' : '';
+  }
+  if (err === 'long') { const over = rand(0.3, 1.8); ty = pi === 0 ? C.len + over : -over; }
+  if (err === 'net') {   // 네트 바로 너머를 낮게 노린 꼴 → 네트에 걸림
+    const ny = pi === 0 ? C.net + 0.7 : C.net - 0.7;
+    flight = Math.max(0.3, flight * Math.abs(ny - from.y) / Math.max(1, Math.abs(ty - from.y)));
+    tx *= 0.5; ty = ny;
+  }
+  const ns = makeShot(pi, from, { x: tx, y: ty }, Math.max(err === 'net' ? 0.3 : 0.55, flight), kind, special, sp, err === 'net');
   game.shot = ns;
   p.tx = 0; p.ty = BASE[pi];                          // 친 사람은 가운데로 복귀
   p.lastSpin = sp; p.lastSpeed = ns.speed; p.lastSpeedT = t;
@@ -425,7 +499,7 @@ function hitBall(pi, u, pow, spin, side) {
   scheduleCPU(ns);
 }
 
-function endPoint(winner, text, color) {
+function endPoint(winner, text, color, line = '') {
   game.state = 'pointEnd'; game.stateT = T(); game.cpuSwing = null; game.crowdT = T();
   game.longest = Math.max(game.longest, game.rally);
   game.log.push({ winner, text, rally: game.rally, kind: game.shot ? game.shot.kind : '' });
@@ -438,6 +512,24 @@ function endPoint(winner, text, color) {
   }
   showMsg(text, color || '#fff', game.gameWon >= 0 ? `${nameOf(winner)} 게임!` : '');
   sfx.point(); rumblePlayer(winner, 0.35, 120);
+  umpire((line ? line + ', ' : '') + (game.gameWon >= 0 ? `게임, ${nameOf(winner)}` : scoreCall()));
+}
+
+// 심판 목소리 (브라우저 음성 합성). 데모 중이거나 설정에서 끄면 조용히
+function umpire(text) {
+  if (game.demo || !settings.voice || typeof speechSynthesis === 'undefined' || typeof SpeechSynthesisUtterance === 'undefined') return;
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR'; u.rate = 1.05;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) { /* 음성 합성이 안 되는 환경은 무시 */ }
+}
+// 점수 부르기: 서버 점수부터 ("피프틴 러브"), 같으면 "~ 올", 40-40부터는 듀스·어드밴티지
+const CALL = ['러브', '피프틴', '서티', '포티'];
+function scoreCall() {
+  const sv = game.server, a = game.points[sv], b = game.points[1 - sv];
+  if (a >= 3 && b >= 3) return a === b ? '듀스' : `어드밴티지 ${nameOf(a > b ? sv : 1 - sv)}`;
+  return a === b ? `${CALL[a]} 올` : `${CALL[a]} ${CALL[b]}`;
 }
 
 function afterPoint() {
@@ -459,6 +551,7 @@ function finishMatch(w) {
   $('resBody').innerHTML = `${slotLabel(0)} ${nameOf(0)} ${game.games[0]} : ${game.games[1]} ${nameOf(1)} ${slotLabel(1)}<br>최장 랠리 ${game.longest}회 · 나이스 샷 ${game.nice[0]} / ${game.nice[1]}`;
   $('result').classList.remove('hidden');
   sfx.cheer(2.2);
+  umpire(`게임 셋, ${nameOf(w)} 승리`);
 }
 
 function hideOverlays(...ids) { for (const id of ids) $(id).classList.add('hidden'); }
@@ -603,12 +696,18 @@ function update() {
     if (d <= step) { p.x = p.tx; p.y = p.ty; } else { p.x += dx / d * step; p.y += dy / d * step; }
   }
   if (game.state === 'serve') {
-    if (isCPU(game.server) && t >= game.cpuServeAt) doSwing(game.server, rand(0.45, game.demo ? 1 : [0.7, 0.85, 1][settings.cpuLevel]), t);
+    const sv = game.server;
+    if (game.serveStage === 'toss' && t - game.toss.t0 > TOSS.fall) {   // 못 치고 떨어뜨림 → 다시 토스
+      game.serveStage = 'ready'; game.toss = null; game.stateT = t - 0.45;
+      if (isCPU(sv)) game.cpuServeAt = t + rand(0.5, 0.9);
+    }
+    if (isCPU(sv) && t >= game.cpuServeAt) doSwing(sv, game.serveStage === 'toss' ? game.cpuServePow : 0.3, t + settings.latencyMs / 1000);   // 토스, 그다음 치기
   } else if (game.state === 'rally') {
     updateRally(t);
-  } else if (game.state === 'pointEnd') {
+  } else if (game.state === 'pointEnd' || game.state === 'fault') {
     if (game.shot) { const bp = ballPos(game.shot, t); game.shot.trail.push(bp); if (game.shot.trail.length > 14) game.shot.trail.shift(); ballEvents(game.shot, t); }
-    if (t - game.stateT > 1.9) afterPoint();
+    if (game.state === 'fault' && t - game.stateT > 1.5) startServe(true);
+    else if (game.state === 'pointEnd' && t - game.stateT > 1.9) afterPoint();
   } else if (game.state === 'select') {
     if (selStartAt && t >= selStartAt) startMatch();
   }
@@ -630,9 +729,17 @@ function updateRally(t) {
   const bp = ballPos(s, t);
   s.trail.push(bp); if (s.trail.length > 14) s.trail.shift();
   ballEvents(s, t);
+  if (s.netT != null && !s.resolved && t - s.t0 >= s.netT) {   // 네트에 걸림
+    sfx.bounce();
+    if (s.kind === 'serve') { serveFault(s, true); return; }
+    s.resolved = true; endPoint(s.receiver, '네트!', '#fbbf24', '네트'); return;
+  }
   if (!s.bounced && t - s.t0 >= s.T1) {
     s.bounced = true;
-    if (s.out && !s.resolved) { s.resolved = true; endPoint(s.receiver, '아웃!', '#fbbf24'); return; }
+    if (s.out && !s.resolved) {
+      if (s.kind === 'serve') { serveFault(s, false); return; }
+      s.resolved = true; endPoint(s.receiver, '아웃!', '#fbbf24', '아웃'); return;
+    }
   }
   if (game.cpuSwing && t >= game.cpuSwing.at) {
     const cs = game.cpuSwing; game.cpuSwing = null;
@@ -818,6 +925,7 @@ function syncMenu() {
   $('lat').value = settings.latencyMs; $('latV').textContent = settings.latencyMs + 'ms';
   $('guide').checked = !!settings.guide;
   for (const i of [0, 1]) $('lefty' + i).checked = settings.lefty[i];
+  $('sideCheck').checked = !!settings.sideCheck; $('voice').checked = !!settings.voice;
   $('gfxInfo').textContent = gfxInfoText();
   renderSlots();
 }
@@ -1023,7 +1131,10 @@ function drawHUD(g) {
   if (game.state !== 'matchEnd') { drawScoreboard(g); drawCards(g); }
   if (game.state === 'serve' && !isCPU(game.server) && t - game.stateT > 0.45) {
     g.font = `800 30px ${FONT}`;
-    pill(g, `${nameOf(game.server)} 서브 · 휘둘러 시작하세요`, VW / 2, 169, '#fff9e8', 0.9 + 0.1 * Math.sin(t * 4));
+    if (game.serveStage === 'toss') {   // 꼭대기 근처면 초록색으로 "지금!"
+      const top = Math.abs(t - game.toss.t0 - TOSS.top) < 0.1;
+      pill(g, top ? '지금! 휘둘러요' : '공이 제일 높을 때 휘둘러요', VW / 2, 169, top ? '#c8f56b' : '#fff9e8', 1);
+    } else pill(g, `${nameOf(game.server)} ${game.faults ? '두 번째 서브' : '서브'} · 휘둘러서 토스`, VW / 2, 169, '#fff9e8', 0.9 + 0.1 * Math.sin(t * 4));
   } else if (game.state === 'rally' && game.rally >= 3) {
     g.font = `800 26px ${FONT}`;
     pill(g, `랠리 ${game.rally}`, VW / 2, 169, game.rally >= 8 ? '#f4d28c' : '#fff9e8', 1);
@@ -1054,7 +1165,8 @@ const isMoving = p => Math.hypot(p.tx - p.x, p.ty - p.y) > 0.08;
 
 function currentBall(t) {
   if (game.state === 'select' || game.state === 'matchEnd') return null;
-  if (game.state === 'serve') {   // 서브 전 공 튀기기
+  if (game.state === 'serve') {   // 토스한 공, 아니면 서브 전 공 튀기기
+    if (game.serveStage === 'toss') return { x: game.toss.x, y: game.toss.y, z: Math.max(0, tossZ(t - game.toss.t0)) };
     const p = players[game.server];
     return { x: p.x + RACKET_SIDE[game.server] * 0.45, y: p.y + (game.server === 0 ? -0.15 : -0.25), z: Math.abs(Math.sin(t * 3.2)) * 1.0 };
   }
@@ -1547,6 +1659,10 @@ function rebuildPlayer3D(i) {
 // linear: 조이콘이 실제로 돈 각도를 따라갈 땐 따로 감속을 넣지 않음 (진짜 팔 움직임에 이미 들어 있음)
 function swingPose(anim, k, sp = 0, linear = false) {
   const e = linear ? clamp(k, 0, 1) : 1 - Math.pow(1 - clamp(k, 0, 1), 3), nrm = NC.nrm;
+  if (anim === 'toss') {   // 토스: 왼손으로 공을 띄우고 라켓은 등 뒤로 (트로피 자세), 고개는 공을 봄
+    return { dR: nrm(lerp(0.35, 0.5, e), lerp(-0.45, 0.55, e), lerp(0.25, 0.6, e)), dL: nrm(lerp(-0.2, -0.12, e), lerp(-0.5, 0.97, e), lerp(-0.45, -0.2, e)),
+      r: nrm(0.1, lerp(-0.2, 0.85, e), lerp(0.4, 0.55, e)), n: new THREE.Vector3(1, 0, 0), twist: lerp(0, -0.45, e), lean: 0, nod: lerp(0, -0.3, e) };
+  }
   if (anim === 'serve' || anim === 'smash') {      // 머리 위로 내려치기
     const b = lerp(-0.8, 2.5, e);
     const dR = nrm(0.3, Math.cos(b), -Math.sin(b));
@@ -1582,6 +1698,7 @@ function armPose(p, t, f) {
   else if (f.ready) base = NC.poses.cheer(t);
   const prep = prepFor(p, t);
   if (prep) base = NC.mixPose(base, swingPose(prep.anim, 0), prep.u * 0.85);
+  if (game.state === 'serve' && game.serveStage === 'toss' && game.server === p.i) base = swingPose('toss', 1);   // 공이 떠 있는 동안 토스 자세 유지
   if (k >= 1 && k < 1.7) return NC.mixPose(swingPose(p.anim, 1, p.swingSpin, p.swingLive), base, smooth((k - 1) / 0.7));
   return base;
 }
@@ -1791,6 +1908,8 @@ function bindMenu() {
   $('lat').oninput = e => { settings.latencyMs = +e.target.value; syncMenu(); saveSettings(); };
   $('guide').onchange = e => { settings.guide = e.target.checked; saveSettings(); };
   for (const i of [0, 1]) $('lefty' + i).onchange = e => { settings.lefty[i] = e.target.checked; saveSettings(); };
+  $('sideCheck').onchange = e => { settings.sideCheck = e.target.checked; saveSettings(); };
+  $('voice').onchange = e => { settings.voice = e.target.checked; saveSettings(); };
   $('btnSwap').onclick = () => { JC.swapped = !JC.swapped; S.set('swapped', JC.swapped); assignJoyCons(); };
   $('btnStart').onclick = openSelect;
   $('btnHome').onclick = () => { location.href = '../../index.html'; };
@@ -1845,6 +1964,6 @@ requestAnimationFrame(frame);
 
 // 테스트용 훅
 window.__ST = { game, players, settings, T, update, render: renderFrame, startMatch, toMenu, openSelect, selMove, selReady, selSet, sel,
-  doSwing, emitSwing, startServe, isCPU, ballPos, planShot, spinLabel, handSide, C, gfx, G3, Q, applyQuality, parts, CHARS, autoStep, joycon: JC, setDemoPaused,
+  doSwing, emitSwing, startServe, isCPU, ballPos, planShot, spinLabel, handSide, scoreCall, TOSS, C, gfx, G3, Q, applyQuality, parts, CHARS, autoStep, joycon: JC, setDemoPaused,
   setClock: f => { realNow = f; } };
 })();
