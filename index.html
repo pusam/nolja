@@ -53,7 +53,7 @@
               <ellipse cx="543" cy="151" rx="33" ry="7" fill="#0f3024" opacity=".3"/><circle cx="539" cy="92" r="39" fill="url(#ball-shade)"/><path d="M513 63c19 5 31 21 31 39 0 11-4 20-10 29m33-66c-17 4-28 19-28 35 0 13 4 22 10 29" stroke="#f8fadf" stroke-width="2.8"/>
               <path d="m568 28 8-15m10 30 16-8m-48-15 2-16" stroke="#d4ed72" stroke-width="3" stroke-linecap="round"/><path d="m135 113 6 15 16 5-16 6-6 15-5-15-16-6 16-5Z" fill="#d4ed72"/><circle cx="573" cy="397" r="5" stroke="#d4ed72" stroke-width="2"/><circle cx="175" cy="375" r="4" fill="#d4ed72"/>
             </svg>
-            <div class="court-label"><span>8 FRIENDS. ONE COURT.</span><span>LET’S PLAY!</span></div>
+            <div class="court-label"><span>LITTLE FRIENDS. ONE COURT.</span><span>LET’S PLAY!</span></div>
           </div>
           <span class="hero-number" aria-hidden="true">NO. 01</span>
         </a>
@@ -68,7 +68,7 @@
     </section>
     <section id="how-to-play" class="club-lounge" aria-labelledby="lounge-title">
       <div class="lounge-copy"><p class="eyebrow">EVERYONE'S INVITED.</p><h2 id="lounge-title">준비물은, 같이 놀 마음.</h2><p>PC 크롬이나 엣지에서 열고 조이콘, 키보드, 게임패드로 즐겨요.<br>큰 화면에 연결하면 거실이 우리만의 게임 클럽이 돼요.</p><span class="controller-note"><svg class="icon" aria-hidden="true"><use href="#i-controller"/></svg> 조이콘 연결은 각 게임 메뉴에서 할 수 있어요.</span></div>
-      <div class="plaza-wrap"><div class="plaza" id="plaza" aria-label="함께할 수 있는 8명의 캐릭터"></div><span class="plaza-label">MEET YOUR PLAY MATES</span></div>
+      <div class="plaza-wrap"><div class="plaza" id="plaza" aria-label="함께할 수 있는 캐릭터 친구들"></div><span class="plaza-label">MEET YOUR PLAY MATES</span></div>
     </section>
   </main>
   <footer class="site-footer"><span>NOLJA CLUB</span><p>좋은 시간은, 함께 플레이할 때.</p><span>MADE FOR TOGETHER.</span></footer>
@@ -80,7 +80,10 @@
   'use strict';
   const GAMES = [{ name: '몬스터 테니스', href: 'games/tennis/index.html' }, { name: '볼링', soon: true }, { name: '야구', soon: true }, { name: '레이싱', soon: true }];
   const plaza = document.getElementById('plaza');
-  window.Nolja.characters.CHARS.forEach((ch, k) => {
+  const characters = window.Nolja.characters.CHARS;
+  plaza.setAttribute('aria-label', `함께할 수 있는 ${characters.length}명의 캐릭터`);
+  document.querySelector('.court-label > span').textContent = `${characters.length} FRIENDS. ONE COURT.`;
+  characters.forEach((ch, k) => {
     const figure = document.createElement('span'); figure.className = 'play-mate';
     const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
     canvas.style.animationDelay = (k * 0.18) + 's'; canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', ch.name); canvas.title = ch.name;

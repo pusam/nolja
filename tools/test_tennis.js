@@ -61,6 +61,14 @@ for (const s of scripts) vm.runInContext(s, sandbox);
 const ST = sandbox.__ST, G = ST.game, G3 = ST.G3;
 const lat = () => ST.settings.latencyMs / 1000;
 const assert = (c, msg) => { if (!c) { console.log('❌ ' + msg); process.exitCode = 1; } else console.log('✅ ' + msg); };
+const charCount = ST.CHARS.length;
+assert(charCount === 16, '캐릭터 16명 제공');
+assert(new Set(ST.CHARS.map(ch => ch.kind)).size === charCount && new Set(ST.CHARS.map(ch => ch.name)).size === charCount && ST.CHARS.every(ch => ch.kind && ch.name), '캐릭터 종류·이름이 모두 고유함');
+assert(ST.CHARS.every(ch => Number.isFinite(ch.h) && ch.h > 0 && Number.isFinite(ch.w) && ch.w > 0), '모든 캐릭터의 모델 크기가 유효함');
+const savedKinds = ['pikachu', 'eevee', 'charmander', 'squirtle', 'jigglypuff', 'agumon', 'patamon', 'gatomon', 'bulbasaur', 'snorlax', 'togepi', 'terriermon'];
+assert(savedKinds.every((kind, i) => ST.CHARS[i] && ST.CHARS[i].kind === kind), '기존 12명 순서를 유지해 저장된 캐릭터 선택과 호환됨');
+const addedDigimon = [['gabumon', '파피몬'], ['tentomon', '텐타몬'], ['palmon', '팔몬'], ['gomamon', '쉬라몬']];
+assert(addedDigimon.every(([kind, name], i) => ST.CHARS[savedKinds.length + i] && ST.CHARS[savedKinds.length + i].kind === kind && ST.CHARS[savedKinds.length + i].name === name), '추가 디지몬 4종을 마지막 순서에 제공');
 
 // 3D 장면의 모든 물체 위치·회전·크기가 유한한지
 function sceneFinite() {
@@ -138,7 +146,7 @@ for (const fn of windowEvents.keydown || []) fn({ code: 'Enter', target: { close
 assert(!rosterEnterPrevented && !ST.sel[0].ready && !ST.sel[1].ready, '캐릭터 버튼의 Enter는 전체 준비 단축키와 충돌하지 않음');
 const before = ST.settings.chars.slice();
 ST.selMove(0, 1); ST.selMove(1, -1); ST.selMove(1, -1);
-assert(ST.settings.chars[0] === (before[0] + 1) % 8 && ST.settings.chars[1] === (before[1] + 6) % 8, `캐릭터 바꾸기 → P1 ${ST.CHARS[ST.settings.chars[0]].name}, P2 ${ST.CHARS[ST.settings.chars[1]].name}`);
+assert(ST.settings.chars[0] === (before[0] + 1) % charCount && ST.settings.chars[1] === (before[1] + charCount - 2) % charCount, `캐릭터 바꾸기 → P1 ${ST.CHARS[ST.settings.chars[0]].name}, P2 ${ST.CHARS[ST.settings.chars[1]].name}`);
 step(0.5);
 assert(Math.abs(ST.T() - selectResumeT - 0.5) < 1e-8, '정지된 데모에서 선택 화면을 열면 시간이 정상 진행됨');
 assert(G3.players[0].ch === ST.CHARS[ST.settings.chars[0]] && G3.players[1].ch === ST.CHARS[ST.settings.chars[1]], '3D 캐릭터 모델도 교체됨');
@@ -147,13 +155,24 @@ G3.camera.aspect = 375 / 812; G3.camera.updateProjectionMatrix(); step(2);
 const portraitEdges = [-1.5, 1.5].map(x => new sandbox.THREE.Vector3(x, 1, -2.2).project(G3.camera).x);
 assert(portraitEdges.every(x => Math.abs(x) < 1), '세로 화면에서도 선택 화면의 두 캐릭터가 좌우로 잘리지 않음');
 G3.camera.aspect = desktopAspect; G3.camera.updateProjectionMatrix(); step(1.5);
-// 모든 캐릭터 모델 만들어 보기 (P2로 8명 차례로)
+// 두 플레이어 모두 마지막 캐릭터 선택 및 양쪽 끝 순환을 확인한다.
+for (const pi of [0, 1]) {
+  const previous = ST.sel[pi].idx, last = charCount - 1;
+  if (ST.sel[pi].idx !== last) ST.selSet(pi, last);
+  assert(ST.settings.chars[pi] === last && G3.players[pi].ch === ST.CHARS[last], `P${pi + 1} 마지막 캐릭터 선택·모델 표시`);
+  ST.selMove(pi, 1);
+  assert(ST.settings.chars[pi] === 0 && G3.players[pi].ch === ST.CHARS[0], `P${pi + 1} 마지막 → 첫 캐릭터 순환`);
+  ST.selMove(pi, -1);
+  assert(ST.settings.chars[pi] === last && G3.players[pi].ch === ST.CHARS[last], `P${pi + 1} 첫 → 마지막 캐릭터 순환`);
+  if (ST.sel[pi].idx !== previous) ST.selSet(pi, previous);
+}
+// 모든 캐릭터 모델을 차례로 생성·교체해 본다.
 const keep = ST.settings.chars[1];
-for (let k = 0; k < 8; k++) { if (k !== ST.sel[1].idx) ST.selSet(1, k); step(0.2); const f = sceneFinite(); if (f.bad) { assert(false, ST.CHARS[k].name + ' 모델 좌표 이상'); } }
-assert(true, '캐릭터 8명 모델 모두 생성·표시 정상');
+for (let k = 0; k < charCount; k++) { if (k !== ST.sel[1].idx) ST.selSet(1, k); step(0.2); const f = sceneFinite(); if (f.bad) { assert(false, ST.CHARS[k].name + ' 모델 좌표 이상'); } }
+assert(true, `캐릭터 ${charCount}명 모델 모두 생성·표시 정상`);
 const monsterCtx = fakeCtx(), monsterNaNBefore = draw.nan;
 for (const ch of ST.CHARS) for (const front of [true, false]) sandbox.Nolja.characters.drawMonster2D(monsterCtx, ch, 76, 0, 152, front);
-assert(draw.nan === monsterNaNBefore, '캐릭터 8명 앞·뒷모습 2D 그리기 좌표 모두 정상');
+assert(draw.nan === monsterNaNBefore, `캐릭터 ${charCount}명 앞·뒷모습 2D 그리기 좌표 모두 정상`);
 if (ST.sel[1].idx !== keep) ST.selSet(1, keep);
 if (ST.sel[1].ready) ST.selReady(1, false);
 ST.emitSwing(0, 0.8, now);          // P1 휘둘러서 준비
@@ -207,7 +226,7 @@ function report(dps, b2 = 0, b4 = 0) {
 }
 const c1 = ST.settings.chars[1];
 now += 0.015; report(5, 0x08); now += 0.015; report(5, 0x00);      // A 버튼 → 다음 캐릭터
-assert(ST.settings.chars[1] === (c1 + 1) % 8, '조이콘 A 버튼 → P2 다음 캐릭터');
+assert(ST.settings.chars[1] === (c1 + 1) % charCount, '조이콘 A 버튼 → P2 다음 캐릭터');
 now += 0.015; report(5, 0, 0x08); now += 0.015; report(5, 0, 0);    // ← 버튼(왼쪽 조이콘 byte4 0x08) → 이전
 assert(ST.settings.chars[1] === c1, '조이콘 ← 버튼 → P2 이전 캐릭터');
 for (let i = 0; i < 8; i++) { now += 0.015; report(1100); }
@@ -247,7 +266,7 @@ const btn = p => ({ pressed: p, value: p ? 1 : 0 });
 const pad = on => ({ connected: true, index: 0, id: 'Xbox Wireless Controller', mapping: 'standard', axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, (_, i) => btn(on.includes(i))) });
 const c0 = ST.settings.chars[0];
 pads = [pad([15])]; step(1 / 60, { render: false }); pads = [pad([])]; step(1 / 60, { render: false });
-assert(ST.settings.chars[0] === (c0 + 1) % 8, '게임패드 → 방향키로 캐릭터 바꾸기');
+assert(ST.settings.chars[0] === (c0 + 1) % charCount, '게임패드 → 방향키로 캐릭터 바꾸기');
 pads = [pad([0])]; step(1 / 60, { render: false }); pads = [];
 assert(ST.sel[0].ready, '게임패드 A → 준비');
 

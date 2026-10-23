@@ -188,13 +188,16 @@ input[type=checkbox] { accent-color: var(--lavender); height: 17px; width: 17px;
 
 /* A collectible roster, with the live court still visible behind the friends. */
 .overlay.sel { background: linear-gradient(#fbf8f3fc, #f6f1fbf2 31%, #f4eefb21 57%, #4942621c 70%, #554a75d9); padding: 28px 4vw; overflow: auto; }
-.selection-top { max-width: 1320px; width: 100%; margin: 0 auto; }
+.selection-top { max-width: 1320px; width: 100%; margin: 0 auto; flex: 0 0 auto; }
 .selection-top > .eyebrow { text-align: center; font-size: 10px; color: #9a8db5; }
 .seltitle { color: #514764; font-size: 32px; text-shadow: none; margin: 10px 0 6px; letter-spacing: -1.2px; }
 .seltitle > span { color: var(--peach); }
-.selection-subtitle { text-align: center; color: #8a7c9b; margin: 0 0 26px; font-size: 12px; }
-.roster { gap: 12px; }
-.tile { border: 2px solid #e3dce9; background: #fffefa; border-radius: 21px; padding: 12px 7px 13px; width: min(11vw, 137px); min-height: 154px; box-shadow: 0 5px 0 #e9e0e97a; transition: background .2s, box-shadow .2s, border-color .2s; color: #655875; }
+.selection-subtitle { text-align: center; color: #8a7c9b; margin: 0 0 15px; font-size: 12px; }
+.roster { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; width: 100%; max-width: 900px; max-height: 298px; margin: 0 auto; padding: 13px 11px 16px; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #b6a5cc #eee6f3; scrollbar-gutter: stable; scroll-padding: 13px; }
+.roster::-webkit-scrollbar { width: 7px; }
+.roster::-webkit-scrollbar-track { background: #eee6f3; border-radius: 10px; }
+.roster::-webkit-scrollbar-thumb { background: #b6a5cc; border-radius: 10px; border: 1px solid #eee6f3; }
+.tile { border: 2px solid #e3dce9; background: #fffefa; border-radius: 18px; padding: 8px 7px 10px; width: 100%; min-width: 0; min-height: 125px; box-shadow: 0 5px 0 #e9e0e97a; transition: background .2s, box-shadow .2s, border-color .2s; color: #655875; }
 .tile:nth-child(8n+1) { background: #fff7dc; }
 .tile:nth-child(8n+2) { background: #eef6ff; }
 .tile:nth-child(8n+3) { background: #fff1e5; }
@@ -204,16 +207,17 @@ input[type=checkbox] { accent-color: var(--lavender); height: 17px; width: 17px;
 .tile:nth-child(8n+7) { background: #eaf6f2; }
 .tile:nth-child(8n+8) { background: #f9eded; }
 .tile:hover { border-color: #b6a4ce; box-shadow: 0 5px 0 #d7c9e5, 0 8px 20px #67518b12; }
-.tile canvas { width: 94px; height: 94px; max-width: 100%; object-fit: contain; }
-.tile .tn { font-size: 13px; font-weight: 750; margin-top: 7px; }
+.tile canvas { width: 76px; height: 76px; max-width: 100%; object-fit: contain; }
+.tile .tn { font-size: 13px; font-weight: 750; margin-top: 5px; }
 .tile .character-type { display: block; margin-top: 5px; color: #8d7e99; font-size: 10px; letter-spacing: .15px; }
 .tile.p1 { border-color: var(--p1); box-shadow: 0 5px 0 #6e8de04d; }
 .tile.p2 { border-color: var(--p2); box-shadow: 0 5px 0 #d982a04d; }
 .tile.p1.p2 { border-color: #ab84c3; box-shadow: 0 5px 0 #ab84c34d; }
 .tg { color: white; padding: 3px 7px; font-size: 10px; border-radius: 8px; top: -10px; }
-.selection-hint { margin-top: 19px; }
+.selection-hint { margin-top: 10px; }
+.roster-scroll-hint { display: block; margin-top: 8px; font-size: 10px; line-height: 1.5; color: #897496; }
 .hint { background: #fffefad9; font-size: 11px; color: #8a7a99; padding: 7px 13px; border: 1px solid #e4dbe9; border-radius: 20px; }
-.selbottom { gap: 24px; width: 100%; max-width: 1160px; align-self: center; }
+.selbottom { gap: 24px; width: 100%; max-width: 1160px; align-self: center; flex: 0 0 auto; }
 .selcard { border-radius: 22px; border: 1px solid #e8dded; background: #fffefaf5; padding: 18px 22px; box-shadow: 0 8px 35px #49345f24; }
 .selcard .nm { font-size: 24px; color: #67557c; }
 .selcard .st { font-size: 12px; }
@@ -241,6 +245,12 @@ input[type=checkbox] { accent-color: var(--lavender); height: 17px; width: 17px;
 .game-toolbar button { background: #fffefae8; border-color: #ded6e5; min-height: 40px; font-size: 12px; padding: 8px 14px; box-shadow: 0 4px 18px #5b436e17; }
 .game-toolbar[hidden] { display: none; }
 
+@media (min-width: 1300px) {
+  .roster { grid-template-columns: repeat(8, minmax(0, 1fr)); max-width: 1180px; max-height: 318px; }
+}
+@media (min-width: 1300px) and (min-height: 701px) {
+  .roster-scroll-hint { display: none; }
+}
 @media (min-width: 1550px) {
   .lobby-main { padding-top: 42px; }
   .feature-copy { min-height: 330px; }
@@ -272,8 +282,8 @@ input[type=checkbox] { accent-color: var(--lavender); height: 17px; width: 17px;
   .connection-card { padding: 19px 21px; }
   .connection-actions { gap: 16px; }
   .footer-signoff { display: none; }
-  .tile { width: 10.7vw; min-height: 135px; padding: 9px 5px 12px; border-radius: 17px; }
-  .tile canvas { width: 78px; height: 78px; }
+  .tile { min-height: 125px; padding: 8px 5px 10px; border-radius: 17px; }
+  .tile canvas { width: 76px; height: 76px; }
   .tile .tn { font-size: 12px; }
 }
 @media (max-width: 900px) {
@@ -298,10 +308,11 @@ input[type=checkbox] { accent-color: var(--lavender); height: 17px; width: 17px;
   .connection-copy p { font-size: 10px; }
   .connection-actions .text-button { display: none; }
   .overlay.sel { padding: 25px 20px; }
-  .roster { max-width: 580px; margin: auto; gap: 12px; }
-  .tile { width: calc(25% - 9px); min-height: 132px; padding: 8px 5px 11px; }
-  .tile canvas { width: 75px; height: 75px; }
-  .selection-subtitle { margin-bottom: 20px; }
+  .roster { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 580px; max-height: 250px; gap: 10px; }
+  .tile { min-height: 107px; padding: 7px 5px 9px; }
+  .tile canvas { width: 66px; height: 66px; }
+  .selection-subtitle { margin-bottom: 10px; }
+  .roster-scroll-hint { display: block; }
   .selbottom { gap: 14px; margin-top: 24px; }
   .selcard { padding: 14px; }
   .selcard .nm { font-size: 21px; }
@@ -360,13 +371,13 @@ input[type=checkbox] { accent-color: var(--lavender); height: 17px; width: 17px;
   .selection-top { margin-bottom: 18px; }
   .overlay.sel { padding: 22px 16px 18px; gap: 20px; }
   .seltitle { font-size: 24px; margin: 10px 0 8px; }
-  .selection-subtitle { font-size: 10px; line-height: 1.7; margin: 0 0 20px; }
-  .roster { gap: 9px; }
-  .tile { width: calc(25% - 7px); max-width: 112px; min-height: 120px; border-radius: 15px; padding: 8px 4px 10px; }
-  .tile canvas { width: 68px; height: 68px; }
+  .selection-subtitle { font-size: 10px; line-height: 1.7; margin: 0 0 9px; }
+  .roster { gap: 9px; max-height: 230px; padding: 12px 9px 14px; }
+  .tile { min-height: 98px; border-radius: 15px; padding: 7px 3px 8px; }
+  .tile canvas { width: 58px; height: 58px; }
   .tile .tn { font-size: 11px; margin-top: 4px; }
   .tile .character-type { font-size: 8px; margin-top: 4px; }
-  .selection-hint { margin-top: 16px; }
+  .selection-hint { margin-top: 9px; }
   .selection-hint .hint { font-size: 9px; line-height: 1.7; }
   .selbottom { grid-template-columns: 1fr 1fr; gap: 10px; align-items: stretch; margin-top: 10px; }
   .selmid { grid-column: 1/-1; grid-row: 2; flex-direction: row; justify-content: space-between; padding: 0; }
@@ -399,8 +410,8 @@ input[type=checkbox] { accent-color: var(--lavender); height: 17px; width: 17px;
   .feature-perks { gap: 8px; font-size: 8px; padding: 15px 13px; }
   .feature-perks .icon { width: 12px; height: 12px; }
   .match-setup { padding: 24px 21px; }
-  .tile { min-height: 111px; }
-  .tile canvas { width: 58px; height: 58px; }
+  .tile { min-height: 96px; }
+  .tile canvas { width: 56px; height: 56px; }
   .selcard { padding: 9px; }
   .selcard .nm { font-size: 17px; }
   .selcard .row > button { padding: 6px 7px; }
@@ -408,9 +419,11 @@ input[type=checkbox] { accent-color: var(--lavender); height: 17px; width: 17px;
 @media (max-height: 700px) and (min-width: 901px) {
   .overlay.sel { padding-top: 17px; padding-bottom: 17px; }
   .seltitle { font-size: 27px; margin-top: 7px; }
-  .selection-subtitle { margin-bottom: 17px; font-size: 11px; }
-  .tile { min-height: 124px; padding: 8px 5px; }
-  .tile canvas { width: 72px; height: 72px; }
+  .selection-subtitle { margin-bottom: 8px; font-size: 11px; }
+  .roster { max-height: 230px; }
+  .roster-scroll-hint { display: block; }
+  .tile { min-height: 96px; padding: 6px 5px; }
+  .tile canvas { width: 56px; height: 56px; }
   .selcard { padding: 12px 18px; }
 }
 @media (prefers-reduced-motion: reduce) {

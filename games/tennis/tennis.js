@@ -1,6 +1,6 @@
 /* ============================================================
  * 스윙 테니스 — 조이콘(WebHID) 스윙으로 치는 2인 테니스
- *  - 캐릭터 8명 중 골라서 2인 대결 (또는 CPU)
+ *  - 몬스터 캐릭터 16종 중 골라서 2인 대결 (또는 CPU)
  *  - 그래픽: three.js 3D(높음·보통·낮음) + 2D(가장 가벼움), 자동 조절
  *    2018년형 노트북 내장그래픽(인텔 UHD 620)에서 돌아가도록 가볍게 구성
  *  - 공용 모듈: shared/store.js · audio.js · joycon.js · characters.js
@@ -527,6 +527,7 @@ function openSelect() {
   players.forEach((p, i) => { p.x = p.tx = P[i][0]; p.y = p.ty = P[i][1]; p.swingT = -9; p.flash = ''; });
   rebuildPlayer3D(0); rebuildPlayer3D(1);
   renderSelect();
+  revealRosterCharacter(sel[0].idx);
 }
 const selCPU = i => settings.mode === 'cpu' && i === 1;
 function selSet(i, k, force) {
@@ -537,11 +538,21 @@ function selSet(i, k, force) {
   settings.chars[i] = k; saveSettings();
   selStartAt = 0;
   rebuildPlayer3D(i);
-  sfx.tick(); renderSelect(); checkSelectStart();
+  sfx.tick(); renderSelect(); revealRosterCharacter(k); checkSelectStart();
 }
 function selMove(i, d, force) {
   if (game.state !== 'select') return;
   selSet(i, (sel[i].idx + d + CHARS.length) % CHARS.length, force);
+}
+// Move only the roster's scroll area, preserving the player controls below it.
+function revealRosterCharacter(k) {
+  const roster = $('roster');
+  if (!roster || !roster.querySelector || !roster.getBoundingClientRect) return;
+  const tile = roster.querySelector(`.tile[data-k="${k}"]`);
+  if (!tile || !tile.getBoundingClientRect) return;
+  const viewport = roster.getBoundingClientRect(), card = tile.getBoundingClientRect();
+  if (card.top < viewport.top + 8) roster.scrollTop -= viewport.top + 8 - card.top;
+  else if (card.bottom > viewport.bottom - 8) roster.scrollTop += card.bottom - viewport.bottom + 8;
 }
 function selReady(i, on) {
   if (game.state !== 'select' || selCPU(i) || sel[i].ready === on) return;

@@ -3,7 +3,7 @@
 거실 TV에서 조이콘 들고 같이 노는 게임 모음. 브라우저(PC 크롬·엣지)에서 돌아가고, 조이콘은 WebHID로 직접 읽음.
 
 - 바로 하기: https://pusam.github.io/nolja/
-- 게임: 🎾 테니스 (조이콘을 라켓처럼 휘둘러서 치는 2인 대결 · 캐릭터 8명 · 3D)
+- 게임: 🎾 테니스 (조이콘을 라켓처럼 휘둘러서 치는 2인 대결 · 몬스터 캐릭터 16종 · 3D)
 
 ## 하는 법
 
@@ -24,7 +24,7 @@ games/
 shared/
   store.js          설정 저장 (게임끼리 공유: 캐릭터·감도·그래픽)
   joycon.js         조이콘 연결·스윙 감지·버튼·진동·기울기
-  characters.js     캐릭터 8명 (얼굴 그림 + 3D 모델 + 자세)
+  characters.js     몬스터 캐릭터 16종 (얼굴 그림 + 3D 모델 + 자세)
   audio.js          효과음 합성
   nolja.css         공용 스타일
   vendor/three.min.js  three.js r149 (MIT, THREE_LICENSE)
