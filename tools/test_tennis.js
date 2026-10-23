@@ -305,14 +305,77 @@ function swingReports({ beta, side, head, roll, peakDps = 1400 }) {
 {
   G.paused = true;   // 판정만 보고 경기에는 안 넘김
   const cases = { top: [30, s => s >= 0.6], flat: [0, s => ST.spinLabel(s) === '플랫'], slice: [-25, s => s <= -0.5] };
-  const bad = [];
+  const bad = [], badSide = [];
+  let motionOk = true;
   for (const side of [1, -1]) for (const head of [1, -1]) for (const roll of [0, 140]) for (const k in cases) {
     const j = { player: 0, gyro: 0, armed: true, swinging: false, swingStart: 0, peak: 0, peakT: 0, cool: 0, prevBtn: 0, simple: 0, lastReport: 0, lastPow: 0, lastSwingT: -9, ok: true, device: {} };
     for (const dv of swingReports({ beta: cases[k][0], side, head, roll })) { now += 0.015; ST.joycon.report(j, { reportId: 0x30, data: dv }); }
-    if (j.lastSpin == null || !cases[k][1](j.lastSpin)) bad.push(`${k} ${side > 0 ? '포핸드' : '백핸드'} 머리${head > 0 ? '+' : '-'}X 롤${roll}: ${j.lastSpin}`);
+    const label = `${k} ${side > 0 ? '포핸드' : '백핸드'} 머리${head > 0 ? '+' : '-'}X 롤${roll}`;
+    if (j.lastSpin == null || !cases[k][1](j.lastSpin)) bad.push(`${label}: ${j.lastSpin}`);
+    if (j.lastSide !== (side > 0 ? 'fh' : 'bh')) badSide.push(`${label}: ${j.lastSide}`);
+    if (!j.motion || j.motion.active || j.motion.angle < 120) motionOk = false;   // 실제로는 170° 휘두름 (420도/초 밑은 빼고 셈)
   }
   G.paused = false;
   assert(bad.length === 0, '조이콘 올려 치기 → 탑스핀, 수평 → 플랫, 깎아 치기 → 슬라이스 (포핸드·백핸드, 쥔 방향·손목 돌림 상관없이 24가지)' + (bad.length ? ' — ' + bad.join(', ') : ''));
+  assert(badSide.length === 0, '조이콘 포핸드·백핸드를 휘두른 방향으로 구분 (24가지)' + (badSide.length ? ' — ' + badSide.join(', ') : ''));
+  assert(motionOk, '휘두른 각도를 팔로스루 끝까지 따라가고, 멈추면 끝남');
+}
+
+// 11) 포핸드·백핸드 자리 잡기 · 조이콘 스윙대로 화면 스윙 · 반대쪽으로 치면 약하게
+{
+  const RS = [1, -1], seen = { fh: 0, bh: 0 };
+  let placedOk = true;
+  ST.toMenu(); step(0.1, { render: false });
+  for (let i = 0, last = null; i < 60 * 60; i++) {
+    now += 1 / 60; ST.update();
+    const s = G.shot;
+    if (s && s !== last && s.kind !== 'serve' && s.hit.z <= 1.8) {
+      last = s; seen[s.side]++;
+      if (((s.hit.x - s.stand.x) * RS[s.receiver] > 0) !== (s.side === 'fh')) placedOk = false;   // 포핸드면 공이 라켓 쪽에
+    }
+  }
+  assert(placedOk && seen.fh > 10 && seen.bh > 10, `공이 오는 쪽에 따라 포핸드·백핸드로 자리 잡음 (1분 데모: 포핸드 ${seen.fh} · 백핸드 ${seen.bh})`);
+
+  // 2인 경기에서 P2가 조이콘으로 받기: 공이 오는 쪽대로 휘두름 → 휘두르기 시작하자마자 화면 스윙 시작, 타점에서 맞음
+  const j = { player: 1, gyro: 0, armed: true, swinging: false, swingStart: 0, peak: 0, peakT: 0, cool: 0, prevBtn: 0, simple: 0, lastReport: 0, lastPow: 0, lastSwingT: -9, ok: true, device: {} };
+  const p2 = ST.players[1];
+  const receive = (wrongSide, want) => {
+    for (let tries = 0; tries < 30; tries++) {
+      if (G.state !== 'serve') step(3, { render: false });
+      step(0.6, { render: false });
+      ST.emitSwing(G.server, 0.6, now);
+      const s = G.shot;
+      if (!s || s.receiver !== 1 || !s.reachable || s.hit.z > 1.8 || (want && s.side !== want)) { step(4, { render: false }); continue; }
+      const side = (s.side === 'fh') !== wrongSide ? 1 : -1;   // 오른손 기준 포핸드 = 위에서 볼 때 반시계
+      const reps = swingReports({ beta: 15, side, head: 1, roll: 0 });
+      // 리포트를 넣기 시작해서 가장 빠른 순간(타점)까지 약 0.72초 → 그때가 이상적인 타이밍이 되게 시작
+      while (ST.T() < s.hit.t + lat() - 0.72) { now += 1 / 60; ST.update(); }
+      let liveBeforeHit = false, animAtHit = '';
+      for (const dv of reps) {
+        now += 0.015; ST.joycon.report(j, { reportId: 0x30, data: dv }); ST.update(); ST.render();
+        if (G.shot === s && !s.resolved && p2.swingLive && ST.T() - p2.swingT < 0.2) liveBeforeHit = true;
+        if (G.shot !== s && !animAtHit) animAtHit = p2.anim;
+      }
+      return { s, ns: G.shot !== s ? G.shot : null, liveBeforeHit, animAtHit, flash: p2.flash };
+    }
+    return null;
+  };
+  ST.toMenu(); ST.settings.mode = '2p'; ST.startMatch();
+  for (const want of ['fh', 'bh']) {
+    const r = receive(false, want);
+    const name = want === 'fh' ? '포핸드' : '백핸드';
+    assert(r && r.ns && r.ns.hitter === 1, `조이콘 ${name} 스윙(가짜 IMU)으로 P2가 받아 넘김`);
+    assert(r && r.liveBeforeHit, `${name}: 휘두르기 시작하자마자 화면 속 스윙이 움직임 (판정 전에)`);
+    assert(r && r.animAtHit === (want === 'bh' ? 'backhand' : 'drive') && r.flash !== '반대쪽!', `${name}: 휘두른 쪽대로 화면 스윙 (${r ? r.animAtHit : '-'})`);
+    step(4, { render: false });
+  }
+  const ok = receive(false);
+  step(4, { render: false });
+  const bad = receive(true);
+  assert(bad && bad.ns && bad.flash === '반대쪽!' && bad.ns.speed < ok.ns.speed, `반대쪽으로 휘두르면 맞긴 하지만 약하게 (${bad && bad.ns ? Math.round(bad.ns.speed) : '-'} < ${ok && ok.ns ? Math.round(ok.ns.speed) : '-'}km/h)`);
+  ST.settings.lefty[1] = true;
+  assert(ST.handSide(1, 'fh') === 'bh' && ST.handSide(0, 'fh') === 'fh', '왼손잡이 설정이면 그 선수만 포핸드·백핸드를 반대로 봄');
+  ST.settings.lefty[1] = false;
 }
 
 // 10) 키보드 쉼표(P2) = 슬라이스로 받아 침

@@ -4,9 +4,12 @@
  *  - connect()        브라우저 장치 선택 창을 띄워 조이콘 연결 (버튼 클릭 안에서 호출)
  *  - start()          예전에 허락한 조이콘 자동 연결 + 끊김 감시 (페이지마다 한 번)
  *  - on(이름, 함수)   이벤트 받기
+ *        'swingstart' (player, t초, jc) — 휘두르기 시작한 순간 바로. jc.motion = { active, angle(도) } 은 팔로스루가 끝날 때까지 계속 늘어남
  *        'swing'   (player, pow 0~1, t초, jc) — 자이로로 감지한 휘두르기. t = 가장 세게 휘두른 순간
  *                  jc.lastSpin: 휘두른 방향으로 정한 스핀 (+1 올려 치기=탑스핀 · 0.15 수평=플랫 · -1 깎아 치기=슬라이스, 모르면 null)
  *                  jc.lastPath: 라켓 머리가 지나간 길의 기울기 sin값 (위 +, 아래 -)
+ *                  jc.lastSide: 'fh' 포핸드(위에서 볼 때 반시계) · 'bh' 백핸드(시계) · null 머리 위로 내려치기 등 (오른손 기준)
+ *  - swingDir(jc)     지금까지 모은 스윙으로 { spin, path, side } (휘두르는 도중에도 부를 수 있음)
  *        'buttons' (player, 새로 눌린 버튼 비트, jc)
  *        'change'  () — 연결·배정이 바뀜
  *  - assign()         조이콘을 P1·P2에 배정 (single=true면 모두 P1, swapped=true면 반대로)
@@ -65,7 +68,7 @@
     if (!device || device.vendorId !== NINTENDO || J.list.some(j => j.device === device)) return;
     const jc = { device, name: J.nameOf(device), player: 0, gyro: 0, armed: true, swinging: false, swingStart: 0,
       peak: 0, peakT: 0, cool: 0, prevBtn: 0, lastPow: 0, lastSwingT: -9, simple: 0, lastReport: 0, ok: false, err: '',
-      lastSpin: null, lastPath: null, up: null, restX: 0, sw: null,
+      lastSpin: null, lastPath: null, lastSide: null, up: null, restX: 0, sw: null, motion: null,
       accel: { x: 0, y: 0, z: 0 }, gyroDps: { x: 0, y: 0, z: 0 } };
     J.list.push(jc);
     J.assign();
@@ -141,6 +144,11 @@
     if (imu) track(jc, imu);
     jc.gyro = Math.max(mag, jc.gyro * 0.92);
     const sens = J.sensitivity, on = 420 / sens, off = 170 / sens;
+    const m = jc.motion;
+    if (m && m.active) {   // 휘두르는 동작 전체(판정 90ms를 넘어 팔로스루까지) 동안 돈 각도
+      m.angle += mag * DT_IMU;
+      if (mag < off) m.active = false;
+    }
     if (jc.swinging) {
       if (imu) gather(jc, imu, mag);
       if (mag > jc.peak) { jc.peak = mag; jc.peakT = t; }
@@ -148,15 +156,17 @@
         jc.swinging = false; jc.cool = t + 0.32;
         const pow = clamp((jc.peak * sens - 420) / 1080, 0, 1);
         const dir = swingDir(jc);
-        jc.lastPow = pow; jc.lastSpin = dir.spin; jc.lastPath = dir.path; jc.lastSwingT = now();
+        jc.lastPow = pow; jc.lastSpin = dir.spin; jc.lastPath = dir.path; jc.lastSide = dir.side; jc.lastSwingT = now();
         emit('swing', jc.player, pow, jc.peakT, jc);
       }
     } else {
       if (mag < off) jc.armed = true;
       if (jc.armed && mag > on && t > jc.cool) {
         jc.swinging = true; jc.armed = false; jc.swingStart = t; jc.peak = mag; jc.peakT = t;
-        jc.sw = { up: 0, abs: 0, ax: 0, w: 0 };
+        jc.sw = { up: 0, abs: 0, ax: 0, w: 0, vert: 0, mag: 0 };
+        jc.motion = { active: true, angle: 0 };
         if (imu) gather(jc, imu, mag);
+        emit('swingstart', jc.player, t, jc);
       }
     }
   };
@@ -198,11 +208,15 @@
     sw.up += k * (s.gz * u.y - s.gy * u.z);   // (ω × X축) · up — +X 끝이 위로 움직이는 빠르기
     sw.abs += k * Math.hypot(s.gy, s.gz);     // |ω × X축|
     sw.ax += k * (s.ax - u.x);                // 중력을 뺀 X축 가속도: 원심력 때문에 라켓 머리 쪽이 음수
+    sw.vert += k * (s.gx * u.x + s.gy * u.y + s.gz * u.z);   // ω · up — 위에서 볼 때 반시계(+)로 돌면 포핸드
+    sw.mag += k * mag;
     sw.w += k;
   }
   function swingDir(jc) {
     const sw = jc.sw;
-    if (!sw || !jc.up || sw.abs < 1e-6) return { spin: null, path: null };
+    if (!sw || !jc.up || sw.abs < 1e-6) return { spin: null, path: null, side: null };
+    const turn = sw.mag > 0 ? sw.vert / sw.mag : 0;   // 회전축이 얼마나 세로인지 (cos). 머리 위 스윙은 0 가까이
+    const side = turn > 0.3 ? 'fh' : turn < -0.3 ? 'bh' : null;
     const ax = sw.ax / sw.w;
     const head = ax < -0.8 ? 1 : ax > 0.8 ? -1 : (jc.restX < -0.3 ? -1 : 1);   // 원심력이 약하면 쉴 때 위를 향한 끝을 머리로
     const path = clamp(head * sw.up / sw.abs, -1, 1);   // 라켓 머리가 지나간 길의 기울기 (sin)
@@ -210,8 +224,9 @@
     let spin = 0.15;                                                                     // ±6° 안: 플랫
     if (path > 0.105) spin = 0.35 + 0.65 * clamp((path - 0.105) / 0.333, 0, 1);           // 올려 치기: 26°면 최대 탑스핀
     else if (path < -0.105) spin = -(0.35 + 0.65 * clamp((-path - 0.105) / 0.302, 0, 1)); // 깎아 치기: 24°면 최대 슬라이스
-    return { spin, path };
+    return { spin, path, side };
   }
+  J.swingDir = swingDir;
 
   J.tilt = pi => { const j = J.list.find(x => x.player === pi && x.ok); return j ? j.accel : null; };
 
