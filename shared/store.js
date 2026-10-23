@@ -7,6 +7,7 @@
  *   latencyMs    화면·블루투스 지연 보정 (ms, 기본 50)
  *   quality      그래픽 단계 auto · high · mid · low · 2d
  *   swapped      조이콘 P1 ↔ P2 바꿈 여부
+ *   sound        소리 크기 { music, sfx, crowd } (0~1, shared/audio.js)
  * 게임 전용 설정은 '게임이름.키' 형식으로 저장 (예: tennis.mode)
  * ============================================================ */
 (function () {

@@ -73,12 +73,28 @@ const game = {
 // 효과음 (데모 중엔 조용히)
 const sfx = {
   init: () => A.init(),
-  hit: p => { if (!game.demo) A.hit(p); },
-  bounce: () => { if (!game.demo) A.bounce(); },
+  hit: (p, o) => { if (!game.demo) A.hit(p, o); },
+  bounce: v => { if (!game.demo) A.bounce(v); },
+  net: () => { if (!game.demo) A.net(); },
   whoosh: p => { if (!game.demo) A.whoosh(p); },
+  toss: () => { if (!game.demo) A.toss(); },
+  squeak: () => { if (!game.demo) A.squeak(); },
   point: () => { if (!game.demo) A.point(); },
+  applause: x => { if (!game.demo) A.applause(x); },
+  ooh: () => { if (!game.demo) A.ooh(); },
+  groan: () => { if (!game.demo) A.groan(); },
   tick: () => A.tick(), ready: () => A.ready(), cheer: len => A.cheer(len),
 };
+// 화면에 맞춰 배경 소리 바꾸기: 메뉴·캐릭터 선택·결과에선 음악, 경기 중엔 음악 없이 관중 웅성거림 (실제 중계처럼)
+const snd = { music: null, amb: null, holdUntil: 0 };
+const VOL = [['volMusic', 'music'], ['volSfx', 'sfx'], ['volCrowd', 'crowd']];   // 설정 화면 슬라이더 → 소리 줄기
+function syncSound() {
+  if (!A.ctx) return;   // 아직 클릭·키 입력 전이라 소리를 못 냄
+  const m = menuOpen() || selectOpen() || (resultOpen() && T() > snd.holdUntil);
+  const a = !m && !game.demo && !game.paused && game.state !== 'select';
+  if (m !== snd.music) { snd.music = m; A.music(m); }
+  if (a !== snd.amb) { snd.amb = a; A.ambience(a); }
+}
 
 // ---------- 시계 (일시정지 시간을 뺀 게임 시간, 초) ----------
 let realNow = () => performance.now() / 1000;
@@ -104,7 +120,7 @@ const RACKET_SIDE = [1, -1];                   // 오른손잡이: 공이 몸 �
 // ---------- 선수 ----------
 function makePlayer(i) {
   return { i, x: 0, y: BASE[i], tx: 0, ty: BASE[i], speed: 5.0, swingT: -9, anim: 'drive', lastPow: 0, lastPowT: -9, flash: '', flashT: -9,
-    lastSpin: 0.5, swingSpin: 0.5, lastSpeed: 0, lastSpeedT: -9, motion: null, motionJc: null, motionT: -9, swingLive: false };
+    lastSpin: 0.5, swingSpin: 0.5, lastSpeed: 0, lastSpeedT: -9, motion: null, motionJc: null, motionT: -9, swingLive: false, run: 0 };
 }
 const players = [makePlayer(0), makePlayer(1)];
 const isCPU = i => game.demo || (game.forceCPU ? !!game.forceCPU[i] : (settings.mode === 'cpu' && i === 1));
@@ -203,7 +219,7 @@ function traceBall(s, from, v, w, dur) {
         const f = pz / (pz - b.z);
         b.x = px + (b.x - px) * f; b.y = py + (b.y - py) * f; b.z = 0;
         b.vx = pvx + (b.vx - pvx) * f; b.vy = pvy + (b.vy - pvy) * f; b.vz = pvz + (b.vz - pvz) * f;
-        bounces.push({ t: (i - 1 + f) * dt, x: b.x, y: b.y });
+        bounces.push({ t: (i - 1 + f) * dt, x: b.x, y: b.y, v: Math.hypot(b.vx, b.vy, b.vz) });   // v: 바닥에 닿는 속도 (소리 크기)
         bounceBall(b);
         if (b.vz < 0.5) { b.vz = 0; rolling = true; }
         const rest = (1 - f) * dt;
@@ -320,6 +336,7 @@ function tossBall(pi) {
   const p = players[pi], t = T();
   game.serveStage = 'toss';
   game.toss = { t0: t, x: p.x + RACKET_SIDE[pi] * 0.25, y: p.y + (pi === 0 ? 0.3 : -0.3) };
+  sfx.toss();
   if (isCPU(pi)) {   // CPU는 꼭대기 근처에서 침 (실력별 오차)
     const lv = game.demo ? 2 : settings.cpuLevel;
     game.cpuServeAt = t + TOSS.top + gauss() * [0.11, 0.08, 0.05][lv];
@@ -350,7 +367,7 @@ function serve(pi, pow, tSwing) {
   p.tx = 0; p.ty = BASE[pi]; p.anim = 'serve';
   p.lastSpin = s.spin; p.lastSpeed = s.speed; p.lastSpeedT = T();
   if (Math.abs(e) < 0.3 && !intoNet && !s.out) { p.flash = '나이스 서브!'; p.flashT = T(); }
-  sfx.hit(pow); spawnSparks(from, '#fde68a', 8); rumblePlayer(pi, 0.5, 60);
+  sfx.hit(pow, { spin: s.spin, perfect: Math.abs(e) < 0.3, kind: 'serve' }); spawnSparks(from, '#fde68a', 8); rumblePlayer(pi, 0.5, 60);
   scheduleCPU(s);
 }
 
@@ -493,7 +510,8 @@ function hitBall(pi, u, pow, spin, side) {
   else if (Math.abs(sp) >= 0.6) { text = spinLabel(sp); }
   if (text) { p.flash = text; p.flashT = t; }
   if (special) showMsg('필살 샷!', color);
-  sfx.hit(kind === 'smash' || special ? 1 : pow);
+  sfx.hit(kind === 'smash' || special ? 1 : pow, { spin: sp, perfect, wrong, kind });
+  if ([10, 15, 20, 30].includes(game.rally)) sfx.ooh();   // 랠리가 길어지면 관중이 "오~"
   spawnSparks(from, special ? '#fb923c' : '#fde68a', special ? 24 : 10);
   rumblePlayer(pi, special || kind === 'smash' ? 0.9 : 0.5, 70);
   scheduleCPU(ns);
@@ -512,6 +530,10 @@ function endPoint(winner, text, color, line = '') {
   }
   showMsg(text, color || '#fff', game.gameWon >= 0 ? `${nameOf(winner)} 게임!` : '');
   sfx.point(); rumblePlayer(winner, 0.35, 120);
+  // 관중: 멋진 공·긴 랠리엔 큰 박수, 긴 랠리를 실수로 끝내거나 더블 폴트면 아쉬워함
+  const great = ['위너!', '에이스!', '필살 샷!'].includes(text) || !!(game.shot && game.shot.kind === 'smash' && winner === game.shot.hitter);
+  if (text === '더블 폴트!' || ((text === '네트!' || text === '아웃!') && game.rally >= 6)) sfx.groan();
+  else sfx.applause(clamp((great ? 0.55 : 0.25) + game.rally * 0.04 + (game.gameWon >= 0 ? 0.25 : 0), 0.2, 1));
   umpire((line ? line + ', ' : '') + (game.gameWon >= 0 ? `게임, ${nameOf(winner)}` : scoreCall()));
 }
 
@@ -520,7 +542,7 @@ function umpire(text) {
   if (game.demo || !settings.voice || typeof speechSynthesis === 'undefined' || typeof SpeechSynthesisUtterance === 'undefined') return;
   try {
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ko-KR'; u.rate = 1.05;
+    u.lang = 'ko-KR'; u.rate = 1.05; u.volume = A.vol.sfx;
     speechSynthesis.cancel(); speechSynthesis.speak(u);
   } catch (e) { /* 음성 합성이 안 되는 환경은 무시 */ }
 }
@@ -550,7 +572,7 @@ function finishMatch(w) {
   $('resTitle').style.color = COLORS[w];
   $('resBody').innerHTML = `${slotLabel(0)} ${nameOf(0)} ${game.games[0]} : ${game.games[1]} ${nameOf(1)} ${slotLabel(1)}<br>최장 랠리 ${game.longest}회 · 나이스 샷 ${game.nice[0]} / ${game.nice[1]}`;
   $('result').classList.remove('hidden');
-  sfx.cheer(2.2);
+  sfx.cheer(2.2); A.jingle(true); snd.holdUntil = T() + 3.2;   // 축하 음악이 끝나면 다시 배경 음악
   umpire(`게임 셋, ${nameOf(w)} 승리`);
 }
 
@@ -689,11 +711,15 @@ function update() {
   const t = T();
   const dt = clamp(t - lastT, 0, 0.1); lastT = t;   // 느린 컴퓨터(10fps)에서도 이동 속도가 실제 시간과 같게
   pollGamepads();
+  syncSound();
   if (game.paused || demoPauseAt !== null) return;
   followMotion(t);
   for (const p of players) {
     const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy), step = p.speed * dt;
-    if (d <= step) { p.x = p.tx; p.y = p.ty; } else { p.x += dx / d * step; p.y += dy / d * step; }
+    if (d > step) { p.x += dx / d * step; p.y += dy / d * step; p.run += step; continue; }
+    p.x = p.tx; p.y = p.ty;
+    if (p.run > 1.5) sfx.squeak();   // 크게 뛰다 멈추면 운동화 "끽"
+    p.run = 0;
   }
   if (game.state === 'serve') {
     const sv = game.server;
@@ -720,7 +746,7 @@ function ballEvents(s, t) {
   while (s.nb < s.bounces.length && t - s.t0 >= s.bounces[s.nb].t) {
     const b = s.bounces[s.nb++];
     if (s.nb > 1 && b.t - s.bounces[s.nb - 2].t < 0.15) continue;   // 굴러가기 직전 자잘한 바운드는 조용히
-    sfx.bounce(); spawnDust(b.x, b.y);
+    sfx.bounce(b.v); spawnDust(b.x, b.y);
   }
 }
 
@@ -730,7 +756,7 @@ function updateRally(t) {
   s.trail.push(bp); if (s.trail.length > 14) s.trail.shift();
   ballEvents(s, t);
   if (s.netT != null && !s.resolved && t - s.t0 >= s.netT) {   // 네트에 걸림
-    sfx.bounce();
+    sfx.net();
     if (s.kind === 'serve') { serveFault(s, true); return; }
     s.resolved = true; endPoint(s.receiver, '네트!', '#fbbf24', '네트'); return;
   }
@@ -926,6 +952,7 @@ function syncMenu() {
   $('guide').checked = !!settings.guide;
   for (const i of [0, 1]) $('lefty' + i).checked = settings.lefty[i];
   $('sideCheck').checked = !!settings.sideCheck; $('voice').checked = !!settings.voice;
+  for (const [id, k] of VOL) { $(id).value = Math.round(A.vol[k] * 100); $(id + 'V').textContent = Math.round(A.vol[k] * 100) + '%'; }
   $('gfxInfo').textContent = gfxInfoText();
   renderSlots();
 }
@@ -1910,6 +1937,10 @@ function bindMenu() {
   for (const i of [0, 1]) $('lefty' + i).onchange = e => { settings.lefty[i] = e.target.checked; saveSettings(); };
   $('sideCheck').onchange = e => { settings.sideCheck = e.target.checked; saveSettings(); };
   $('voice').onchange = e => { settings.voice = e.target.checked; saveSettings(); };
+  for (const [id, k] of VOL) {   // 소리 크기: 움직이는 대로 바로 바꾸고, 놓으면 효과음·박수로 들려줌
+    $(id).oninput = e => { sfx.init(); A.setVolume(k, e.target.value / 100); $(id + 'V').textContent = e.target.value + '%'; };
+    $(id).onchange = () => { if (k === 'sfx') A.hit(0.6, { perfect: true }); else if (k === 'crowd') A.applause(0.35); };
+  }
   $('btnSwap').onclick = () => { JC.swapped = !JC.swapped; S.set('swapped', JC.swapped); assignJoyCons(); };
   $('btnStart').onclick = openSelect;
   $('btnHome').onclick = () => { location.href = '../../index.html'; };

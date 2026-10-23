@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#8176db">
 <title>몬스터 테니스 · 놀자</title>
-<link rel="stylesheet" href="../../shared/nolja.css">
-<link rel="stylesheet" href="tennis.css">
+<link rel="stylesheet" href="../../shared/nolja.css?v=20261023">
+<link rel="stylesheet" href="tennis.css?v=20261023">
 </head>
 <body>
 <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -47,7 +47,7 @@
     <section class="connection-card" aria-labelledby="controllerTitle"><span class="connection-icon"><svg aria-hidden="true" class="icon"><use href="#i-pad"/></svg></span><div class="connection-copy"><h2 id="controllerTitle">휘두르는 재미, 조이콘과 함께</h2><p id="connectionStatus">키보드만으로도 바로 플레이할 수 있어요.</p></div><div class="connection-actions"><button id="btnSwap" class="text-button">P1 ↔ P2 바꾸기</button><button id="btnConnect" class="connect-button"><span class="plus-icon" aria-hidden="true">+</span> 조이콘 연결</button></div></section>
     <div class="secondary-grid">
       <details class="club-details" id="controllerDetails"><summary><span><svg aria-hidden="true" class="icon"><use href="#i-pad"/></svg> 컨트롤러 상태 · 연결 방법</span><svg aria-hidden="true" class="icon chevron"><use href="#i-chevron"/></svg></summary><div class="details-content"><p class="small">윈도우 블루투스에서 조이콘 측면의 동그란 버튼을 길게 눌러 페어링한 뒤, ‘조이콘 연결’을 눌러주세요. 두 개를 연결하려면 한 번씩 눌러주세요.</p><div id="hidWarn" class="warn hidden" role="status"></div><div id="slots" aria-live="polite"></div></div></details>
-      <details class="club-details" id="settingsDetails"><summary><span><svg aria-hidden="true" class="icon"><use href="#i-sliders"/></svg> 그래픽 · 플레이 설정</span><svg aria-hidden="true" class="icon chevron"><use href="#i-chevron"/></svg></summary><div class="details-content"><div class="setting-title">그래픽 품질</div><div id="qRow" class="row seg"><button data-q="auto">자동</button><button data-q="high">높음</button><button data-q="mid">보통</button><button data-q="low">낮음</button><button data-q="2d">2D</button></div><div id="gfxInfo" class="small gfx-info"></div><label class="set" for="sens">스윙 감도 <input id="sens" type="range" min="0.6" max="1.6" step="0.05"><span id="sensV" class="small"></span></label><label class="set" for="lat">타이밍 보정 <input id="lat" type="range" min="0" max="200" step="10"><span id="latV" class="small"></span></label><label class="set guide-setting"><input id="guide" type="checkbox"> 타이밍 가이드 표시</label><p class="small">공을 칠 자리에 줄어드는 원이 나타나요. 자꾸 ‘늦음’이 나면 타이밍 보정을 올려보세요.</p><label class="set guide-setting"><input id="lefty0" type="checkbox"> P1 왼손으로 쳐요</label><label class="set"><input id="lefty1" type="checkbox"> P2 왼손으로 쳐요</label><p class="small">조이콘으로 포핸드·백핸드를 볼 때 방향을 반대로 봐요.</p><label class="set guide-setting"><input id="sideCheck" type="checkbox"> 포핸드·백핸드 판정</label><p class="small">끄면 반대쪽으로 휘둘러도 제대로 맞아요. 아이들과 할 때 좋아요.</p><label class="set guide-setting"><input id="voice" type="checkbox"> 심판 목소리</label><p class="small">점수와 아웃·폴트를 소리 내어 불러줘요.</p></div></details>
+      <details class="club-details" id="settingsDetails"><summary><span><svg aria-hidden="true" class="icon"><use href="#i-sliders"/></svg> 그래픽 · 플레이 설정</span><svg aria-hidden="true" class="icon chevron"><use href="#i-chevron"/></svg></summary><div class="details-content"><div class="setting-title">그래픽 품질</div><div id="qRow" class="row seg"><button data-q="auto">자동</button><button data-q="high">높음</button><button data-q="mid">보통</button><button data-q="low">낮음</button><button data-q="2d">2D</button></div><div id="gfxInfo" class="small gfx-info"></div><label class="set" for="sens">스윙 감도 <input id="sens" type="range" min="0.6" max="1.6" step="0.05"><span id="sensV" class="small"></span></label><label class="set" for="lat">타이밍 보정 <input id="lat" type="range" min="0" max="200" step="10"><span id="latV" class="small"></span></label><label class="set guide-setting"><input id="guide" type="checkbox"> 타이밍 가이드 표시</label><p class="small">공을 칠 자리에 줄어드는 원이 나타나요. 자꾸 ‘늦음’이 나면 타이밍 보정을 올려보세요.</p><label class="set guide-setting"><input id="lefty0" type="checkbox"> P1 왼손으로 쳐요</label><label class="set"><input id="lefty1" type="checkbox"> P2 왼손으로 쳐요</label><p class="small">조이콘으로 포핸드·백핸드를 볼 때 방향을 반대로 봐요.</p><label class="set guide-setting"><input id="sideCheck" type="checkbox"> 포핸드·백핸드 판정</label><p class="small">끄면 반대쪽으로 휘둘러도 제대로 맞아요. 아이들과 할 때 좋아요.</p><label class="set guide-setting"><input id="voice" type="checkbox"> 심판 목소리</label><p class="small">점수와 아웃·폴트를 소리 내어 불러줘요.</p><div class="setting-title sound-title">소리 크기</div><label class="set" for="volMusic">음악 <input id="volMusic" type="range" min="0" max="100" step="5"><span id="volMusicV" class="small"></span></label><label class="set" for="volSfx">효과음 <input id="volSfx" type="range" min="0" max="100" step="5"><span id="volSfxV" class="small"></span></label><label class="set" for="volCrowd">관중 <input id="volCrowd" type="range" min="0" max="100" step="5"><span id="volCrowdV" class="small"></span></label><p class="small">메뉴에선 음악, 경기 중엔 관중 소리가 나와요. 0이면 꺼져요.</p></div></details>
     </div>
     <footer class="club-footer"><button id="btnHome" class="text-button">← 놀자 라운지</button><span>조이콘 스트랩을 꼭 끼고, 주변 공간을 확보해 주세요.</span><span class="footer-signoff">LITTLE FRIENDS, LOVELY GAMES.</span></footer>
   </main>
@@ -59,11 +59,11 @@
 <div id="pause" class="overlay hidden"><div class="panel center pause-panel"><p class="eyebrow">TAKE A BREATHER</p><div class="big">잠깐, 쉬어갈까요?</div><p class="sub">코트는 그대로 기다리고 있어요.</p><div class="row modal-actions"><button id="btnResume" class="primary">계속 플레이</button><button id="btnQuit">매치 설정으로</button></div><div id="pauseInfo" class="small"></div></div></div>
 <div id="result" class="overlay bottom hidden"><div class="panel center result-panel"><p class="eyebrow">WHAT A MATCH!</p><div id="resTitle" class="big"></div><div id="resBody" class="sub"></div><div class="row modal-actions"><button id="btnAgain" class="primary">한 판 더!</button><button id="btnReselect">캐릭터 바꾸기</button><button id="btnMenu">매치 설정</button></div><div class="small result-hint">조이콘 버튼 / Enter = 다시 하기</div></div></div>
 <script src="../../shared/vendor/three.min.js"></script>
-<script src="../../shared/store.js"></script>
-<script src="../../shared/audio.js"></script>
-<script src="../../shared/joycon.js"></script>
-<script src="../../shared/characters.js"></script>
-<script src="tennis.js"></script>
-<script src="tennis-ui.js"></script>
+<script src="../../shared/store.js?v=20261023"></script>
+<script src="../../shared/audio.js?v=20261023"></script>
+<script src="../../shared/joycon.js?v=20261023"></script>
+<script src="../../shared/characters.js?v=20261023"></script>
+<script src="tennis.js?v=20261023"></script>
+<script src="tennis-ui.js?v=20261023"></script>
 </body>
 </html>

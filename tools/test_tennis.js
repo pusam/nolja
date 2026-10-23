@@ -42,9 +42,41 @@ let randomSeed = 0x12345678;
 const testMath = Object.create(Math);
 testMath.random = () => { randomSeed = (1664525 * randomSeed + 1013904223) >>> 0; return randomSeed / 4294967296; };
 let pads = [];
+// 가짜 WebAudio: 소리 코드가 예외 없이 도는지 확인. 브라우저처럼 값이 NaN이거나 시간이 음수, 지수 변화가 0 이하면 기록
+const audioLog = { nodes: 0, starts: 0, bad: [] };
+function fakeParam(name) {
+  const p = { value: 0, cancelScheduledValues: () => p };
+  const check = kind => (v, t) => { if (!Number.isFinite(v) || !Number.isFinite(t) || t < 0 || (kind === 'exp' && v <= 0)) audioLog.bad.push(`${name}.${kind}(${v}, ${t})`); return p; };
+  p.setValueAtTime = check('set'); p.linearRampToValueAtTime = check('lin'); p.exponentialRampToValueAtTime = check('exp'); p.setTargetAtTime = check('target');
+  return p;
+}
+function fakeNode(params = []) {
+  audioLog.nodes++;
+  const n = { connect: x => x, disconnect: noop,
+    start: (t = 0) => { audioLog.starts++; if (!Number.isFinite(t) || t < 0) audioLog.bad.push('start ' + t); },
+    stop: (t = 0) => { if (!Number.isFinite(t) || t < 0) audioLog.bad.push('stop ' + t); } };
+  for (const k of params) n[k] = fakeParam(k);
+  return n;
+}
+class FakeAudioContext {
+  constructor() { this.sampleRate = 8000; this.state = 'running'; this.destination = fakeNode(); this.t0 = now; }
+  get currentTime() { return Math.max(0, now - this.t0); }
+  createGain() { return fakeNode(['gain']); }
+  createOscillator() { return fakeNode(['frequency', 'detune']); }
+  createBiquadFilter() { return fakeNode(['frequency', 'Q', 'gain']); }
+  createBufferSource() { return fakeNode(['playbackRate']); }
+  createDynamicsCompressor() { return fakeNode(['threshold', 'ratio', 'attack', 'release', 'knee']); }
+  createBuffer(ch, len, rate) { const d = new Float32Array(len); return { length: len, sampleRate: rate, duration: len / rate, getChannelData: () => d }; }
+  resume() { this.state = 'running'; return Promise.resolve(); }
+  suspend() { this.state = 'suspended'; return Promise.resolve(); }
+}
+const spoken = [];   // 심판 목소리로 말한 문장
 const sandbox = {
   __ST_HEADLESS: '3d',
   Math: testMath,
+  AudioContext: FakeAudioContext,
+  speechSynthesis: { cancel: noop, speak: u => spoken.push(u.text) },
+  SpeechSynthesisUtterance: function (text) { this.text = text; },
   document: { getElementById: el, createElement: () => mkEl(''), querySelectorAll: () => [], body: mkEl('body'),
     addEventListener: noop, documentElement: { requestFullscreen: noop }, fullscreenElement: null, hidden: false, exitFullscreen: noop },
   navigator: { getGamepads: () => pads },
@@ -52,7 +84,7 @@ const sandbox = {
   requestAnimationFrame: noop, localStorage: { getItem: () => null, setItem: noop },
   innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1,
   console: { log: (...a) => console.log(...a), warn: noop, error: (...a) => errors.push(a.map(String).join(' ')) },
-  setTimeout: noop, setInterval: noop, location: { protocol: 'https:' },
+  setTimeout: noop, setInterval: noop, clearTimeout: noop, clearInterval: noop, location: { protocol: 'https:' },
   addEventListener: (name, fn) => { (windowEvents[name] || (windowEvents[name] = [])).push(fn); },
 };
 sandbox.window = sandbox;
@@ -500,6 +532,30 @@ function swingReports({ beta, side, head, roll, peakDps = 1400 }) {
   }
   assert(got && got.ns.hitter === 1 && got.flash !== '반대쪽!', '포핸드·백핸드 판정을 끄면 반대쪽으로 휘둘러도 제대로 맞음');
   ST.settings.sideCheck = true;
+}
+
+// 13) 소리: 화면에 따라 음악·관중 소리 바꾸기, 음악 악보 전체 예약, 볼륨, 심판 목소리
+{
+  const AU = sandbox.Nolja.audio;
+  assert(!!AU.ctx && audioLog.starts > 100, `경기하면서 효과음이 실제로 만들어짐 (소리 ${audioLog.starts}개)`);
+  ST.toMenu(); step(0.1, { render: false });
+  assert(!!AU.mus && !AU.amb, '메뉴에선 배경 음악 (관중 소리 없음)');
+  for (let i = 0; i < 160; i++) { now += 0.05; AU.pump(); }   // 8마디 반복을 두 바퀴 넘게 예약
+  ST.settings.mode = '2p'; ST.startMatch(); step(0.1, { render: false });
+  assert(!AU.mus && !!AU.amb, '경기 중엔 음악 없이 관중 웅성거림');
+  for (const fn of windowEvents.keydown || []) fn({ code: 'Escape', preventDefault: noop });
+  step(0.1, { render: false });
+  assert(G.paused && !AU.amb, '일시정지하면 관중 소리도 멈춤');
+  for (const fn of windowEvents.keydown || []) fn({ code: 'Escape', preventDefault: noop });
+  step(0.1, { render: false });
+  assert(!G.paused && !!AU.amb, '다시 하면 관중 소리 다시');
+  AU.setVolume('music', 0.3);
+  assert(AU.vol.music === 0.3 && AU.bus.music.gain.value !== undefined, '음악 볼륨 조절');
+  for (const k of ['applause', 'ooh', 'groan', 'net', 'toss', 'squeak']) AU[k](0.7);
+  AU.hit(1, { spin: 0.9, perfect: true, kind: 'smash' }); AU.hit(0.4, { spin: -0.8, wrong: true }); AU.jingle(true); AU.cheer(2);
+  assert(audioLog.bad.length === 0, '모든 소리의 값·시간이 정상 (NaN·음수 시간 없음)' + (audioLog.bad[0] ? ' — ' + audioLog.bad.slice(0, 3).join(', ') : ''));
+  const said = spoken.join(' / ');
+  assert(/(피프틴|서티|포티|러브|올|듀스|어드밴티지|게임)/.test(said), `심판이 점수를 불러줌 ("${spoken.slice(-2).join('", "')}")`);
 }
 
 assert(errors.length === 0, '전체 예외 없음' + (errors[0] ? ' — ' + errors[0] : ''));
