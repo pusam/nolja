@@ -18,6 +18,7 @@
   }
   function syncLayout() {
     const inMenu = !menu.classList.contains('hidden');
+    if (!inMenu && guide.open) guide.close();   // a controller button can leave the menu while the guide is open
     const parent = inMenu ? preview : document.body;
     if (stage.parentElement !== parent) parent.prepend(stage);
     game.setDemoPaused(inMenu && previewPaused);
@@ -40,16 +41,22 @@
     if (!menu.classList.contains('hidden')) game.setDemoPaused(previewPaused);
     updatePreviewButton();
   });
-  $('btnGuide').addEventListener('click', () => guide.showModal());
+  // Opened with the mouse: drop focus on close so Enter starts the game instead of reopening the guide.
+  let guideByMouse = false;
+  $('btnGuide').addEventListener('click', event => { guideByMouse = event.detail > 0; guide.showModal(); });
+  guide.addEventListener('close', () => { if (guideByMouse) $('btnGuide').blur(); });
   $('btnGuideClose').addEventListener('click', () => guide.close());
   guide.addEventListener('click', event => { if (event.target === guide) { const r = guide.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) guide.close(); } });
-  // Let native buttons, disclosures and the dialog keep their keyboard behavior.
+  // Let native controls keep only the keys they actually use; everything else (Enter to start, F, game keys) reaches the game.
   window.addEventListener('keydown', event => {
     if (guide.open) { event.stopImmediatePropagation(); return; }
-    const interactive = event.target instanceof Element ? event.target.closest('button, a, input, summary, select, textarea') : null;
-    if (!interactive) return;
-    if (event.code === 'Enter' || event.code === 'NumpadEnter' || event.code === 'Space') event.stopImmediatePropagation();
-    if (interactive.matches('input') && event.code !== 'Escape') event.stopImmediatePropagation();
+    const el = event.target instanceof Element ? event.target.closest('button, a, input, summary, select, textarea') : null;
+    if (!el) return;
+    const activate = event.code === 'Enter' || event.code === 'NumpadEnter' || event.code === 'Space';
+    if (el.matches('textarea, select, input:not([type=checkbox]):not([type=range])')) { if (event.code !== 'Escape') event.stopImmediatePropagation(); }
+    else if (el.matches('input[type=checkbox]')) { if (event.code === 'Space') event.stopImmediatePropagation(); }
+    else if (el.matches('input[type=range]')) { if (event.code.startsWith('Arrow') || event.code === 'Home' || event.code === 'End' || event.code.startsWith('Page')) event.stopImmediatePropagation(); }
+    else if (activate) event.stopImmediatePropagation();
   }, true);
   $('btnGamePause').addEventListener('click', () => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })));
   $('btnGameFull').addEventListener('click', () => $('btnFull').click());
@@ -65,9 +72,9 @@
     if (count) $('controllerDetails').open = true;
   }
   joycon.on('change', () => { if (updateSlots) updateSlots(); updateConnection(); });
-  new MutationObserver(() => {
-    if (!$('hidWarn').classList.contains('hidden')) $('controllerDetails').open = true;
-  }).observe($('hidWarn'), { attributes: true, childList: true, characterData: true, subtree: true });
+  const showWarning = () => { if (!$('hidWarn').classList.contains('hidden')) $('controllerDetails').open = true; };
+  new MutationObserver(showWarning).observe($('hidWarn'), { attributes: true, childList: true, characterData: true, subtree: true });
+  showWarning();   // tennis.js may have shown the "no Joy-Con here" warning before this observer existed
   updatePreviewButton();
   updateConnection();
   syncLayout();

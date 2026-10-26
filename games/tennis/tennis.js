@@ -207,7 +207,8 @@ function traceBall(s, from, v, w, dur) {
     } else {
       const px = b.x, py = b.y, pz = b.z, pvx = b.vx, pvy = b.vy, pvz = b.vz;
       stepBall(b, dt);
-      if (s.netT == null && (py - C.net) * (b.y - C.net) < 0) {   // 네트보다 낮게 지나가면 걸려서 친 사람 쪽으로 툭 떨어짐
+      // 첫 바운드 전에 네트보다 낮게 지나가면 걸려서 친 사람 쪽으로 툭 떨어짐 (튀고 굴러 되돌아오는 공은 네트 실수가 아님)
+      if (s.netT == null && !bounces.length && (py - C.net) * (b.y - C.net) < 0) {
         const f = (C.net - py) / (b.y - py), zx = pz + (b.z - pz) * f, xx = px + (b.x - px) * f;
         if (zx < netTop(xx)) {
           s.netT = (i - 1 + f) * dt;
@@ -226,7 +227,7 @@ function traceBall(s, from, v, w, dur) {
         b.x += b.vx * rest; b.y += b.vy * rest; b.z += b.vz * rest;
       }
     }
-    if (b.y < WY0 || b.y > WY1) { b.y = clamp(b.y, WY0, WY1); b.vy *= -0.3; b.vx *= 0.6; }
+    if (b.y < WY0 || b.y > WY1) { b.y = clamp(b.y, WY0, WY1); b.vy *= -0.3; b.vx *= 0.6; b.w *= -0.3; }   // 되돌아가면 회전도 진행 방향 기준으로 반대
     if (Math.abs(b.x) > BALL.WALL_X) { b.x = clamp(b.x, -BALL.WALL_X, BALL.WALL_X); b.vx *= -0.3; b.vy *= 0.6; }
     P[3 * i] = b.x; P[3 * i + 1] = b.y; P[3 * i + 2] = b.z;
   }
@@ -257,11 +258,11 @@ function planShot(from, to, flight, spin, intoNet = false) {
   return s;
 }
 
-function makeShot(hitter, from, to, flight, kind, special = false, spin = 0, intoNet = false) {
+function makeShot(hitter, from, to, flight, kind, special = false, spin = 0, intoNet = false, t0 = T()) {
   // 아웃: 옆줄 밖, 또는 너무 길게 (서브는 서비스 박스 밖)
   const outY = kind === 'serve' ? Math.abs(to.y - C.net) > C.svc + 0.03 : to.y < -0.03 || to.y > C.len + 0.03;
   const s = Object.assign(planShot(from, to, flight, spin, intoNet), {
-    hitter, receiver: 1 - hitter, kind, special, t0: T(),
+    hitter, receiver: 1 - hitter, kind, special, t0,
     out: Math.abs(to.x) > C.halfW + 0.03 || outY,
     resolved: false, miss: '', bounced: false, nb: 0, trail: [],
   });
@@ -362,7 +363,8 @@ function serve(pi, pow, tSwing) {
     flight *= Math.abs(ny - from.y) / Math.abs(to.y - from.y);
     to = { x: to.x * 0.6, y: ny };
   }
-  const s = makeShot(pi, from, to, Math.max(0.3, flight), 'serve', false, second ? 0.6 : lerp(0.5, 0.1, pow), intoNet);   // 두 번째는 킥(탑스핀)
+  const tc = clamp(game.toss.t0 + dt, game.toss.t0, T());   // 맞힌 순간 (보정한 스윙 시각)
+  const s = makeShot(pi, from, to, Math.max(0.3, flight), 'serve', false, second ? 0.6 : lerp(0.5, 0.1, pow), intoNet, tc);   // 두 번째는 킥(탑스핀)
   game.shot = s; game.state = 'rally'; game.stateT = T(); game.rally = 0; game.serveStage = 'hit';
   p.tx = 0; p.ty = BASE[pi]; p.anim = 'serve';
   p.lastSpin = s.spin; p.lastSpeed = s.speed; p.lastSpeedT = T();
@@ -451,15 +453,16 @@ function doSwing(pi, pow, tSwing, spin, side = null) {
   const d = (tSwing - settings.latencyMs / 1000) - s.hit.t;
   if (d < -0.75) return;            // 공이 아직 멀리 있음 → 무시
   if (!s.reachable) return;         // 못 따라가는 공
-  if (Math.abs(d) <= s.W) { hitBall(pi, d / s.W, pow, spin, side); return; }
+  // 맞힌 순간 = 보정한 스윙 시각. 조이콘은 감지에 0.09초+보정만큼 늦게 알려 주므로 지금 공 위치가 아니라 그때 위치에서 쳐 보냄
+  if (Math.abs(d) <= s.W) { hitBall(pi, d / s.W, pow, spin, side, clamp(tSwing - settings.latencyMs / 1000, s.t0, t)); return; }
   if (d < -s.W) { s.miss = '빠름!'; p.flash = '빠름!'; p.flashT = t; }
 }
 
-function hitBall(pi, u, pow, spin, side) {
+function hitBall(pi, u, pow, spin, side, tc = T()) {
   const s = game.shot, p = players[pi], t = T();
   s.resolved = true;
   game.rally++;
-  const bp = ballPos(s, t);
+  const bp = ballPos(s, tc);
   const from = { x: bp.x, y: bp.y, z: clamp(bp.z, 0.4, 3.2) };
   // 공은 백핸드 쪽인데 포핸드로 휘두르는 등 반대로 치면: 맞기는 하지만 힘없고 방향이 흔들림
   const wrong = !!(settings.sideCheck && side && side !== s.side && from.z <= 1.85);
@@ -497,7 +500,7 @@ function hitBall(pi, u, pow, spin, side) {
     flight = Math.max(0.3, flight * Math.abs(ny - from.y) / Math.max(1, Math.abs(ty - from.y)));
     tx *= 0.5; ty = ny;
   }
-  const ns = makeShot(pi, from, { x: tx, y: ty }, Math.max(err === 'net' ? 0.3 : 0.55, flight), kind, special, sp, err === 'net');
+  const ns = makeShot(pi, from, { x: tx, y: ty }, Math.max(err === 'net' ? 0.3 : 0.55, flight), kind, special, sp, err === 'net', tc);
   game.shot = ns;
   p.tx = 0; p.ty = BASE[pi];                          // 친 사람은 가운데로 복귀
   p.lastSpin = sp; p.lastSpeed = ns.speed; p.lastSpeedT = t;
@@ -546,6 +549,8 @@ function umpire(text) {
     speechSynthesis.cancel(); speechSynthesis.speak(u);
   } catch (e) { /* 음성 합성이 안 되는 환경은 무시 */ }
 }
+// 일시정지·메뉴로 가면 하던 말을 멈춤
+function hush() { try { if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel(); } catch (e) { /* 무시 */ } }
 // 점수 부르기: 서버 점수부터 ("피프틴 러브"), 같으면 "~ 올", 40-40부터는 듀스·어드밴티지
 const CALL = ['러브', '피프틴', '서티', '포티'];
 function scoreCall() {
@@ -597,12 +602,12 @@ function toMenu() {
   hideOverlays('pause', 'result', 'select');
   $('menu').classList.remove('hidden');
   game.points = [0, 0]; game.games = [0, 0]; game.msg = null;
-  syncMenu(); startServe();
+  syncMenu(); startServe(); hush();
 }
 
 function pause() {
   if (game.paused || game.demo || game.state === 'matchEnd' || game.state === 'select') return;
-  pausedAt = realNow(); game.paused = true; $('pause').classList.remove('hidden');
+  pausedAt = realNow(); game.paused = true; $('pause').classList.remove('hidden'); hush();
   $('pauseInfo').textContent = gfxInfoText();
 }
 function resume() {
@@ -686,7 +691,7 @@ function buildRoster() {
   if (el.querySelectorAll) el.querySelectorAll('canvas').forEach((c, k) => NC.portrait(c, CHARS[k]));
   const tileOf = e => (e.target && e.target.closest) ? e.target.closest('.tile') : null;
   el.onclick = e => { const tl = tileOf(e); if (tl) selSet(0, +tl.dataset.k); };
-  el.oncontextmenu = e => { e.preventDefault(); const tl = tileOf(e); if (tl) selSet(1, +tl.dataset.k, true); };
+  el.oncontextmenu = e => { e.preventDefault(); const tl = tileOf(e); if (tl) { tl.blur(); selSet(1, +tl.dataset.k, true); } };   // 포커스가 남으면 Enter가 P1 선택으로 눌림
 }
 function renderSelect() {
   document.querySelectorAll('#roster .tile').forEach(tl => {
@@ -773,8 +778,8 @@ function updateRally(t) {
     if (game.state !== 'rally') return;
   }
   if (s.resolved || game.shot !== s) return;
-  // 판정 창이 지났는데 못 침 (스윙 감지 지연 여유 0.12초)
-  if (t > s.hit.t + s.W + 0.12) {
+  // 판정 창이 지났는데 못 침. 판정은 타이밍 보정을 뺀 시각으로 하니 기다리는 것도 보정만큼 + 스윙 감지 여유(조이콘 0.09초)
+  if (t > s.hit.t + s.W + settings.latencyMs / 1000 + 0.15) {
     s.resolved = true;
     let text, color = '#fca5a5';
     if (s.miss) text = s.miss;
@@ -843,16 +848,16 @@ window.addEventListener('keydown', e => {
   emitSwing(pi, pow, realNow(), spin);
 });
 
-const padPrev = {}, padSel = {};
+const padPrev = {}, padSel = {}, padSlot = {};   // padSlot: 패드 번호 → 선수. 다른 패드가 빠져도 자리가 안 바뀜
 function pollGamepads() {
   if (!navigator.getGamepads) return;
   let pads; try { pads = navigator.getGamepads() || []; } catch (e) { return; }
-  let slot = 0;
+  const live = pads.filter(gp => gp && gp.connected && !(JC.supported && /057e|joy-con|pro controller|nintendo/i.test(gp.id)));   // PC에선 조이콘은 WebHID로 받음
+  for (const k in padSlot) if (!live.some(gp => String(gp.index) === k)) delete padSlot[k];
   game.padCount = 0;
-  for (const gp of pads) {
-    if (!gp || !gp.connected) continue;
-    if (JC.supported && /057e|joy-con|pro controller|nintendo/i.test(gp.id)) continue;   // PC에선 조이콘은 WebHID로 받음
-    const pi = settings.mode === 'cpu' ? 0 : (slot++ % 2);
+  for (const gp of live) {
+    if (padSlot[gp.index] == null) { const used = Object.values(padSlot); padSlot[gp.index] = !used.includes(0) ? 0 : !used.includes(1) ? 1 : gp.index % 2; }
+    const pi = settings.mode === 'cpu' ? 0 : padSlot[gp.index];
     game.padCount++;
     const now = gp.buttons.map(b => b.pressed || b.value > 0.5);
     const prev = padPrev[gp.index] || [];
@@ -1474,8 +1479,9 @@ function initRenderer(aa) {
   const prev = $('gl');
   if (prev) prev.replaceWith(canvas); else document.body.prepend(canvas);
   G3.renderer = r; G3.aa = aa; G3.lost = false;
-  canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); G3.lost = true; });
-  canvas.addEventListener('webglcontextrestored', () => { G3.lost = false; });
+  // 예전 렌더러를 버릴 때(forceContextLoss) 그 캔버스의 '잃음' 알림이 늦게 와도 지금 렌더러를 멈추지 않게
+  canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); if (G3.renderer === r) G3.lost = true; });
+  canvas.addEventListener('webglcontextrestored', () => { if (G3.renderer === r) G3.lost = false; });
   if (G3.courtTex) { G3.courtTex.anisotropy = Math.min(8, r.capabilities.getMaxAnisotropy()); G3.courtTex.needsUpdate = true; }
   return true;
 }
@@ -1959,7 +1965,13 @@ function bindMenu() {
     const r = await JC.connect();
     showWarn(r.error || '');
   };
-  document.addEventListener('click', e => { if (e.detail > 0 && e.target && e.target.closest) { const b = e.target.closest('button'); if (b) b.blur(); } });
+  // 마우스로 누른 버튼·체크박스·슬라이더·펼침 제목은 포커스를 풀어서 Enter·F 같은 게임 키가 막히지 않게
+  document.addEventListener('click', e => {
+    const a = document.activeElement;
+    if (e.detail > 0 && a && a.matches && a.matches('button, summary, input[type=checkbox], input[type=range]')) a.blur();
+  });
+  // 전체화면에서 Esc를 누르면 크롬이 전체화면만 풀고 키는 안 넘겨줌 → 경기 중이면 일시정지
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) pause(); });
   window.addEventListener('pointerdown', () => sfx.init());
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
   window.addEventListener('resize', resize);

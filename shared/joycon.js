@@ -12,7 +12,8 @@
  *  - swingDir(jc)     지금까지 모은 스윙으로 { spin, path, side } (휘두르는 도중에도 부를 수 있음)
  *        'buttons' (player, 새로 눌린 버튼 비트, jc)
  *        'change'  () — 연결·배정이 바뀜
- *  - assign()         조이콘을 P1·P2에 배정 (single=true면 모두 P1, swapped=true면 반대로)
+ *  - assign()         조이콘을 연결 순서대로 P1·P2에 다시 배정 (single=true면 모두 P1, swapped=true면 반대로)
+ *                     새로 붙은 조이콘은 빈자리로 가고, 하나가 끊겨도 나머지 자리는 그대로
  *  - rumble(player, 세기, ms)  진동
  *  - tilt(player)     가속도 {x,y,z} (단위 g) — 기울이기 조작(레이싱 등)에 사용
  *
@@ -71,17 +72,30 @@
       lastSpin: null, lastPath: null, lastSide: null, up: null, restX: 0, sw: null, motion: null,
       accel: { x: 0, y: 0, z: 0 }, gyroDps: { x: 0, y: 0, z: 0 } };
     J.list.push(jc);
-    J.assign();
+    jc.player = freeSlot(jc); emit('change');
     try { if (!device.opened) await device.open(); }
-    catch (e) { jc.err = '열기 실패 — 블루투스 다시 연결해 보세요'; emit('change'); return; }
+    catch (e) {   // 못 열면 목록에서 빼서 자리를 비우고, 다시 연결할 수 있게 함
+      const i = J.list.indexOf(jc); if (i >= 0) J.list.splice(i, 1);
+      emit('change');
+      return '열기 실패 — 블루투스를 다시 연결하거나, 다른 프로그램(Steam 등)이 조이콘을 쓰고 있지 않은지 확인해 보세요';
+    }
     device.addEventListener('inputreport', ev => J.report(jc, ev));
     await init(jc);
     jc.ok = true; jc.lastReport = now(); emit('change');
     J.rumbleOne(jc, 0.5, 120);
+    return '';
   }
+  // 끊긴 조이콘만 빼고 남은 조이콘 자리는 그대로 (경기 중에 P1·P2가 뒤바뀌지 않게)
   function remove(device) {
     const i = J.list.findIndex(j => j.device === device);
-    if (i >= 0) { J.list.splice(i, 1); J.assign(); }
+    if (i >= 0) { J.list.splice(i, 1); emit('change'); }
+  }
+  // 새로 붙은 조이콘은 빈자리로 (P1부터, 바꿈이면 P2부터). 둘 다 차 있으면 번갈아
+  function freeSlot(jc) {
+    if (J.single) return 0;
+    const used = J.list.filter(j => j !== jc).map(j => j.player), order = J.swapped ? [1, 0] : [0, 1];
+    const free = order.find(pi => !used.includes(pi));
+    return free !== undefined ? free : order[(J.list.length - 1) % 2];
   }
 
   J.assign = function () {
@@ -99,8 +113,9 @@
     if (!J.supported) return { ok: false, count: 0, error: '이 브라우저는 조이콘 직접 연결을 지원하지 않아요. PC의 크롬이나 엣지로 열어주세요. (키보드·게임패드는 사용 가능)' };
     try {
       const devs = await navigator.hid.requestDevice({ filters: [{ vendorId: NINTENDO }] });
-      for (const d of devs) await add(d);
-      return { ok: true, count: devs.length, error: '' };
+      let error = '';
+      for (const d of devs) error = (await add(d)) || error;
+      return { ok: !error, count: devs.length, error };
     } catch (e) {
       const fileHint = typeof location !== 'undefined' && location.protocol === 'file:';
       return { ok: false, count: 0, error: fileHint ? '파일을 직접 열면 크롬이 조이콘 연결을 막아요. 인터넷 주소나 start-game.bat으로 열어주세요.' : '연결 실패: ' + (e && e.message ? e.message : e) };

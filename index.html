@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#173d30">
 <meta name="description" content="우리 집이 플레이 그라운드가 되는 시간. 조이콘이나 키보드로 함께 즐기는 놀자 게임 클럽.">
 <title>놀자 · 몬스터 테니스 클럽</title>
-<link rel="stylesheet" href="shared/home.css?v=20261023">
+<link rel="stylesheet" href="shared/home.css?v=20261026">
 </head>
 <body>
 <a class="skip-link" href="#games">게임 고르기로 바로 가기</a>
@@ -73,8 +73,8 @@
   </main>
   <footer class="site-footer"><span>NOLJA CLUB</span><p>좋은 시간은, 함께 플레이할 때.</p><span>MADE FOR TOGETHER.</span></footer>
 </div>
-<script src="shared/store.js?v=20261023"></script>
-<script src="shared/characters.js?v=20261023"></script>
+<script src="shared/store.js?v=20261026"></script>
+<script src="shared/characters.js?v=20261026"></script>
 <script>
 (() => {
   'use strict';
@@ -90,11 +90,13 @@
     window.Nolja.characters.portrait(canvas, ch); figure.appendChild(canvas); plaza.appendChild(figure);
   });
   let choice = 0;
+  // 받침이 있으면 '은', 없으면 '는' (볼링은 · 야구는)
+  const topic = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return w + (c >= 0 && c < 11172 ? (c % 28 ? '은' : '는') : '은(는)'); };
   const tiles = [...document.querySelectorAll('#channels .ch')];
   const hint = document.getElementById('gameHint');
   const showChoice = () => {
     tiles.forEach((tile, i) => tile.classList.toggle('focus', i === choice));
-    hint.textContent = GAMES[choice].soon ? GAMES[choice].name + '은 준비 중이에요. ← → 키로 다른 게임을 골라 보세요.' : '몬스터 테니스 선택됨 · ← → 게임 고르기 · Enter 시작하기';
+    hint.textContent = GAMES[choice].soon ? topic(GAMES[choice].name) + ' 준비 중이에요. ← → 키로 다른 게임을 골라 보세요.' : '몬스터 테니스 선택됨 · ← → 게임 고르기 · Enter 시작하기';
   };
   tiles[0].addEventListener('focus', () => { choice = 0; showChoice(); });
   window.addEventListener('keydown', e => {

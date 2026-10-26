@@ -558,5 +558,63 @@ function swingReports({ beta, side, head, roll, peakDps = 1400 }) {
   assert(/(피프틴|서티|포티|러브|올|듀스|어드밴티지|게임)/.test(said), `심판이 점수를 불러줌 ("${spoken.slice(-2).join('", "')}")`);
 }
 
-assert(errors.length === 0, '전체 예외 없음' + (errors[0] ? ' — ' + errors[0] : ''));
-assert(draw.nan === 0, '전체 HUD NaN 없음');
+// 14) 센 탑스핀이 튀고 뒤 펜스에서 돌아와 네트를 지나가도 '네트 실수'가 아님 (예전엔 받을 수 없는 공이 됨)
+{
+  const C = ST.C;
+  let late = 0;
+  for (let k = 0; k < 40; k++) {
+    const s = ST.planShot({ x: (k % 5 - 2) * 0.6, y: -0.9, z: 1 }, { x: (k % 7 - 3) * 0.6, y: 21.4 + (k % 5) * 0.5 }, 0.5 + (k % 3) * 0.06, 0.85 + (k % 2) * 0.15);
+    if (s.netT != null) late++;
+  }
+  assert(late === 0, `센 탑스핀 40개 모두 바운드 뒤 네트로 잡히지 않음 (${late}개)`);
+}
+
+// 15) 타이밍 보정이 커도 판정 창 끝 스윙이 받아지고, 받아친 공은 맞힌 자리에서 출발
+{
+  ST.toMenu(); ST.settings.mode = '2p'; ST.startMatch();
+  const keepLat = ST.settings.latencyMs; ST.settings.latencyMs = 150;
+  let res = null;
+  for (let tries = 0; tries < 15 && !res; tries++) {
+    if (G.state !== 'serve') step(3, { render: false });
+    step(0.6, { render: false });
+    if (G.server !== 0) { step(4, { render: false }); continue; }
+    serveBall(0);
+    const s = G.shot;
+    if (!s || s.receiver !== 1 || !s.reachable || s.hit.z > 1.8) { step(4, { render: false }); continue; }
+    const late = 0.9 * s.W;
+    while (G.state === 'rally' && ST.T() < s.hit.t + lat() + late) { now += 1 / 60; ST.update(); }
+    ST.emitSwing(1, 0.6, now);
+    if (G.shot !== s && G.shot) { const c = ST.ballPos(s, ST.T() - lat()), P = G.shot.path; res = { d: Math.hypot(P[0] - c.x, P[1] - c.y) }; }
+    else res = { lost: G.state };
+  }
+  ST.settings.latencyMs = keepLat;
+  assert(res && res.d != null && res.d < 0.05, `타이밍 보정 150ms에서도 판정 창 끝(0.9W) 스윙을 받아치고, 맞힌 자리에서 다시 날아감 (${res && res.d != null ? res.d.toFixed(3) + 'm' : JSON.stringify(res)})`);
+}
+
+// 16) 조이콘 자리 (가짜 WebHID): 하나가 끊겨도 남은 조이콘 자리는 그대로 · 못 열면 오류를 알려주고 목록에서 빠짐
+const finishChecks = () => {
+  assert(errors.length === 0, '전체 예외 없음' + (errors[0] ? ' — ' + errors[0] : ''));
+  assert(draw.nan === 0, '전체 HUD NaN 없음');
+};
+(async () => {
+  const J = ST.joycon, hid = {};
+  const dev = (name, failOpen) => ({ vendorId: 0x057e, productId: 0x2007, productName: name, opened: false,
+    open() { if (failOpen) return Promise.reject(new Error('busy')); this.opened = true; return Promise.resolve(); },
+    addEventListener: noop, sendReport: () => Promise.resolve() });
+  sandbox.navigator.hid = { addEventListener: (n, f) => { hid[n] = f; }, getDevices: () => Promise.resolve([]), requestDevice: () => Promise.resolve(hid.pick || []) };
+  const keep = J.supported;
+  J.supported = true; J.single = false; J.swapped = false; J.list.length = 0;
+  J.start();
+  const slots = () => J.list.map(j => `${j.device.productName}:P${j.player + 1}`).join(' ');
+  hid.connect({ device: dev('A') }); hid.connect({ device: dev('B') });
+  const s1 = slots();
+  hid.disconnect({ device: J.list[0].device });
+  const s2 = slots();
+  hid.connect({ device: dev('A2') });
+  const s3 = slots();
+  assert(s1 === 'A:P1 B:P2' && s2 === 'B:P2' && s3 === 'B:P2 A2:P1', `조이콘 하나가 끊겨도 다른 조이콘 자리는 그대로, 다시 붙으면 빈자리로 (${s1} → ${s2} → ${s3})`);
+  J.list.length = 0; hid.pick = [dev('X', true)];
+  const r = await J.connect();
+  assert(!r.ok && /열기 실패/.test(r.error) && J.list.length === 0, '조이콘을 못 열면 오류를 알려주고 목록에서 빠져 다시 연결할 수 있음');
+  J.list.length = 0; J.supported = keep; delete sandbox.navigator.hid;
+})().catch(e => assert(false, '조이콘 자리 테스트 예외 — ' + e)).then(finishChecks);

@@ -306,7 +306,6 @@ input[type=checkbox] { accent-color: var(--lavender); height: 17px; width: 17px;
   .mode-options button { padding: 15px 11px; min-height: 119px; }
   .mode-options button > span { font-size: 10px; white-space: normal; }
   .connection-copy p { font-size: 10px; }
-  .connection-actions .text-button { display: none; }
   .overlay.sel { padding: 25px 20px; }
   .roster { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 580px; max-height: 250px; gap: 10px; }
   .tile { min-height: 107px; padding: 7px 5px 9px; }
