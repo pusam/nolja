@@ -39,3 +39,10 @@
 @media(max-width:1080px){.hero{grid-template-columns:1fr 1.05fr}.hero h2{font-size:58px}.hero-desc{font-size:11px}.home-monsters{width:122%;margin-left:-30px}}
 @media(max-width:760px){.hero{grid-template-columns:1fr 1fr;min-height:450px}.home-monsters{width:135%;margin-left:-45px}.hero-desc{font-size:11px}.court-label{right:20px;font-size:7px}.hero h2{font-size:52px}}
 @media(max-width:510px){.hero{display:flex;flex-direction:column;min-height:0}.hero-copy{padding:26px 25px 17px}.hero h2{font-size:56px}.hero-desc{font-size:12px;line-height:1.9}.hero-art{height:255px;margin:0;flex-shrink:0}.home-monsters{width:115%;height:290px;margin:-35px -8px 0 0;object-fit:contain;max-height:none}.hero-number{font-size:8px}.court-label{bottom:12px;right:20px;font-size:6px}.game-tags{font-size:10px}.play-button{margin-top:18px}.club-lounge .plaza{max-width:312px;row-gap:7px}}
+
+/* Playable small tile (Monster Kart) next to the coming-soon ones. */
+.soon.playable{background:#f3effb;border-color:#d9d1ef;color:inherit;transition:border-color 180ms ease,box-shadow 180ms ease}
+.soon.playable:hover{border-color:#a69bd9;box-shadow:0 8px 22px #65519414}
+.soon.playable .soon-icon{background:#e4ddf7;color:#6b58a8}
+.soon.playable .soon-label{background:#7766b4;border-color:#6c5ca8;color:#fffaf5;font-weight:700}
+.soon.playable.focus{outline-color:#8f80c8}

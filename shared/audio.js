@@ -6,7 +6,11 @@
  *  - 효과음: hit(세기, { spin, perfect, wrong, kind }) · bounce(속도 m/s) · net() · whoosh(세기) · toss() · squeak()
  *            point() · tick() · ready()
  *  - 관중:   ambience(켜기) 웅성거림 · applause(세기 0~1) 박수 · ooh() 감탄 · groan() 아쉬움 · cheer(초) 함성
- *  - 음악:   music(켜기) 밝은 배경 음악 (계속 반복) · jingle(크게) 이겼을 때 짧은 축하
+ *  - 음악:   music(켜기, 곡) 곡 'menu' 밝은 배경 음악 · 'race' 신나는 레이스 곡 (계속 반복) · tempo(배) 빠르기
+ *            jingle(크게) 이겼을 때 짧은 축하
+ *  - 카트:   engine(id, 속도 0~1.4, 부스트 0~1, 드리프트 0~1) 엔진·타이어 소리 (계속, engine(id, null)이면 끔) · enginesOff()
+ *            countdown(숫자, 0이면 출발) · boost() · spark(단계) · itemBox() · roulette() · itemGet() · zap() · crash()
+ *            plop() · splash() · bump(세기) · trick() · land() · finalLap()
  * ============================================================ */
 (function () {
   'use strict';
@@ -178,13 +182,15 @@
     },
 
     // ---------- 음악 ----------
-    // 밝은 4/4 · 112bpm · C-G-Am-F-C-G-F-G 8마디 반복. 마림바 멜로디 + 엇박 코드 + 베이스 + 가벼운 드럼
-    music(on) {
+    // menu: 밝은 4/4 · 112bpm · C-G-Am-F-C-G-F-G 8마디 반복. 마림바 멜로디 + 엇박 코드 + 베이스 + 가벼운 드럼
+    // race: 148bpm · Am-F-C-G-Am-F-G-E. 8분음표로 달리는 베이스 + 쿵쿵 드럼 + 통통 튀는 리드
+    music(on, song = 'menu') {
       if (!this.ctx) return;
       const c = this.ctx, t = c.currentTime;
+      if (on && this.mus && this.mus.name !== song) this.music(false);   // 다른 곡이면 지금 곡은 줄이고 새로 시작
       if (on && !this.mus) {
         const out = c.createGain(); out.gain.setValueAtTime(0.0001, t); out.gain.linearRampToValueAtTime(0.38, t + 1.5); out.connect(this.bus.music);
-        this.mus = { out, next: t + 0.1, step: 0 };
+        this.mus = { out, next: t + 0.1, step: 0, name: song, song: SONGS[song] || SONGS.menu, rate: 1 };
         this.timer = setInterval(() => this.pump(), 25);
       } else if (!on && this.mus) {
         const m = this.mus; this.mus = null; clearInterval(this.timer);
@@ -192,23 +198,37 @@
         setTimeout(() => m.out.disconnect(), 1000);
       }
     },
+    tempo(rate) { if (this.mus) this.mus.rate = clamp(+rate || 1, 0.5, 2); },   // 마지막 바퀴처럼 곡을 빠르게
     pump() {   // 앞으로 0.15초 안에 울릴 16분음표들을 미리 예약 (타이머가 늦어도 박자는 정확)
       const m = this.mus; if (!m || !this.live()) return;
-      const sixteenth = 60 / 112 / 4;
+      const sixteenth = 60 / m.song.bpm / 4 / m.rate, len = m.song.chords.length * 16;
       if (m.next < this.ctx.currentTime - 0.05) m.next = this.ctx.currentTime + 0.05;   // 타이머가 오래 멈췄으면 밀린 음은 건너뜀
-      while (m.next < this.ctx.currentTime + 0.15) { this.beat(m.step, m.next, m.out); m.next += sixteenth; m.step = (m.step + 1) % 128; }
+      while (m.next < this.ctx.currentTime + 0.15) { this.beat(m.step, m.next, m.out, m.song, m.rate); m.next += sixteenth; m.step = (m.step + 1) % len; }
     },
-    beat(step, t, out) {
-      const bar = step >> 4, s = step & 15, chord = CHORDS[bar], q = 60 / 112;
-      if (s % 4 === 0) this.tone(t, mtof(chord.bass - 12) * (s === 8 ? 1.5 : 1), mtof(chord.bass - 12), q * 0.9, 0.22, 'triangle', out, 0.01);
-      if (s % 4 === 2) for (const n of chord.keys) this.tone(t, mtof(n), mtof(n), 0.16, 0.045, 'triangle', out);   // 엇박 코드 "짠"
-      if (s === 0 || s === 8) this.tone(t, 120, 48, 0.12, 0.2, 'sine', out);                                         // 킥
-      if (s === 4 || s === 12) this.noise(t, 0.09, 1800, 0.8, 0.06, out);                                           // 박수 같은 스네어
-      if (s % 2 === 0) this.noise(t, 0.025, 8000, 0.7, s % 4 ? 0.018 : 0.03, out, 'highpass');                       // 하이햇
-      for (const [at, note, len] of MELODY[bar]) {
+    beat(step, t, out, song = SONGS.menu, rate = 1) {
+      const bar = step >> 4, s = step & 15, chord = song.chords[bar], q = 60 / song.bpm / rate;
+      if (song.style === 'drive') {
+        if (s % 2 === 0) this.tone(t, mtof(chord.bass - (s % 4 ? 0 : 12)), mtof(chord.bass - (s % 4 ? 0 : 12)), q * 0.42, 0.2, 'triangle', out, 0.006);   // 둥둥 달리는 베이스
+        if (s % 4 === 2) for (const n of chord.keys) this.tone(t, mtof(n), mtof(n), 0.11, 0.04, 'square', out);                                            // 엇박 코드 "짠"
+        if (s % 4 === 0) this.tone(t, 130, 45, 0.13, 0.24, 'sine', out);                                                                                  // 쿵쿵 킥
+        if (s === 4 || s === 12) this.noise(t, 0.1, 1900, 0.8, 0.075, out);                                                                              // 스네어
+        if (s % 2 === 1) this.noise(t, 0.02, 9000, 0.7, 0.02, out, 'highpass');                                                                         // 하이햇
+      } else {
+        if (s % 4 === 0) this.tone(t, mtof(chord.bass - 12) * (s === 8 ? 1.5 : 1), mtof(chord.bass - 12), q * 0.9, 0.22, 'triangle', out, 0.01);
+        if (s % 4 === 2) for (const n of chord.keys) this.tone(t, mtof(n), mtof(n), 0.16, 0.045, 'triangle', out);   // 엇박 코드 "짠"
+        if (s === 0 || s === 8) this.tone(t, 120, 48, 0.12, 0.2, 'sine', out);                                         // 킥
+        if (s === 4 || s === 12) this.noise(t, 0.09, 1800, 0.8, 0.06, out);                                           // 박수 같은 스네어
+        if (s % 2 === 0) this.noise(t, 0.025, 8000, 0.7, s % 4 ? 0.018 : 0.03, out, 'highpass');                       // 하이햇
+      }
+      for (const [at, note, len] of song.melody[bar]) {
         if (at !== s) continue;
-        this.tone(t, mtof(note), mtof(note), Math.min(0.5, len * q / 4 + 0.08), 0.1, 'sine', out);                  // 마림바
-        this.tone(t, mtof(note) * 4, mtof(note) * 4, 0.05, 0.02, 'sine', out);
+        if (song.style === 'drive') {   // 리드: 살짝 거친 네모파 + 맑은 사인파
+          this.tone(t, mtof(note), mtof(note), Math.min(0.45, len * q / 4 + 0.05), 0.045, 'square', out);
+          this.tone(t, mtof(note), mtof(note), Math.min(0.45, len * q / 4 + 0.05), 0.07, 'sine', out);
+        } else {
+          this.tone(t, mtof(note), mtof(note), Math.min(0.5, len * q / 4 + 0.08), 0.1, 'sine', out);                  // 마림바
+          this.tone(t, mtof(note) * 4, mtof(note) * 4, 0.05, 0.02, 'sine', out);
+        }
       }
     },
     jingle(big = false) {   // 도-미-솔-도 + 화음, 크게면 한 번 더 올라감
@@ -218,6 +238,104 @@
       const end = t + notes.length * 0.11;
       for (const n of [72, 76, 79, 84]) this.tone(end, mtof(n), mtof(n), big ? 1.6 : 0.9, 0.08, 'triangle', out, 0.02);
       this.tone(end, 110, 45, 0.2, 0.25, 'sine', out);
+    },
+
+    // ---------- 카트 ----------
+    // 엔진 "부릉": 톱니파 + 한 옥타브 아래 네모파를 저역 통과로 걸러 퉁퉁 떨게 함. 빠를수록 높고 밝게, 부스트면 더
+    // 드리프트면 타이어 "끼익" (좁은 대역 잡음). 매 프레임 불러도 값은 0.06초마다만 바꿈
+    engine(id, speed, boost = 0, drift = 0) {
+      if (!this.ctx) return;
+      const c = this.ctx, t = c.currentTime, eng = this.eng || (this.eng = {});
+      let e = eng[id];
+      if (speed == null || !Number.isFinite(speed) || !this.live()) {   // 끄기 (소리를 못 내는 동안에도 꺼 둠)
+        if (e) {
+          delete eng[id];
+          e.out.gain.cancelScheduledValues(t); e.out.gain.setValueAtTime(Math.max(0.0001, e.out.gain.value), t); e.out.gain.linearRampToValueAtTime(0.0001, t + 0.2);
+          for (const n of e.nodes) n.stop(t + 0.25);
+        }
+        return;
+      }
+      if (!e) {
+        const out = c.createGain(); out.gain.value = 0.0001; out.connect(this.bus.sfx);
+        const trem = c.createGain(); trem.gain.value = 0.7; trem.connect(out);
+        const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 400; f.Q.value = 2; f.connect(trem);
+        const o1 = c.createOscillator(); o1.type = 'sawtooth'; o1.frequency.value = 60; o1.connect(f);
+        const o2 = c.createOscillator(), g2 = c.createGain(); o2.type = 'square'; o2.frequency.value = 30; g2.gain.value = 0.5; o2.connect(g2).connect(f);
+        const lfo = c.createOscillator(), depth = c.createGain(); lfo.frequency.value = 18; depth.gain.value = 0.3; lfo.connect(depth).connect(trem.gain);
+        const src = c.createBufferSource(), bp = c.createBiquadFilter(), sq = c.createGain();
+        src.buffer = this.buf; src.loop = true; bp.type = 'bandpass'; bp.frequency.value = 2600; bp.Q.value = 5; sq.gain.value = 0.0001;
+        src.connect(bp).connect(sq).connect(out);
+        for (const n of [o1, o2, lfo]) n.start(t);
+        src.start(t, Math.random() * 0.5);
+        e = eng[id] = { out, f, o1, o2, lfo, sq, nodes: [o1, o2, lfo, src], at: -1 };
+      }
+      if (t - e.at < 0.06) return;
+      e.at = t;
+      const k = clamp(speed, 0, 1.4), b = clamp(boost, 0, 1), f0 = 52 + 88 * k + 30 * b;
+      e.o1.frequency.setTargetAtTime(f0, t, 0.06); e.o2.frequency.setTargetAtTime(f0 / 2, t, 0.06);
+      e.lfo.frequency.setTargetAtTime(14 + 26 * k, t, 0.1);
+      e.f.frequency.setTargetAtTime(350 + 1500 * k + 900 * b, t, 0.08);
+      e.out.gain.setTargetAtTime(0.045 + 0.04 * k + 0.03 * b, t, 0.1);
+      e.sq.gain.setTargetAtTime(drift > 0 ? 0.035 + 0.035 * clamp(drift, 0, 1) : 0.0001, t, 0.05);
+    },
+    enginesOff() { for (const id of Object.keys(this.eng || {})) this.engine(id, null); },
+    countdown(n) {   // 출발 신호: "삐 · 삐 · 삐 · 삐잉!"
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      if (n > 0) { this.tone(t, 523, 523, 0.22, 0.17, 'square'); this.tone(t, 1046, 1046, 0.12, 0.05); }
+      else { this.tone(t, 1046, 1046, 0.6, 0.17, 'square'); this.tone(t, 1568, 1568, 0.45, 0.07); }
+    },
+    boost() {   // 부스트 "슈웅": 잡음이 위로 쓸려 올라가고 음도 같이
+      if (!this.live()) return;
+      const t = this.ctx.currentTime, f = this.noise(t, 0.5, 500, 0.9, 0.18);
+      f.frequency.exponentialRampToValueAtTime(3200, t + 0.45);
+      this.tone(t, 220, 880, 0.4, 0.08, 'sawtooth');
+    },
+    spark(level = 1) {   // 드리프트 불꽃이 한 단계 커질 때 "띵"
+      if (!this.live()) return;
+      const t = this.ctx.currentTime, f = level > 1 ? 1760 : 1320;
+      this.tone(t, f, f, 0.09, 0.06, 'square'); this.tone(t + 0.06, f * 1.5, f * 1.5, 0.12, 0.05);
+    },
+    itemBox() {   // 아이템 상자 깨질 때 반짝 "또로롱"
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      [1047, 1319, 1568, 2093].forEach((f, i) => this.tone(t + i * 0.045, f, f, 0.12, 0.08, 'triangle'));
+      this.noise(t, 0.15, 6000, 1, 0.05, null, 'highpass');
+    },
+    roulette() { if (!this.live()) return; const t = this.ctx.currentTime, f = rnd(1500, 2000); this.tone(t, f, f * 0.92, 0.04, 0.045, 'square'); },
+    itemGet() { if (!this.live()) return; const t = this.ctx.currentTime; this.tone(t, 880, 880, 0.08, 0.11, 'triangle'); this.tone(t + 0.08, 1320, 1320, 0.16, 0.11, 'triangle'); },
+    zap() {   // 번개 구슬 쏘기 "지잉"
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      this.tone(t, 1800, 300, 0.35, 0.1, 'sawtooth'); this.noise(t, 0.25, 3000, 2, 0.1);
+    },
+    crash() {   // 맞아서 빙글빙글 "쿵 뺑그르르"
+      if (!this.live()) return;
+      const c = this.ctx, t = c.currentTime;
+      this.tone(t, 160, 60, 0.25, 0.32); this.noise(t, 0.3, 600, 0.8, 0.28, null, 'lowpass');
+      const o = this.tone(t + 0.05, 900, 300, 0.9, 0.06, 'triangle');
+      const lfo = c.createOscillator(), depth = c.createGain();
+      lfo.frequency.value = 9; depth.gain.value = 120; lfo.connect(depth).connect(o.frequency); lfo.start(t); lfo.stop(t + 1);
+    },
+    plop() { if (!this.live()) return; const t = this.ctx.currentTime; this.tone(t, 700, 180, 0.14, 0.16); },   // 함정 내려놓기 "퐁"
+    splash() {   // 물방울 함정 밟기 "첨벙"
+      if (!this.live()) return;
+      const t = this.ctx.currentTime, f = this.noise(t, 0.4, 1400, 0.9, 0.22);
+      f.frequency.exponentialRampToValueAtTime(400, t + 0.35);
+      this.tone(t, 500, 150, 0.2, 0.1);
+    },
+    bump(p = 0.5) {   // 벽·카트에 부딪힘 "쿵"
+      if (!this.live()) return;
+      const t = this.ctx.currentTime, k = clamp(p, 0.1, 1);
+      this.tone(t, 140, 55, 0.14, 0.08 + 0.25 * k); this.noise(t, 0.08, 700, 1, 0.04 + 0.15 * k);
+    },
+    trick() { if (!this.live()) return; const t = this.ctx.currentTime; this.tone(t, 660, 1320, 0.14, 0.09, 'square'); this.tone(t + 0.12, 1320, 1980, 0.16, 0.07, 'triangle'); },
+    land() { if (!this.live()) return; const t = this.ctx.currentTime; this.tone(t, 110, 50, 0.12, 0.26); this.noise(t, 0.06, 500, 1, 0.1, null, 'lowpass'); },
+    finalLap() {   // 마지막 바퀴 알림 "빰빰빰빰 빠밤!"
+      if (!this.live()) return;
+      const t = this.ctx.currentTime + 0.02, out = this.bus.music;
+      [67, 72, 76, 79].forEach((n, i) => this.tone(t + i * 0.09, mtof(n), mtof(n), 0.2, 0.12, 'square', out));
+      this.tone(t + 0.38, mtof(84), mtof(84), 0.6, 0.12, 'triangle', out);
     },
   };
   if (saved && typeof saved === 'object') for (const k of ['music', 'sfx', 'crowd']) if (Number.isFinite(saved[k])) A.vol[k] = clamp(saved[k], 0, 1);
@@ -251,6 +369,25 @@
     [[0, 81, 2], [2, 79, 2], [4, 77, 2], [6, 81, 2], [8, 84, 4], [12, 81, 4]],
     [[0, 79, 2], [2, 77, 2], [4, 76, 2], [6, 74, 2], [8, 79, 8]],
   ];
+  // 레이스 곡: Am-F-C-G-Am-F-G-E (마지막 E는 다시 처음으로 끌어당김)
+  const RACE_CHORDS = [
+    { bass: 45, keys: [57, 60, 64] }, { bass: 41, keys: [57, 60, 65] }, { bass: 48, keys: [55, 60, 64] }, { bass: 43, keys: [55, 59, 62] },
+    { bass: 45, keys: [57, 60, 64] }, { bass: 41, keys: [57, 60, 65] }, { bass: 43, keys: [55, 59, 62] }, { bass: 40, keys: [56, 59, 64] },
+  ];
+  const RACE_MELODY = [
+    [[0, 76, 2], [2, 74, 2], [4, 72, 2], [6, 76, 2], [8, 81, 4], [12, 79, 2], [14, 76, 2]],
+    [[0, 77, 2], [2, 76, 2], [4, 74, 2], [6, 72, 2], [8, 74, 4], [12, 72, 2], [14, 69, 2]],
+    [[0, 72, 2], [2, 76, 2], [4, 79, 4], [8, 84, 2], [10, 83, 2], [12, 79, 4]],
+    [[0, 74, 2], [2, 79, 2], [4, 83, 4], [8, 81, 2], [10, 79, 2], [12, 74, 4]],
+    [[0, 76, 2], [2, 74, 2], [4, 72, 2], [6, 76, 2], [8, 84, 4], [12, 83, 2], [14, 81, 2]],
+    [[0, 81, 2], [2, 77, 2], [4, 72, 2], [6, 77, 2], [8, 81, 2], [10, 84, 2], [12, 81, 4]],
+    [[0, 79, 2], [2, 83, 2], [4, 86, 4], [8, 83, 2], [10, 79, 2], [12, 74, 4]],
+    [[0, 80, 4], [4, 76, 2], [6, 80, 2], [8, 83, 6], [14, 80, 2]],
+  ];
+  const SONGS = {
+    menu: { bpm: 112, style: 'pop', chords: CHORDS, melody: MELODY },
+    race: { bpm: 148, style: 'drive', chords: RACE_CHORDS, melody: RACE_MELODY },
+  };
 
   // 다른 탭으로 가면 소리를 멈췄다가 돌아오면 다시
   if (typeof document !== 'undefined' && document.addEventListener) {

@@ -12,6 +12,9 @@
  *  - swingDir(jc)     지금까지 모은 스윙으로 { spin, path, side } (휘두르는 도중에도 부를 수 있음)
  *        'buttons' (player, 새로 눌린 버튼 비트, jc)
  *        'change'  () — 연결·배정이 바뀜
+ *  - jc.hold          지금 누르고 있는 버튼 비트 (앞면·방향키·+/− 에 SL·SR·L/R·ZL/ZR·스틱 누르기까지, 레이싱처럼 계속 누르는 조작용)
+ *  - jc.kind          'L' · 'R' · 'pro' (조이콘 종류에 따라 가로로 쥐었을 때 버튼 위치가 다름)
+ *  - jc.stick         스틱 원래 값 { x, y } (0~4095, 가운데 약 2048, 위·오른쪽이 큼)
  *  - assign()         조이콘을 연결 순서대로 P1·P2에 다시 배정 (single=true면 모두 P1, swapped=true면 반대로)
  *                     새로 붙은 조이콘은 빈자리로 가고, 하나가 끊겨도 나머지 자리는 그대로
  *  - rumble(player, 세기, ms)  진동
@@ -29,7 +32,9 @@
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   // 버튼 비트: Y · X · B · A (오른쪽 조이콘) / ↓ ↑ → ← (왼쪽 조이콘) / − +
-  const BTN = { Y: 0x01, X: 0x02, B: 0x04, A: 0x08, DOWN: 0x10, UP: 0x20, RIGHT: 0x40, LEFT: 0x80, MINUS: 0x100, PLUS: 0x200 };
+  // 아래 SR부터는 jc.hold에만 있음 (레일 쪽 SL·SR, 어깨 L/R, 뒤 ZL/ZR, 스틱 누르기)
+  const BTN = { Y: 0x01, X: 0x02, B: 0x04, A: 0x08, DOWN: 0x10, UP: 0x20, RIGHT: 0x40, LEFT: 0x80, MINUS: 0x100, PLUS: 0x200,
+    SR: 0x400, SL: 0x800, SHOULDER: 0x1000, TRIGGER: 0x2000, STICK: 0x4000 };
 
   const J = N.joycon = {
     supported: typeof navigator !== 'undefined' && !!navigator.hid,
@@ -67,7 +72,8 @@
 
   async function add(device) {
     if (!device || device.vendorId !== NINTENDO || J.list.some(j => j.device === device)) return;
-    const jc = { device, name: J.nameOf(device), player: 0, gyro: 0, armed: true, swinging: false, swingStart: 0,
+    const jc = { device, name: J.nameOf(device), player: 0, gyro: 0, armed: true, swinging: false, swingStart: 0, hold: 0,
+      kind: device.productId === 0x2006 ? 'L' : device.productId === 0x2007 ? 'R' : device.productId === 0x2009 ? 'pro' : '',
       peak: 0, peakT: 0, cool: 0, prevBtn: 0, lastPow: 0, lastSwingT: -9, simple: 0, lastReport: 0, ok: false, err: '',
       lastSpin: null, lastPath: null, lastSide: null, up: null, restX: 0, sw: null, motion: null,
       accel: { x: 0, y: 0, z: 0 }, gyroDps: { x: 0, y: 0, z: 0 } };
@@ -142,6 +148,10 @@
     const btn = (b2 & 0x0f) | ((b4 & 0x0f) << 4) | ((b3 & 0x03) << 8);   // 앞면 버튼·방향키·+/−
     const pressed = btn & ~jc.prevBtn;
     jc.prevBtn = btn;
+    const side = b2 | b4;   // 오른쪽 바이트·왼쪽 바이트의 4~7번 비트 = SR · SL · R(L) · ZR(ZL)
+    jc.hold = btn | (side & 0x10 ? BTN.SR : 0) | (side & 0x20 ? BTN.SL : 0) | (side & 0x40 ? BTN.SHOULDER : 0) | (side & 0x80 ? BTN.TRIGGER : 0) | (b3 & 0x0c ? BTN.STICK : 0);
+    const so = jc.kind === 'R' ? 8 : 5;   // 스틱 12비트 두 개: 왼쪽 스틱(조이콘 L·프로콘) 5~7바이트, 오른쪽 스틱(조이콘 R) 8~10바이트. 가운데 약 2048
+    jc.stick = { x: d.getUint8(so) | ((d.getUint8(so + 1) & 0x0f) << 8), y: (d.getUint8(so + 1) >> 4) | (d.getUint8(so + 2) << 4) };
     if (pressed) emit('buttons', jc.player, pressed, jc);
     const t = now();
     for (let k = 0; k < 3; k++) {

@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#173d30">
-<meta name="description" content="우리 집이 플레이 그라운드가 되는 시간. 조이콘이나 키보드로 함께 즐기는 놀자 게임 클럽.">
-<title>놀자 · 몬스터 테니스 클럽</title>
-<link rel="stylesheet" href="shared/home.css?v=20261026">
+<meta name="description" content="우리 집이 플레이 그라운드가 되는 시간. 조이콘이나 키보드로 함께 즐기는 놀자 게임 클럽 (몬스터 테니스 · 몬스터 카트).">
+<title>놀자 · 몬스터 게임 클럽</title>
+<link rel="stylesheet" href="shared/home.css?v=20261027">
 </head>
 <body>
 <a class="skip-link" href="#games">게임 고르기로 바로 가기</a>
@@ -57,11 +57,11 @@
           </div>
           <span class="hero-number" aria-hidden="true">NO. 01</span>
         </a>
-        <div class="coming-heading"><span>NEXT UP</span><p>다음 경기도 준비 중이에요.</p></div>
+        <div class="coming-heading"><span>MORE GAMES</span><p>몬스터 카트가 새로 열렸어요. 다음 경기도 준비 중!</p></div>
         <div class="coming-games">
-          <article class="ch soon bowling" data-i="1" aria-label="볼링, 준비 중"><div class="soon-icon"><svg aria-hidden="true"><use href="#i-bowling"/></svg></div><div class="soon-copy"><h2>볼링</h2><p>스트라이크의 기분 좋은 한 방.</p></div><span class="soon-label">준비 중</span></article>
-          <article class="ch soon baseball" data-i="2" aria-label="야구, 준비 중"><div class="soon-icon"><svg aria-hidden="true"><use href="#i-baseball"/></svg></div><div class="soon-copy"><h2>야구</h2><p>담장 너머로, 시원한 홈런.</p></div><span class="soon-label">준비 중</span></article>
-          <article class="ch soon racing" data-i="3" aria-label="레이싱, 준비 중"><div class="soon-icon"><svg aria-hidden="true"><use href="#i-racing"/></svg></div><div class="soon-copy"><h2>레이싱</h2><p>나란히 출발해서, 짜릿하게 추월.</p></div><span class="soon-label">준비 중</span></article>
+          <a class="ch soon playable racing" data-i="1" href="games/kart/index.html" aria-label="몬스터 카트 시작하기. 조이콘을 핸들처럼 기울여 달리는 1~2인 카트 레이스"><div class="soon-icon"><svg aria-hidden="true"><use href="#i-racing"/></svg></div><div class="soon-copy"><h2>몬스터 카트</h2><p>조이콘을 핸들처럼, 짜릿하게 추월.</p></div><span class="soon-label">NEW · 달리기</span></a>
+          <article class="ch soon bowling" data-i="2" aria-label="볼링, 준비 중"><div class="soon-icon"><svg aria-hidden="true"><use href="#i-bowling"/></svg></div><div class="soon-copy"><h2>볼링</h2><p>스트라이크의 기분 좋은 한 방.</p></div><span class="soon-label">준비 중</span></article>
+          <article class="ch soon baseball" data-i="3" aria-label="야구, 준비 중"><div class="soon-icon"><svg aria-hidden="true"><use href="#i-baseball"/></svg></div><div class="soon-copy"><h2>야구</h2><p>담장 너머로, 시원한 홈런.</p></div><span class="soon-label">준비 중</span></article>
         </div>
       </div>
       <p id="gameHint" class="keyboard-hint" aria-live="polite"><span><kbd>←</kbd><kbd>→</kbd> 게임 고르기</span><span><kbd>Enter</kbd> 시작하기</span></p>
@@ -73,12 +73,12 @@
   </main>
   <footer class="site-footer"><span>NOLJA CLUB</span><p>좋은 시간은, 함께 플레이할 때.</p><span>MADE FOR TOGETHER.</span></footer>
 </div>
-<script src="shared/store.js?v=20261026"></script>
-<script src="shared/characters.js?v=20261026"></script>
+<script src="shared/store.js?v=20261027"></script>
+<script src="shared/characters.js?v=20261027"></script>
 <script>
 (() => {
   'use strict';
-  const GAMES = [{ name: '몬스터 테니스', href: 'games/tennis/index.html' }, { name: '볼링', soon: true }, { name: '야구', soon: true }, { name: '레이싱', soon: true }];
+  const GAMES = [{ name: '몬스터 테니스', href: 'games/tennis/index.html' }, { name: '몬스터 카트', href: 'games/kart/index.html' }, { name: '볼링', soon: true }, { name: '야구', soon: true }];
   const plaza = document.getElementById('plaza');
   const characters = window.Nolja.characters.CHARS;
   plaza.setAttribute('aria-label', `함께할 수 있는 ${characters.length}명의 캐릭터`);
@@ -96,9 +96,9 @@
   const hint = document.getElementById('gameHint');
   const showChoice = () => {
     tiles.forEach((tile, i) => tile.classList.toggle('focus', i === choice));
-    hint.textContent = GAMES[choice].soon ? topic(GAMES[choice].name) + ' 준비 중이에요. ← → 키로 다른 게임을 골라 보세요.' : '몬스터 테니스 선택됨 · ← → 게임 고르기 · Enter 시작하기';
+    hint.textContent = GAMES[choice].soon ? topic(GAMES[choice].name) + ' 준비 중이에요. ← → 키로 다른 게임을 골라 보세요.' : GAMES[choice].name + ' 선택됨 · ← → 게임 고르기 · Enter 시작하기';
   };
-  tiles[0].addEventListener('focus', () => { choice = 0; showChoice(); });
+  tiles.forEach((tile, i) => { if (!GAMES[i].soon) tile.addEventListener('focus', () => { choice = i; showChoice(); }); });
   window.addEventListener('keydown', e => {
     if (e.altKey || e.ctrlKey || e.metaKey || e.target.closest('input, textarea, select, [contenteditable="true"]')) return;
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {

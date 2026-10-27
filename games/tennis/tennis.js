@@ -849,6 +849,15 @@ window.addEventListener('keydown', e => {
 });
 
 const padPrev = {}, padSel = {}, padSlot = {};   // padSlot: 패드 번호 → 선수. 다른 패드가 빠져도 자리가 안 바뀜
+// 패드 자리: 다른 패드도 조이콘도 안 쓰는 자리로 (조이콘 P1 + 패드 하나면 패드는 P2). 한번 정하면 그대로
+function padSlotFor(gp) {
+  const others = Object.keys(padSlot).filter(k => k !== String(gp.index)).map(k => padSlot[k]);
+  const joy = JC.list.filter(j => j.ok).map(j => j.player), cur = padSlot[gp.index];
+  if (cur != null && !joy.includes(cur)) return cur;
+  const free = [0, 1].find(p => !others.includes(p) && !joy.includes(p));
+  if (free !== undefined) return free;
+  return cur != null ? cur : !others.includes(0) ? 0 : !others.includes(1) ? 1 : gp.index % 2;
+}
 function pollGamepads() {
   if (!navigator.getGamepads) return;
   let pads; try { pads = navigator.getGamepads() || []; } catch (e) { return; }
@@ -856,7 +865,7 @@ function pollGamepads() {
   for (const k in padSlot) if (!live.some(gp => String(gp.index) === k)) delete padSlot[k];
   game.padCount = 0;
   for (const gp of live) {
-    if (padSlot[gp.index] == null) { const used = Object.values(padSlot); padSlot[gp.index] = !used.includes(0) ? 0 : !used.includes(1) ? 1 : gp.index % 2; }
+    padSlot[gp.index] = padSlotFor(gp);
     const pi = settings.mode === 'cpu' ? 0 : padSlot[gp.index];
     game.padCount++;
     const now = gp.buttons.map(b => b.pressed || b.value > 0.5);

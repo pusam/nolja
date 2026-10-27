@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#8176db">
+<title>몬스터 카트 · 놀자</title>
+<link rel="stylesheet" href="../../shared/nolja.css?v=20261027">
+<link rel="stylesheet" href="../../shared/lobby.css?v=20261027">
+<link rel="stylesheet" href="kart.css?v=20261027">
+</head>
+<body>
+<svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+  <symbol id="i-kart" viewBox="0 0 24 24"><path d="M4 15h16l-1.5-4H13l-1.5-3H8L6.5 11H5Z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M11.5 8 13 5h3"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m1-15a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3"/><path d="M9 1v4m6-4v4M9 19v4m6-4v4M1 9h4m-4 6h4m14-6h4m-4 6h4M9 9h6v6H9z"/></symbol>
+  <symbol id="i-pad" viewBox="0 0 24 24"><path d="M8 6h8c3 0 4 3 5 9 1 5-3 5-6 1H9c-3 4-7 4-6-1C4 9 5 6 8 6Z"/><path d="M8 9v6m-3-3h6m5-2h.01m2 3h.01"/></symbol>
+  <symbol id="i-wheel" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4"/><path d="M3.3 10.5 9.7 11.4M20.7 10.5l-6.4.9M12 14.4V21"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h6m4 0h6M4 17h10m4 0h2"/><circle cx="12" cy="7" r="2"/><circle cx="16" cy="17" r="2"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"/></symbol>
+  <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 15h10"/></symbol>
+</defs></svg>
+<div id="kartStage"><canvas id="gl" aria-label="카트 레이스 화면"></canvas><canvas id="hud" aria-hidden="true"></canvas></div>
+
+<div id="menu" class="overlay lobby">
+  <header class="club-header">
+    <a class="brand" href="../../index.html" aria-label="놀자 홈"><span class="brand-symbol"><svg aria-hidden="true"><use href="#i-kart"/></svg></span><span class="brand-word">nolja<span class="brand-dot">.</span></span><span class="brand-tag">PLAY<br>TOGETHER</span></a>
+    <nav class="club-nav" aria-label="메인 메뉴"><a href="../../index.html">게임 라운지</a><span class="nav-divider"></span><span class="current-game">몬스터 카트</span></nav>
+    <button id="btnFull" class="header-button" aria-label="전체화면 (F)"><svg aria-hidden="true" class="icon"><use href="#i-expand"/></svg><span>전체화면</span><kbd>F</kbd></button>
+  </header>
+  <main class="lobby-main">
+    <div class="page-heading"><div><p class="eyebrow">SMALL FRIENDS. FAST KARTS.</p><h1>오늘은 누구랑 달려 볼까요<span>?</span></h1></div><button id="btnGuide" class="text-button">플레이 가이드 <span aria-hidden="true">↗</span></button></div>
+    <div class="lobby-grid">
+      <section class="game-feature" aria-labelledby="gameTitle">
+        <div class="feature-copy"><div class="feature-topline"><span class="sport-badge"><span></span> NOLJA · MONSTER KART</span><span class="feature-edition">READY, SET, GO!</span></div><div class="feature-intro"><h2 id="gameTitle">몬스터<br>카트<span>MONSTER KART</span></h2><p>귀여운 친구들의<br>두근두근 카트 레이스.</p><span class="feature-note">조이콘을 핸들처럼 꺾어 보세요!</span></div><img id="kartArt" class="monster-team kart-art" alt="카트를 탄 귀여운 몬스터 친구들"></div>
+        <div id="kartPreview" class="court-preview"><div class="preview-caption"><span class="live-dot"></span> LIVE RACE <span class="caption-divider">/</span> 시범 레이스</div><button id="btnPreview" class="preview-toggle" aria-pressed="false" aria-label="시범 레이스 일시정지">Ⅱ</button><span class="court-watermark" aria-hidden="true">LITTLE FRIENDS. BIG RACES.</span></div>
+        <div class="feature-perks"><span><svg aria-hidden="true" class="icon"><use href="#i-pad"/></svg> 조이콘 · 키보드 · 게임패드</span><span><svg aria-hidden="true" class="icon"><use href="#i-users"/></svg> 1–2인 + CPU</span><span><svg aria-hidden="true" class="icon"><use href="#i-wheel"/></svg> 기울여서 핸들 조작</span></div>
+      </section>
+      <section class="match-setup" aria-labelledby="setupTitle">
+        <div class="setup-heading"><div><p class="eyebrow">READY TO RACE?</p><h2 id="setupTitle">오늘의 레이스</h2></div><span class="setup-ball-wrap"><svg class="setup-ball" aria-hidden="true"><use href="#i-wheel"/></svg></span></div>
+        <fieldset class="setup-group"><legend><span class="step-number">01</span> 누구와 달릴까요?</legend><div id="modeRow" class="mode-options" aria-label="레이스 모드"><button data-mode="2p"><svg aria-hidden="true" class="icon"><use href="#i-users"/></svg><strong>함께 레이스</strong><span>화면을 나눠서, 2인 + CPU</span><i class="choice-dot"></i></button><button data-mode="1p"><svg aria-hidden="true" class="icon"><use href="#i-cpu"/></svg><strong>혼자 레이스</strong><span>CPU 친구 5명과 함께</span><i class="choice-dot"></i></button></div><div id="lvRow" class="level-options"><span>CPU 실력</span><div class="row"><button data-lv="0">쉬움</button><button data-lv="1">보통</button><button data-lv="2">어려움</button></div></div></fieldset>
+        <fieldset class="setup-group win-group"><legend><span class="step-number">02</span> 몇 바퀴 달릴까요?</legend><div id="lapRow" class="win-options" aria-label="바퀴 수"><button data-laps="2">2<span>바퀴</span></button><button data-laps="3">3<span>바퀴</span></button><button data-laps="5">5<span>바퀴</span></button></div><p class="field-hint">코스: 몬스터 서킷 · 한 바퀴 약 30초</p></fieldset>
+        <div class="start-area"><button id="btnStart" class="primary start-button">캐릭터 선택하기 <svg aria-hidden="true" class="icon"><use href="#i-arrow"/></svg></button><span class="start-hint"><kbd>Enter</kbd> 키로도 시작할 수 있어요</span></div>
+      </section>
+    </div>
+    <section class="connection-card" aria-labelledby="controllerTitle"><span class="connection-icon"><svg aria-hidden="true" class="icon"><use href="#i-wheel"/></svg></span><div class="connection-copy"><h2 id="controllerTitle">핸들처럼 꺾는 재미, 조이콘과 함께</h2><p id="connectionStatus">키보드만으로도 바로 달릴 수 있어요.</p></div><div class="connection-actions"><button id="btnSwap" class="text-button">P1 ↔ P2 바꾸기</button><button id="btnConnect" class="connect-button"><span class="plus-icon" aria-hidden="true">+</span> 조이콘 연결</button></div></section>
+    <div class="secondary-grid">
+      <details class="club-details" id="controllerDetails"><summary><span><svg aria-hidden="true" class="icon"><use href="#i-pad"/></svg> 컨트롤러 상태 · 연결 방법</span><svg aria-hidden="true" class="icon chevron"><use href="#i-chevron"/></svg></summary><div class="details-content"><p class="small">윈도우 블루투스에서 조이콘 측면의 동그란 버튼을 길게 눌러 페어링한 뒤, ‘조이콘 연결’을 눌러주세요. 두 개를 연결하려면 한 번씩 눌러주세요. 조이콘을 가로로 잡고(스틱이 왼쪽) 기울이면 아래 눈금이 움직여요.</p><div id="hidWarn" class="warn hidden" role="status"></div><div id="slots" aria-live="polite"></div></div></details>
+      <details class="club-details" id="settingsDetails"><summary><span><svg aria-hidden="true" class="icon"><use href="#i-sliders"/></svg> 그래픽 · 플레이 설정</span><svg aria-hidden="true" class="icon chevron"><use href="#i-chevron"/></svg></summary><div class="details-content"><div class="setting-title">그래픽 품질</div><div id="qRow" class="row seg"><button data-q="auto">자동</button><button data-q="high">높음</button><button data-q="mid">보통</button><button data-q="low">낮음</button></div><div id="gfxInfo" class="small gfx-info"></div><label class="set" for="steer">핸들 감도 <input id="steer" type="range" min="15" max="45" step="1"><span id="steerV" class="small"></span></label><p class="small">조이콘을 이만큼 기울이면 핸들이 끝까지 꺾여요. 작을수록 예민해요.</p><label class="set guide-setting"><input id="autoGas" type="checkbox"> 자동 가속</label><p class="small">가속 버튼을 안 눌러도 계속 달려요. 아이들과 할 때 좋아요.</p><label class="set guide-setting"><input id="assist" type="checkbox"> 핸들 보조</label><p class="small">길 밖으로 나가려 하면 살짝 돌려줘요.</p><label class="set guide-setting"><input id="flip0" type="checkbox"> P1 핸들 방향 반대로</label><label class="set"><input id="flip1" type="checkbox"> P2 핸들 방향 반대로</label><p class="small">조이콘을 오른쪽으로 기울였는데 왼쪽으로 가면 켜 주세요.</p><div class="setting-title sound-title">소리 크기</div><label class="set" for="volMusic">음악 <input id="volMusic" type="range" min="0" max="100" step="5"><span id="volMusicV" class="small"></span></label><label class="set" for="volSfx">효과음 <input id="volSfx" type="range" min="0" max="100" step="5"><span id="volSfxV" class="small"></span></label><label class="set" for="volCrowd">관중 <input id="volCrowd" type="range" min="0" max="100" step="5"><span id="volCrowdV" class="small"></span></label><p class="small">레이스 중엔 신나는 곡과 엔진 소리가 나와요. 0이면 꺼져요.</p></div></details>
+    </div>
+    <footer class="club-footer"><button id="btnHome" class="text-button">← 놀자 라운지</button><span>조이콘 스트랩을 꼭 끼고, 주변 공간을 확보해 주세요.</span><span class="footer-signoff">LITTLE FRIENDS, LOVELY GAMES.</span></footer>
+  </main>
+</div>
+
+<dialog id="guideDialog" class="guide-dialog" aria-labelledby="guideTitle"><div class="dialog-heading"><div><p class="eyebrow">READY, SET, GO!</p><h2 id="guideTitle">처음이어도 괜찮아요.</h2></div><button id="btnGuideClose" class="close-button" aria-label="플레이 가이드 닫기">×</button></div><p class="sub">조이콘을 가로로 잡고(스틱이 왼쪽) 핸들처럼 기울이면 돼요. 자동 가속이 켜져 있으면 버튼은 안 눌러도 달려요.</p><div class="guide-steps"><div><span>01</span><h3>핸들처럼 기울이기</h3><p>오른쪽으로 기울이면 오른쪽, 왼쪽이면 왼쪽. 길 밖 풀밭은 느려지니 조심! 반대로 가면 설정에서 ‘핸들 방향 반대로’를 켜요.</p></div><div><span>02</span><h3>드리프트로 부스트</h3><p>커브에서 드리프트 버튼을 누른 채로 꺾어요. 바퀴 불꽃이 파랑 → 주황이 됐을 때 떼면 슝! 주황일수록 길게 빨라져요.</p></div><div><span>03</span><h3>아이템과 점프</h3><p>? 상자를 지나면 아이템: 불꽃 대시, 번개 구슬(앞 친구를 맞혀요), 물방울 함정(뒤에 놓아요). 점프대에서 조이콘을 휙 튕기면 트릭 → 착지하며 부스트!</p></div></div><div class="keyboard-guide"><h3><svg aria-hidden="true" class="icon"><use href="#i-wheel"/></svg> 조이콘 (가로로 잡았을 때)</h3><p class="small joy-map">오른쪽 버튼 가속 · 아래 버튼 브레이크 · 위 버튼이나 SR 드리프트 · 왼쪽 버튼이나 SL 아이템 · + / − 일시정지</p><h3><svg aria-hidden="true" class="icon"><use href="#i-keyboard"/></svg> 키보드로 플레이</h3><div class="keyboard-players"><div><span class="badge b1">P1</span><kbd>A</kbd><kbd>D</kbd> 핸들 <kbd>W</kbd> 가속 <kbd>S</kbd> 브레이크 <kbd>Space</kbd> 드리프트 <kbd>E</kbd> 아이템</div><div><span class="badge b2">P2</span><kbd>←</kbd><kbd>→</kbd> 핸들 <kbd>↑</kbd> 가속 <kbd>↓</kbd> 브레이크 <kbd>/</kbd> 드리프트 <kbd>.</kbd> 아이템</div></div><p class="small"><kbd>Enter</kbd> 시작 · <kbd>Esc</kbd> 일시정지 · <kbd>F</kbd> 전체화면 · 혼자 할 땐 방향키도 P1</p><p class="small">게임패드: 스틱·방향키 핸들 · A 가속 · B 브레이크 · RB/X 드리프트 · LB/Y 아이템 · Start 일시정지</p></div></dialog>
+
+<div id="select" class="overlay sel hidden"><div class="selection-top"><p class="eyebrow">PICK YOUR RACER</p><div class="seltitle">함께 달릴 친구를 골라요<span>.</span></div><p class="selection-subtitle">조이콘을 기울여서 고르고, 버튼을 누르면 준비 완료!</p><div id="roster" class="roster" aria-label="레이서 목록"></div><div class="center selection-hint"><span class="hint">클릭 = P1 · 우클릭 = P2 · 아래 화살표 버튼으로도 고를 수 있어요</span><span class="roster-scroll-hint">캐릭터 목록을 스크롤하면 더 많은 친구가 보여요.</span></div></div><div class="selbottom"><div class="selcard" id="selc0"><div class="row"><span class="badge b1">P1</span><b class="nm" id="seln0"></b><span class="st" id="sels0"></span></div><div class="row"><button data-p="0" data-d="-1" aria-label="P1 이전 캐릭터">←</button><button data-p="0" data-d="1" aria-label="P1 다음 캐릭터">→</button><button data-p="0" aria-label="P1 준비">준비</button></div><div class="small" id="selh0"></div></div><div class="selmid"><div id="selMsg" class="selmsg" role="status"></div><button id="btnSelBack">← 레이스 설정</button></div><div class="selcard" id="selc1"><div class="row"><span class="badge b2">P2</span><b class="nm" id="seln1"></b><span class="st" id="sels1"></span></div><div class="row"><button data-p="1" data-d="-1" aria-label="P2 이전 캐릭터">←</button><button data-p="1" data-d="1" aria-label="P2 다음 캐릭터">→</button><button data-p="1" aria-label="P2 준비">준비</button></div><div class="small" id="selh1"></div></div></div></div>
+<div id="pause" class="overlay hidden"><div class="panel center pause-panel"><p class="eyebrow">PIT STOP</p><div class="big">잠깐, 쉬어갈까요?</div><p class="sub">카트는 그대로 기다리고 있어요.</p><div class="row modal-actions"><button id="btnResume" class="primary">계속 달리기</button><button id="btnQuit">레이스 설정으로</button></div><div id="pauseInfo" class="small"></div></div></div>
+<div id="result" class="overlay bottom hidden"><div class="panel center result-panel"><p class="eyebrow">WHAT A RACE!</p><div id="resTitle" class="big"></div><div id="resBody" class="sub"></div><div class="row modal-actions"><button id="btnAgain" class="primary">한 판 더!</button><button id="btnReselect">캐릭터 바꾸기</button><button id="btnMenu">레이스 설정</button></div><div class="small result-hint">조이콘 버튼 / Enter = 다시 달리기</div></div></div>
+<script src="../../shared/vendor/three.min.js"></script>
+<script src="../../shared/store.js?v=20261027"></script>
+<script src="../../shared/audio.js?v=20261027"></script>
+<script src="../../shared/joycon.js?v=20261027"></script>
+<script src="../../shared/characters.js?v=20261027"></script>
+<script src="kart.js?v=20261027"></script>
+<script src="kart-ui.js?v=20261027"></script>
+</body>
+</html>

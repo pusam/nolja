@@ -1,5 +1,6 @@
 /* Shared character collection. All characters have identical playing ability.
  * Models face -Z; every animated paw and the racket use the same shoulder rig.
+ * build3D(ch, accent, { racket, low }): low = fewer facets for small, far-away copies (kart racers).
  */
 (function () {
   'use strict';
@@ -242,8 +243,18 @@
     };
     return GEO;
   }
+  // Far-away copies (kart racers in the distance): same shapes with fewer facets.
+  let GEO_LOW = null;
+  function geoLow() {
+    if (GEO_LOW) return GEO_LOW;
+    GEO_LOW = Object.assign({}, geo(), {
+      sphere: new THREE.SphereGeometry(1, 11, 8), arm: new THREE.CapsuleGeometry(0.11, ARM_L - 0.22, 2, 7),
+      cone: new THREE.ConeGeometry(1, 1, 9), band: new THREE.TorusGeometry(1, 0.045, 4, 14),
+    });
+    return GEO_LOW;
+  }
   function build3D(ch, accent, opts = {}) {
-    const g = geo(), own = [], mats = new Map(), root = new THREE.Group(), cast = [];
+    const g = opts.low ? geoLow() : geo(), own = [], mats = new Map(), root = new THREE.Group(), cast = [];
     const mat = (color, unlit = false) => {
       const key = String(color) + unlit; if (mats.has(key)) return mats.get(key);
       const m = unlit ? new THREE.MeshBasicMaterial({ color }) : new THREE.MeshLambertMaterial({ color });
