@@ -238,6 +238,29 @@ assert(me.boostT > 0.5 && !me.drift, `버튼을 떼면 부스트 ${me.boostT.toF
 placeK(me, 20, 0, 20);
 press('Space'); run(0.05); press('KeyD'); run(0.2); release('KeyD'); release('Space'); run(0.05);
 assert(!me.drift && me.boostT === 0, '불꽃이 생기기 전에 떼면 부스트 없음');
+{
+  // 손맛: 같은 속도로 직선에서 꺾어 보고 얼마나 도는지 (보통 꺾기 vs 드리프트)
+  const turned = (keysDown, sec, after = null) => {
+    placeK(me, 20, 0, 22); me.speedMul = 1; const a0 = me.a;
+    for (const k of keysDown) press(k);
+    run(0.2); if (after) { after(); } run(sec - 0.2);
+    const deg = Math.abs(wrapA(me.a - a0)) * 180 / Math.PI, drifting = !!me.drift;
+    for (const k of ['KeyA', 'KeyD', 'Space']) release(k); run(0.3);
+    return { deg, drifting };
+  };
+  const normalQ = turned(['KeyD'], 0.25).deg, driftQ = turned(['KeyD', 'Space'], 0.25).deg;
+  const normal1 = turned(['KeyD'], 1).deg, neutral = turned(['KeyD', 'Space'], 1, () => release('KeyD'));
+  const counter = turned(['KeyD', 'Space'], 1, () => { release('KeyD'); press('KeyA'); });
+  assert(driftQ > normalQ * 1.2, `드리프트를 걸면 처음 0.25초에도 그냥 꺾기보다 빨리 돎 (${driftQ.toFixed(0)}° > ${normalQ.toFixed(0)}°)`);
+  assert(neutral.drifting && neutral.deg > normal1 * 0.85, `드리프트 중 핸들을 가운데 둬도 그냥 끝까지 꺾은 만큼은 돎 (${neutral.deg.toFixed(0)}° · 보통 ${normal1.toFixed(0)}°)`);
+  assert(counter.drifting && counter.deg > 20, `드리프트 중 반대로 꺾어도 직진으로 펴지지 않고 완만하게 돎 (${counter.deg.toFixed(0)}°)`);
+  // 보이는 것: 드리프트를 걸면 차체가 한 번에 꺾이지 않고 부드럽게 기울어짐
+  placeK(me, 20, 0, 22); press('KeyD'); press('Space'); run(0.12); KT.render();
+  const early = Math.abs(me.mesh.driftYaw || 0); run(0.5); KT.render();
+  const later = Math.abs(me.mesh.driftYaw || 0);
+  release('KeyD'); release('Space'); run(0.3);
+  assert(early > 0 && early < later && later > 0.3, `드리프트 차체 각도가 부드럽게 커짐 (${early.toFixed(2)} → ${later.toFixed(2)})`);
+}
 
 // ---------- 6. 점프대 · 트릭 · 대시 판 ----------
 console.log('\n[6] 점프대 · 트릭 · 대시 판');

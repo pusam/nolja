@@ -430,27 +430,30 @@ function driveKart(k, c, h) {
   }
   // 드리프트: 버튼을 누른 채로 꺾으면 시작 (누르는 순간 살짝 뜀). 꺾는 쪽으로 더 꺾을수록 불꽃이 빨리 커짐
   const driftBtn = c.drift && k.spinT <= 0;
-  if (driftBtn && !k.prevDrift && !k.air && k.v > 9) { k.vy = 2.6; k.air = true; k.hop = true; k.driftArm = true; }
+  if (driftBtn && !k.prevDrift && !k.air && k.v > 9) { k.vy = 2.0; k.air = true; k.hop = true; k.driftArm = true; }
   if (!driftBtn) k.driftArm = false;
   if (driftBtn && !k.drift && k.driftArm && Math.abs(c.steer) > 0.3 && k.v > 9 && !k.offroad) k.drift = { dir: Math.sign(c.steer), charge: 0, level: 0 };
   if (k.drift) {
     if (!driftBtn || k.v < 6 || k.spinT > 0) endDrift(k, !driftBtn);
     else if (!k.air && !k.offroad) {
-      k.drift.charge += h * (0.8 + 0.8 * Math.max(0, k.steer * k.drift.dir));   // 파랑 0.6~1.2초 · 주황 1.5~3초 · 분홍 2.5~5초
+      k.drift.charge += h * (1.0 + 0.6 * Math.max(0, k.steer * k.drift.dir));   // 파랑 0.6~1초 · 주황 1.5~2.4초 · 분홍 2.5~4초 (안쪽으로 꺾을수록 빨리)
       const lv = DRIFT.reduce((a, D, i) => D && k.drift.charge >= D.charge ? i : a, 0);
       if (lv > k.drift.level) { k.drift.level = lv; if (k.human >= 0) { sfx('spark', lv); rumble(k.human, 0.2, 60); } }
     }
   }
   k.prevDrift = driftBtn;
   // 방향
-  let yaw = k.drift ? k.drift.dir * (0.62 + 0.55 * clamp(k.steer * k.drift.dir, -1, 1)) * 1.55 : k.steer * turnRate(k.v);
-  if (k.air) yaw *= 0.45;
+  // 드리프트: 핸들을 가운데 둬도 거의 끝까지 꺾은 만큼 돌고(1.1), 안쪽으로 꺾으면 더 날카롭게(1.85), 바깥으로 꺾으면 완만하게(0.25) — 반대로 살짝 꺾어도 휙 펴지지 않게
+  const dsteer = k.drift ? clamp(k.steer * k.drift.dir, -1, 1) : 0;
+  let yaw = k.drift ? k.drift.dir * (1.1 + dsteer * (dsteer > 0 ? 0.75 : 0.85)) : k.steer * turnRate(k.v);
+  if (k.air) yaw *= k.hop ? 0.85 : 0.45;   // 드리프트 시작할 때 살짝 뛰는 동안은 거의 그대로 돎 (점프대에서 날 땐 덜)
   const icy = k.zone === 'ice' && k.starT <= 0;
   if (icy) yaw *= 0.75;   // 얼음판: 핸들이 덜 먹고
   if (k.spinT > 0) yaw = 0;
   const turn = -yaw * h;
   k.a = wrapA(k.a + turn);
   if (icy) k.vl += k.v * Math.sin(turn) * 0.45;   // 차는 돌아도 가던 쪽으로 계속 미끄러짐 (커브 바깥으로 밀림)
+  if (k.drift && !k.air) k.vl -= k.drift.dir * 3 * h;   // 드리프트: 뒤가 빠지며 커브 바깥으로 살짝 미끄러짐 (초속 0.6m쯤)
   if (k.magnetT > 0) {
     k.magnetT = Math.max(0, k.magnetT - h);
     const o = k.magnetTarget, ds = o ? sdiff(o.s, k.s) : 0;
@@ -792,11 +795,11 @@ function aiControl(k, h) {
     }
   }
   for (const tr of traps) { const ds = sdiff(tr.s, k.s); if (ds > 0 && ds < 22 && Math.abs(tr.d - target) < 2.4) target = tr.d + (target >= tr.d ? 2.6 : -2.6); }
-  let hotSide = 0;   // 앞 커브 안쪽에 용암 웅덩이가 있는 쪽 (+ 오른쪽): 그쪽으로는 드리프트를 시작하지 않음
+  let hotSide = 0;   // 앞 커브 안쪽에 웅덩이(용암·늪·물)가 있는 쪽 (+ 오른쪽): 그쪽으로는 드리프트를 시작하지 않음 (드리프트는 안쪽을 파고드니까)
   for (const z of ZONES) {   // 길 한쪽만 덮은 늪·얼음판·용암 웅덩이는 피해서 (길 전체를 덮은 건 어쩔 수 없음). 용암은 더 넉넉히
     const ds = sdiff(z.s, k.s), m = z.type === 'lava' ? 3 : 1.6;
     if (ds > -z.len && ds < 30 && z.d1 - z.d0 < 2 * TRACK.halfW && target > z.d0 - m + 0.4 && target < z.d1 + m - 0.4) target = z.d0 + z.d1 > 0 ? z.d0 - m : z.d1 + m;
-    if (z.type === 'lava' && ds > -z.len && ds < 40 && z.d1 - z.d0 < 2 * TRACK.halfW) hotSide = Math.sign(z.d0 + z.d1);
+    if (z.type !== 'ice' && ds > -z.len && ds < 40 && z.d1 - z.d0 < 2 * TRACK.halfW) hotSide = Math.sign(z.d0 + z.d1);
   }
   // 불기둥: 지나갈 무렵(앞뒤 조금 넉넉히) 솟거나 달아올라 있는 것들을 모두 비켜 가는 줄 중 가장 가까운 줄로 (없으면 가장 가까운 불기둥만)
   const hotJets = JETS.filter(j => { const ds = sdiff(j.s, k.s), at = t + ds / Math.max(6, k.v); return ds > -3 && ds < 50 && [-0.25, 0, 0.25, 0.5].some(u => jetState(j, at + u) > 0.2); });
@@ -828,8 +831,10 @@ function aiControl(k, h) {
   c.gas = k.v < vSafe; c.brake = k.v > vSafe + 5;
   // 드리프트: 커브 들어갈 때 누르고, 커브가 끝나면 떼서 부스트
   const ahead = curvSpan(k.s + 4, k.s + 18, true);
-  if (ai.drifting) { if (!k.drift && !k.driftArm || Math.abs(ahead) < 0.01 || Math.sign(ahead) !== (k.drift ? k.drift.dir : Math.sign(ahead)) || (hotSide && k.d * hotSide > 2)) ai.drifting = false; }
-  else if (Math.abs(ahead) > 0.024 && k.v > 15 && !k.air && !k.offroad && Math.sign(ahead) !== hotSide && Math.random() < ai.driftSkill * h * 6) { ai.drifting = true; c.steer = Math.sign(ahead); }
+  // 드리프트로 돌 만큼 급한 커브(필요한 회전이 초당 0.55 넘게)에서만 걸고, 앞이 거의 곧아지면(0.2 아래) 놓아서 부스트
+  const need = Math.abs(ahead) * Math.max(0, k.v);
+  if (ai.drifting) { if (!k.drift && !k.driftArm || need < 0.2 || Math.sign(ahead) !== (k.drift ? k.drift.dir : Math.sign(ahead)) || (hotSide && k.d * hotSide > 2)) ai.drifting = false; }
+  else if (need > 0.55 && k.v > 15 && !k.air && !k.offroad && Math.sign(ahead) !== hotSide && Math.random() < ai.driftSkill * h * 6) { ai.drifting = true; c.steer = Math.sign(ahead); }
   c.drift = ai.drifting;
   // 아이템
   c.item = false;
@@ -2749,7 +2754,9 @@ function syncKart3D(m, k, t, dt) {
   m.group.visible = m.blob.visible = true;
   m.group.position.set(k.x, k.y, k.z);
   let yaw = k.a;
-  if (k.drift) yaw -= k.drift.dir * 0.38;   // 드리프트: 코가 커브 안쪽을 봄
+  const driftYaw = k.drift ? k.drift.dir * (0.3 + 0.18 * clamp(k.steer * k.drift.dir, -1, 1)) : 0;   // 드리프트: 코가 커브 안쪽을 봄
+  m.driftYaw = lerp(m.driftYaw || 0, driftYaw, 1 - Math.exp(-dt * 9));   // 홱 꺾이지 않고 부드럽게 기울었다 돌아옴
+  yaw -= m.driftYaw;
   if (k.spinT > 0) yaw += (1 - k.spinT / 1.25) * Math.PI * 4;
   m.group.rotation.y = yaw;
   // 서스펜션: 가속하면 코가 들리고 브레이크면 숙임, 착지하면 살짝 눌렸다 펴짐
