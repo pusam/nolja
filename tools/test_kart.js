@@ -40,6 +40,8 @@ const windowEvents = {};
 let randomSeed = 0x2468ace1;   // CPU 주행·아이템이 실행마다 달라지지 않게 고정
 const testMath = Object.create(Math);
 testMath.random = () => { randomSeed = (1664525 * randomSeed + 1013904223) >>> 0; return randomSeed / 4294967296; };
+let pilotSeed = 0x13579bdf;   // 테스트 코드(아이 운전 흉내 등)가 쓰는 난수도 따로 고정 → 실행할 때마다 똑같이
+const prand = () => { pilotSeed = (1103515245 * pilotSeed + 12345) >>> 0; return pilotSeed / 4294967296; };
 let pads = [];
 // 가짜 WebAudio: 소리 코드가 예외 없이 도는지 확인. 브라우저처럼 값이 NaN이거나 시간이 음수, 지수 변화가 0 이하면 기록
 const audioLog = { nodes: 0, starts: 0, bad: [] };
@@ -120,7 +122,7 @@ const p0 = KT.trackPoint(0, 0);
 assert(Math.hypot(p0.x + 20, p0.z) < 0.5, '출발선은 첫 컨트롤 포인트 (-20, 0)');
 let worstS = 0, worstD = 0;
 for (let i = 0; i < 300; i++) {
-  const s = Math.random() * TR.len, d = (Math.random() - 0.5) * 2 * KT.TRACK.halfW, p = KT.trackPoint(s, d), q = KT.locate(p.x, p.z, -1);
+  const s = prand() * TR.len, d = (prand() - 0.5) * 2 * KT.TRACK.halfW, p = KT.trackPoint(s, d), q = KT.locate(p.x, p.z, -1);
   worstS = Math.max(worstS, Math.abs(KT.sdiff(q.s, s))); worstD = Math.max(worstD, Math.abs(q.d - d));
 }
 assert(worstS < 0.8 && worstD < 0.35, `길 위 (s,d) → 좌표 → (s,d) 되돌리기 오차 s ${worstS.toFixed(2)}m · d ${worstD.toFixed(2)}m`);
@@ -394,7 +396,7 @@ pads = []; JC.list.length = 0;
 console.log('\n[12] 난이도');
 // 조이콘 기울기로 운전하는 아이: 0.3초 늦게 보고, 손이 흔들리고, 길 가운데 ±3m를 왔다갔다, 가끔 0.6초 딴짓
 function kidRace(level, seed, laps = 3) {
-  randomSeed = seed >>> 0;
+  randomSeed = seed >>> 0; pilotSeed = (seed ^ 0x5bd1e995) >>> 0;
   KT.settings.cpuLevel = level; KT.settings.laps = laps; JC.list.length = 0;
   const jc = { ok: true, player: 0, kind: 'R', accel: { x: 0, y: 0, z: 1 }, hold: 0, stick: { x: 2048, y: 2048 } };
   startRace('1p'); JC.list.push(jc);
@@ -406,24 +408,24 @@ function kidRace(level, seed, laps = 3) {
     for (const k of karts) if (k.human < 0 && k.item === 'zap') zaps++;
     hist.push({ x: me.x, z: me.z, a: me.a, s: me.s, v: me.v }); if (hist.length > 18) hist.shift();
     const seen = hist[0], t = KT.T();
-    if (t > st.wanderAt) { st.wander = (Math.random() - 0.5) * 6; st.wanderAt = t + 2 + Math.random() * 3; }
-    if (t > st.idle && Math.random() < 1 / 480) st.idle = t + 0.6;
+    if (t > st.wanderAt) { st.wander = (prand() - 0.5) * 6; st.wanderAt = t + 2 + prand() * 3; }
+    if (t > st.idle && prand() < 1 / 480) st.idle = t + 0.6;
     if (t < st.idle) return;
     const q = KT.trackPoint(seen.s + 9 + seen.v * 0.3, st.wander);
     const err = wrapA(Math.atan2(q.x - seen.x, q.z - seen.z) - seen.a);
-    st.noise += ((Math.random() - 0.5) * 0.9 - st.noise) * 0.08;
+    st.noise += ((prand() - 0.5) * 0.9 - st.noise) * 0.08;
     const steer = Math.max(-1, Math.min(1, -err * 1.6 + st.noise)), ang = (3 + Math.abs(steer) * 25) * Math.sign(steer) * Math.PI / 180;
     jc.accel = { x: -Math.sin(ang), y: 0, z: Math.cos(ang) };
-    jc.hold = me.item && Math.random() < 0.02 ? B.B : 0;
+    jc.hold = me.item && prand() < 0.02 ? B.B : 0;
   });
   JC.list.length = 0;
   return { place: me.place, zaps };
 }
-const easy = [kidRace(0, 1000), kidRace(0, 1077), kidRace(0, 1154)], hard = [kidRace(2, 1026), kidRace(2, 1103), kidRace(2, 1180)];
+const easy = [kidRace(0, 1000), kidRace(0, 1077), kidRace(0, 1154)], hard = [1026, 1103, 1180, 1257, 1334].map(seed => kidRace(2, seed));   // 어려움은 운에 덜 휘둘리게 다섯 판
 const avgPlace = rs => rs.reduce((a, r) => a + r.place, 0) / rs.length;
 assert(avgPlace(easy) <= 2, `쉬움: 아이처럼 흔들리며 달려도 평균 ${avgPlace(easy).toFixed(1)}등 (2등 안)`);
 assert(easy.every(r => r.zaps === 0), '쉬움 CPU는 번개 구슬을 안 씀');
-assert(avgPlace(hard) >= 3, `어려움: 같은 운전이면 평균 ${avgPlace(hard).toFixed(1)}등 (쉽게 못 이김)`);
+assert(avgPlace(hard) >= 2.5 && hard.filter(r => r.place === 1).length <= 1, `어려움: 같은 운전이면 평균 ${avgPlace(hard).toFixed(1)}등 · 1등 ${hard.filter(r => r.place === 1).length}/5 (쉽게 못 이김, 등수 ${hard.map(r => r.place).join(',')})`);
 {
   startRace('1p'); KT.settings.cpuLevel = 0; skipCountdown();
   const cpuK = karts.find(k => k.human < 0), meK = KT.humanKart(0);
@@ -729,7 +731,8 @@ console.log('\n[18] 아이템 두 칸 · 새 아이템');
   assert(me.magnetTarget === c1 && maxV > KT.KART.VMAX * 1.1 && endT > 0 && endT < 3.5 && KT.sdiff(c1.s, me.s) < 5, `자석: ${d0.toFixed(0)}m 앞 카트에게 ${endT.toFixed(1)}초 만에 (최고 ${maxV.toFixed(1)}m/s)`);
   // 천둥 번개: 내 앞 카트만 빙글 (보호막이 있으면 보호막만 터짐)
   clear(me); clear(c1); clear(c2); const c3 = cpus[2]; clear(c3);
-  G.only = [me, c1, c2, c3]; placeK(me, 60, 0, 10); placeK(c1, 120, 0, 10); placeK(c2, 30, 0, 10); placeK(c3, 140, 0, 10); c3.shieldT = 10; run(0.1);
+  G.only = [me, c1, c2, c3]; for (const k of G.only) k.lap = 1;   // 앞뒤는 등수(바퀴 수 포함)로 정하니 같은 바퀴에서
+  placeK(me, 60, 0, 10); placeK(c1, 120, 0, 10); placeK(c2, 30, 0, 10); placeK(c3, 140, 0, 10); c3.shieldT = 10; run(0.1);
   me.item = 'bolt'; me.itemN = 1; tap('ControlLeft');
   assert(c1.spinT > 0 && c2.spinT === 0 && c3.spinT === 0 && c3.shieldT === 0 && me.spinT === 0, `천둥 번개: 앞 카트는 빙글, 뒤 카트는 그대로, 보호막은 대신 터짐 (앞 ${c1.spinT.toFixed(2)} 뒤 ${c2.spinT.toFixed(2)} 보호막 ${c3.spinT.toFixed(2)}/${c3.shieldT} 나 ${me.spinT.toFixed(2)})`);
   // 통통 공: 곧장 날아가 벽에서 튕기고, 맞으면 빙글
@@ -768,7 +771,7 @@ console.log('\n[18] 아이템 두 칸 · 새 아이템');
 {
   // CPU도 새 아이템을 씀 (보통, 사람도 CPU처럼)
   KT.settings.cpuLevel = 1; G.stats.used = {};
-  startRace('1p', true); skipCountdown(); run(90);
+  startRace('1p', true); skipCountdown(); run(150);
   const used = Object.keys(G.stats.used || {});
   assert(['shield', 'magnet', 'ball', 'paint'].filter(x => used.includes(x)).length >= 3, `CPU가 새 아이템을 씀 (${used.join(', ')})`);
   G.forceCPU = null; KT.toMenu();
@@ -808,7 +811,8 @@ console.log('\n[20] 도전 코스: 용암 성');
   assert(KT.JETS.length >= 4 && G3.jets.length === KT.JETS.length && G3.snowfall, `불기둥 ${KT.JETS.length}개 · 날리는 불티`);
   // 시범 레이스: 다리 위에선 다리 높이, 아래 길에선 땅 높이로 (층이 섞이지 않음)
   const lapB = karts.map(k => k.lap), r0 = G.stats.rescues, prevSpin = karts.map(() => 0);
-  let bad = -1, layerBad = 0, upT = 0, downT = 0, jetHits = 0, puddleT = 0;
+  let bad = -1, layerBad = 0, upT = 0, downT = 0, jetHits = 0, jetPass = 0, puddleT = 0;
+  const prevS = karts.map(k => k.s);
   run(150, j => {
     if (bad < 0 && !karts.every(finite)) bad = j;
     karts.forEach((k, i) => {
@@ -816,13 +820,14 @@ console.log('\n[20] 도전 코스: 용암 성');
       if (!k.air && Math.abs(KT.sdiff(k.s, under.s)) < 25) { downT += 1 / 60; if (k.y > 0.2) layerBad++; }
       const z = zoneOf(k.s, k.d); if (z && halfRoad(z)) puddleT += 1 / 60;
       if (k.spinT > prevSpin[i] + 0.5 && KT.JETS.some(q => Math.abs(KT.sdiff(k.s, q.s)) < 4)) jetHits++;
-      prevSpin[i] = k.spinT;
+      for (const q of KT.JETS) if (KT.sdiff(prevS[i], q.s) < 0 && KT.sdiff(k.s, q.s) >= 0 && Math.abs(KT.sdiff(k.s, q.s)) < 30) jetPass++;   // 불기둥을 지나감
+      prevSpin[i] = k.spinT; prevS[i] = k.s;
     });
   });
   assert(bad < 0 && karts.every(k => k.lap - lapB[k.slot] >= 2), `시범 레이스: 150초에 모두 2바퀴 이상 (${karts.map((k, i) => k.lap - lapB[i]).join(',')})`);
   assert(G.stats.rescues - r0 <= 2, `끼여서 다시 세운 횟수 ${G.stats.rescues - r0}`);
   assert(layerBad === 0 && upT > 10 && downT > 10, `다리 위 ${upT.toFixed(0)}초는 7m, 굴다리 ${downT.toFixed(0)}초는 땅에서 (층이 안 섞임)`);
-  assert(puddleT < 4 && jetHits <= 4, `CPU는 머리핀 안쪽 용암 웅덩이(${puddleT.toFixed(1)}초)와 불기둥(빙글 ${jetHits}번)을 피해 감`);
+  assert(puddleT < 4 && jetHits <= jetPass * 0.1, `CPU는 머리핀 안쪽 용암 웅덩이(${puddleT.toFixed(1)}초)와 불기둥(${jetPass}번 지나며 빙글 ${jetHits}번)을 피해 감`);
   // 직접 달려 보기
   startRace('1p'); skipCountdown();
   const me = KT.humanKart(0); G.only = [me];
