@@ -16,6 +16,14 @@
     $('btnPreview').setAttribute('aria-pressed', String(previewPaused));
     $('btnPreview').setAttribute('aria-label', previewPaused ? '시범 레이스 재생' : '시범 레이스 일시정지');
   }
+  function updateRaceSummary() {
+    const mode = document.querySelector('#modeRow button.on');
+    const laps = document.querySelector('#lapRow button.on');
+    const level = document.querySelector('#lvRow button.on');
+    if (!mode || !laps || !level) return;
+    const summary = `${mode.dataset.mode === '2p' ? '2 PLAYERS' : '1 PLAYER'} + CPU  /  ${laps.dataset.laps} LAPS  /  ${['EASY', 'NORMAL', 'HARD'][Number(level.dataset.lv)]}`;
+    if ($('setupSummary').textContent !== summary) $('setupSummary').textContent = summary;
+  }
   function syncLayout() {
     const inMenu = !menu.classList.contains('hidden');
     if (!inMenu && guide.open) guide.close();   // a controller button can leave the menu while the guide is open
@@ -26,6 +34,8 @@
     document.querySelectorAll('#modeRow button, #lvRow button, #lapRow button, #qRow button').forEach(button => {
       button.setAttribute('aria-pressed', String(button.classList.contains('on')));
     });
+    updateRaceSummary();
+    $('select').classList.toggle('solo', $('selc1').classList.contains('hidden'));
     requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
   }
   $('btnPreview').addEventListener('click', () => {
@@ -59,6 +69,9 @@
   $('btnGameFull').addEventListener('click', () => $('btnFull').click());
   const layoutObserver = new MutationObserver(syncLayout);
   [menu, $('select'), $('pause'), $('result')].forEach(element => layoutObserver.observe(element, { attributes: true, attributeFilter: ['class'] }));
+  new MutationObserver(() => {
+    $('select').classList.toggle('solo', $('selc1').classList.contains('hidden'));
+  }).observe($('selc1'), { attributes: true, attributeFilter: ['class'] });
   document.querySelectorAll('#modeRow button, #lvRow button, #lapRow button, #qRow button').forEach(button => button.addEventListener('click', syncLayout));
   new ResizeObserver(() => window.dispatchEvent(new Event('resize'))).observe(preview);
   const joycon = window.Nolja.joycon;

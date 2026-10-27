@@ -1218,28 +1218,37 @@ const partM = (x, y, z, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) => { con
 const kartGeoCache = new Map();
 function kartBodyGeo(tint) {
   if (kartGeoCache.has(tint)) return kartGeoCache.get(tint);
-  const C = c => new THREE.Color(c), main = C(tint), dark = C(tint).multiplyScalar(0.72), seat = C('#3d3550'), cream = C('#f7f1e6'), metal = C('#b9bdc9'), tire = C('#2f2a36'), hub = C('#fff4dc');
-  const box = new THREE.BoxGeometry(1, 1, 1), cyl = new THREE.CylinderGeometry(1, 1, 1, 14), torus = new THREE.TorusGeometry(0.17, 0.04, 6, 18);
+  const C = c => new THREE.Color(c), main = C(tint), dark = C(tint).multiplyScalar(0.66), seat = C('#293638'), cream = C('#fff5df'), metal = C('#a9bdc1'), tire = C('#252e32'), hub = C('#f7d772');
+  const box = new THREE.BoxGeometry(1, 1, 1), cyl = new THREE.CylinderGeometry(1, 1, 1, 16), sphere = new THREE.SphereGeometry(1, 16, 10), torus = new THREE.TorusGeometry(0.17, 0.04, 6, 18);
   const P = [
-    { geo: box, matrix: partM(0, 0.36, 0.05, 0, 0, 0, 1.36, 0.26, 2.2), color: main },        // 바닥
-    { geo: box, matrix: partM(0, 0.5, 0.78, -0.28, 0, 0, 1.0, 0.26, 0.92), color: main },      // 앞 덮개
-    { geo: box, matrix: partM(0.72, 0.46, 0.02, 0, 0, 0, 0.34, 0.3, 1.5), color: dark },       // 옆구리
-    { geo: box, matrix: partM(-0.72, 0.46, 0.02, 0, 0, 0, 0.34, 0.3, 1.5), color: dark },
+    { geo: box, matrix: partM(0, 0.32, 0.05, 0, 0, 0, 1.36, 0.22, 2.2), color: dark },        // 낮은 섀시
+    { geo: sphere, matrix: partM(0, 0.48, 0.62, 0, 0, 0, 0.66, 0.29, 0.76), color: main },    // 둥근 앞 덮개
+    { geo: box, matrix: partM(0, 0.745, 0.63, -0.10, 0, 0, 0.16, 0.018, 0.64), color: cream }, // 레이싱 스트라이프
+    { geo: sphere, matrix: partM(0.7, 0.44, 0.02, 0, 0, 0, 0.23, 0.21, 0.72), color: main }, // 옆 포드
+    { geo: sphere, matrix: partM(-0.7, 0.44, 0.02, 0, 0, 0, 0.23, 0.21, 0.72), color: main },
     { geo: box, matrix: partM(0, 0.66, -0.92, 0.12, 0, 0, 0.82, 0.38, 0.14), color: seat },   // 등받이 (낮게: 뒤에서 캐릭터가 잘 보이게)
     { geo: box, matrix: partM(0, 0.53, -0.5, 0, 0, 0, 0.95, 0.12, 0.62), color: seat },        // 의자
-    { geo: box, matrix: partM(0, 0.3, 1.25, 0, 0, 0, 1.55, 0.16, 0.18), color: cream },       // 범퍼
+    { geo: sphere, matrix: partM(0, 0.31, 1.2, 0, 0, 0, 0.82, 0.12, 0.2), color: cream },    // 둥근 범퍼
     { geo: box, matrix: partM(0, 0.36, -1.18, 0, 0, 0, 1.3, 0.2, 0.2), color: cream },
     { geo: box, matrix: partM(0, 0.6, -1.12, 0, 0, 0, 0.62, 0.34, 0.42), color: metal },      // 엔진
     { geo: cyl, matrix: partM(0.18, 0.66, -1.38, Math.PI / 2, 0, 0, 0.07, 0.36, 0.07), color: metal },   // 배기구
     { geo: cyl, matrix: partM(-0.18, 0.66, -1.38, Math.PI / 2, 0, 0, 0.07, 0.36, 0.07), color: metal },
     { geo: torus, matrix: partM(0, 0.86, -0.12, -0.6, 0, 0), color: seat },                   // 핸들
+    { geo: box, matrix: partM(0, 0.86, -1.11, -0.12, 0, 0, 1.57, 0.10, 0.38), color: main }, // 리어 윙
   ];
+  for (const sx of [-1, 1]) {
+    P.push({ geo: box, matrix: partM(sx * 0.53, 0.63, -1.08, 0, 0, 0, 0.08, 0.42, 0.10), color: seat });
+    P.push({ geo: box, matrix: partM(sx * 0.77, 0.88, -1.1, 0, 0, 0, 0.06, 0.20, 0.40), color: cream });
+    P.push({ geo: sphere, matrix: partM(sx * 0.4, 0.48, 1.19, 0, 0, 0, 0.14, 0.08, 0.045), color: cream });
+    P.push({ geo: box, matrix: partM(sx * 0.44, 0.44, -1.3, 0, 0, 0, 0.23, 0.075, 0.035), color: C('#fa7756') });
+  }
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    P.push({ geo: cyl, matrix: partM(sx * 0.8, 0.32, sz * 0.82, 0, 0, Math.PI / 2, 0.32, 0.3, 0.32), color: tire });
-    P.push({ geo: cyl, matrix: partM(sx * 0.81, 0.32, sz * 0.82, 0, 0, Math.PI / 2, 0.15, 0.32, 0.15), color: hub });
+    P.push({ geo: cyl, matrix: partM(sx * 0.8, 0.36, sz * 0.82, 0, 0, Math.PI / 2, 0.36, 0.32, 0.36), color: tire });
+    P.push({ geo: cyl, matrix: partM(sx * 0.81, 0.36, sz * 0.82, 0, 0, Math.PI / 2, 0.22, 0.34, 0.22), color: cream });
+    P.push({ geo: cyl, matrix: partM(sx * 0.82, 0.36, sz * 0.82, 0, 0, Math.PI / 2, 0.11, 0.35, 0.11), color: hub });
   }
   const g = mergeGeoms(P);
-  box.dispose(); cyl.dispose(); torus.dispose();
+  box.dispose(); cyl.dispose(); sphere.dispose(); torus.dispose();
   kartGeoCache.set(tint, g);
   return g;
 }
@@ -1317,28 +1326,34 @@ function ensureScene3D() {
   const Sc = new THREE.Scene(); G3.scene = Sc;
   Sc.background = canvasTex(4, 256, (g, w, h) => {
     const gr = g.createLinearGradient(0, 0, 0, h);
-    gr.addColorStop(0, '#9fc7f2'); gr.addColorStop(0.55, '#d9e8f7'); gr.addColorStop(1, '#fbeedf');
+    gr.addColorStop(0, '#68bdeb'); gr.addColorStop(0.65, '#c4e7ed'); gr.addColorStop(1, '#f4efd7');
     g.fillStyle = gr; g.fillRect(0, 0, w, h);
   });
-  Sc.fog = new THREE.Fog(0xeeeaf0, 140, 560);
+  Sc.fog = new THREE.Fog(0xd5e8df, 170, 620);
   G3.aniso = [];
   G3.matLit = new THREE.MeshLambertMaterial({ vertexColors: true });
   G3.matUnlit = new THREE.MeshBasicMaterial({ vertexColors: true });
-  G3.blobGeo = new THREE.CircleGeometry(1.25, 20);
-  G3.blobMat = basic(0x3c3350, { transparent: true, opacity: 0.22, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 });
+  const shadow = canvasTex(64, 64, (g, w, h) => {
+    const gradient = g.createRadialGradient(w / 2, h / 2, 4, w / 2, h / 2, w / 2);
+    gradient.addColorStop(0, 'rgba(24,42,40,0.45)'); gradient.addColorStop(0.55, 'rgba(24,42,40,0.25)'); gradient.addColorStop(1, 'rgba(24,42,40,0)');
+    g.fillStyle = gradient; g.fillRect(0, 0, w, h);
+  });
+  G3.blobGeo = new THREE.PlaneGeometry(3.8, 3.8);
+  G3.blobMat = basic(0xffffff, { map: shadow, transparent: true, opacity: 0.85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 });
   for (let i = 0; i < 2; i++) { G3.camState.push({ cam: new THREE.PerspectiveCamera(52, 16 / 9, 0.25, 900), pos: new THREE.Vector3(), look: new THREE.Vector3(), yaw: 0, snap: true, fov: 52 }); }
-  Sc.add(new THREE.HemisphereLight(0xf8f5ff, 0x6f9460, 0.9));
-  const sun = new THREE.DirectionalLight(0xfff1d6, 0.62); sun.position.set(-60, 120, 40); Sc.add(sun);
+  Sc.add(new THREE.HemisphereLight(0xe5f4ff, 0x648b62, 0.75));
+  const sun = new THREE.DirectionalLight(0xfff0d0, 0.65); sun.position.set(-60, 100, 40); Sc.add(sun);
   buildGround(Sc);
   buildRoad(Sc);
   buildWalls(Sc);
   buildRampAndPanels(Sc);
   buildScenery(Sc);
+  buildTrackside(Sc);
   buildItemsFx(Sc);
 }
 function buildGround(Sc) {
   const tex = canvasTex(128, 128, (g, w, h) => {
-    g.fillStyle = '#a9d08e'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#83bd76'; g.fillRect(0, 0, w, h);
     const rng = mulberry32(7);
     for (let i = 0; i < 900; i++) { g.fillStyle = rng() < 0.5 ? 'rgba(255,255,255,0.06)' : 'rgba(40,90,40,0.07)'; g.fillRect(rng() * w, rng() * h, 2, 3); }
   });
@@ -1364,21 +1379,21 @@ function stripGeo(d0, d1, y, vScale = 10) {
 }
 function buildRoad(Sc) {
   const tex = canvasTex(128, 256, (g, w, h) => {
-    g.fillStyle = '#9b98b0'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#47565b'; g.fillRect(0, 0, w, h);
     const rng = mulberry32(11);
     for (let i = 0; i < 1400; i++) { g.fillStyle = rng() < 0.5 ? 'rgba(255,255,255,0.07)' : 'rgba(30,20,50,0.07)'; g.fillRect(rng() * w, rng() * h, 2, 2); }
     g.fillStyle = '#fbf7ee'; g.fillRect(3, 0, 5, h); g.fillRect(w - 8, 0, 5, h);       // 가장자리 선
-    g.fillStyle = 'rgba(255,240,200,0.8)'; g.fillRect(w / 2 - 2, 0, 4, h * 0.45);      // 가운데 점선
+    g.fillStyle = 'rgba(255,250,224,0.48)'; g.fillRect(w / 2 - 0.8, 0, 1.6, h * 0.32); // 가는 가운데 점선
   });
   tex.wrapS = THREE.ClampToEdgeWrapping; tex.wrapT = THREE.RepeatWrapping;
   G3.aniso.push(tex);
   const road = new THREE.Mesh(stripGeo(-TRACK.halfW, TRACK.halfW, 0.02), lam(0xffffff, { map: tex, polygonOffset: true, polygonOffsetFactor: -1 }));
   Sc.add(road);
   // 길과 벽 사이 거친 풀밭 (느려지는 곳)
-  const rough = lam(0x93c27c, { polygonOffset: true, polygonOffsetFactor: -0.5 });
+  const rough = lam(0x9bc685, { polygonOffset: true, polygonOffsetFactor: -0.5 });
   Sc.add(new THREE.Mesh(stripGeo(TRACK.halfW, TRACK.wall, 0.01), rough), new THREE.Mesh(stripGeo(-TRACK.wall, -TRACK.halfW, 0.01), rough));
   // 커브엔 빨강·흰 연석 (2m마다 색이 바뀌는 칸)
-  const pos = [], col = [], idx = [], red = new THREE.Color('#ef8f8f'), white = new THREE.Color('#fff8ef');
+  const pos = [], col = [], idx = [], red = new THREE.Color('#ed734d'), white = new THREE.Color('#fff4d9');
   for (const side of [-1, 1]) for (let i = 0; i < TR.n; i++) {
     if (Math.abs(curvSpan(i * TR.step - 6, i * TR.step + 6, true)) < 0.012) continue;
     const j = (i + 1) % TR.n, c = Math.floor(i * TR.step / 2) % 2 ? red : white, v0 = pos.length / 3;
@@ -1412,7 +1427,7 @@ function buildRoad(Sc) {
 }
 // 벽: 안쪽 면 · 윗면 · 바깥 면, 4m마다 흰색·빨강
 function buildWalls(Sc) {
-  const pos = [], col = [], idx = [], A1 = new THREE.Color('#fff6ea'), A2 = new THREE.Color('#f29b9b'), A3 = new THREE.Color('#9ec5ef');
+  const pos = [], col = [], idx = [], A1 = new THREE.Color('#fff3d6'), A2 = new THREE.Color('#ec7953'), A3 = new THREE.Color('#409f9c');
   const H1 = 1.0, T1 = 0.7;
   for (const side of [-1, 1]) for (let i = 0; i < TR.n; i++) {
     const j = (i + 1) % TR.n, blk = Math.floor(i * TR.step / 4) % 2, c = blk ? (side > 0 ? A2 : A3) : A1;
@@ -1486,18 +1501,18 @@ function buildScenery(Sc) {
   }
   const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(2.4, 1), lam(0xffffff), spots.length);
   const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.32, 0.45, 2.6, 6), lam(0x9b7653), spots.length);
-  const greens = ['#7cbf6b', '#94cc72', '#6fae74', '#a6d27a', '#86c48c', '#b5d98a'];
+  const greens = ['#41966c', '#6caf6e', '#4c9e79', '#9ac373', '#6db58b', '#b2ce78'];
   spots.forEach(([x, z, s], i) => {
     K.m.compose(K.v.set(x, 1.3 * s, z), K.q.identity(), K.w.set(s, s, s)); trunks.setMatrixAt(i, K.m);
     K.m.compose(K.v.set(x, (2.6 + 1.8) * s, z), K.q.identity(), K.w.set(s, s * 1.1, s)); crowns.setMatrixAt(i, K.m);
     crowns.setColorAt(i, K.col.set(greens[Math.floor(rng() * greens.length)]));
   });
   Sc.add(crowns, trunks);
-  // 먼 산 (파스텔)
-  const mp = [], mcols = ['#b8b5df', '#a9c8e6', '#c7b9e2', '#9fc4c9', '#bfd5a8'], cone = new THREE.ConeGeometry(1, 1, 7);
+  // 장난감 공원처럼 둥근 언덕. 정적 지형은 한 덩어리로 그림.
+  const mp = [], mcols = ['#72bca3', '#96c9a1', '#73b4b1', '#accd97', '#8cbea1'], hill = new THREE.SphereGeometry(1, 16, 10);
   for (let i = 0; i < 18; i++) {
     const a = i / 18 * Math.PI * 2 + rng() * 0.2, r = 380 + rng() * 80, hgt = 60 + rng() * 90, w = 70 + rng() * 60;
-    mp.push({ geo: cone, matrix: partM(Math.cos(a) * r, hgt / 2 - 2, 60 + Math.sin(a) * r, 0, rng() * 3, 0, w, hgt, w), color: new THREE.Color(mcols[i % mcols.length]) });
+    mp.push({ geo: hill, matrix: partM(Math.cos(a) * r, -8, 60 + Math.sin(a) * r, 0, rng() * 3, 0, w, hgt * 0.75, w * 0.8), color: new THREE.Color(mcols[i % mcols.length]) });
   }
   Sc.add(new THREE.Mesh(mergeGeoms(mp), G3.matLit));
   // 구름
@@ -1508,7 +1523,7 @@ function buildScenery(Sc) {
   }
   Sc.add(new THREE.Mesh(mergeGeoms(cp), basic(0xffffff, { vertexColors: true, fog: false })));
   // 관중석: 출발선 바깥쪽 계단 + 알록달록 관중
-  const sp = [], box = new THREE.BoxGeometry(1, 1, 1), lav = new THREE.Color('#c9c0ea'), cre = new THREE.Color('#fff7ea'), roofC = new THREE.Color('#f2a6ba');
+  const sp = [], box = new THREE.BoxGeometry(1, 1, 1), lav = new THREE.Color('#75aaa2'), cre = new THREE.Color('#fff4db'), roofC = new THREE.Color('#ed784f');
   for (let st = 0; st < 4; st++) sp.push({ geo: box, matrix: partM(-5, 0.6 * (st + 1), -24 - st * 2.6, 0, 0, 0, 72, 1.2 * (st + 1), 2.6), color: st % 2 ? lav : cre });
   sp.push({ geo: box, matrix: partM(-5, 9.2, -29, -0.18, 0, 0, 74, 0.3, 10), color: roofC });
   for (const x of [-40, -5, 30]) sp.push({ geo: box, matrix: partM(x, 4.6, -33.6, 0, 0, 0, 0.5, 9.2, 0.5), color: cre });
@@ -1521,14 +1536,14 @@ function buildScenery(Sc) {
   G3.crowd = new THREE.Group(); G3.crowd.add(crowd); Sc.add(G3.crowd);
   // 출발 문 (기둥 둘 + 현수막)
   const banner = canvasTex(512, 64, (g, w, h) => {
-    g.fillStyle = '#8176db'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#ed683a'; g.fillRect(0, 0, w, h);
     for (let x = 0; x < w; x += 16) { g.fillStyle = (x / 16) % 2 ? '#2f2a3a' : '#fffaf2'; g.fillRect(x, 0, 16, 8); g.fillStyle = (x / 16) % 2 ? '#fffaf2' : '#2f2a3a'; g.fillRect(x, h - 8, 16, 8); }
     g.fillStyle = '#fffaf2'; g.font = `900 30px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('NOLJA  MONSTER  KART', w / 2, h / 2 + 1);
   });
   const p0 = trackPoint(0, 0), gate = new THREE.Group(), span = TRACK.halfW + 2;
   const pole = new THREE.CylinderGeometry(0.45, 0.55, 7.2, 10), poleMat = lam(0xfff4e4);
   for (const sd of [-1, 1]) { const m = new THREE.Mesh(pole, poleMat); m.position.set(sd * span, 3.6, 0); gate.add(m); }
-  const bar = new THREE.Mesh(new THREE.BoxGeometry(span * 2 + 1.2, 1.8, 0.5), [lam(0x8176db), lam(0x8176db), lam(0x8176db), lam(0x8176db), lam(0xffffff, { map: banner }), lam(0xffffff, { map: banner })]);
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(span * 2 + 1.2, 1.8, 0.5), [lam(0xed683a), lam(0xed683a), lam(0xed683a), lam(0xed683a), lam(0xffffff, { map: banner }), lam(0xffffff, { map: banner })]);
   bar.position.set(0, 7.0, 0); gate.add(bar);
   gate.position.set(p0.x, 0, p0.z); gate.rotation.y = Math.atan2(p0.tx, p0.tz);
   Sc.add(gate);
@@ -1544,7 +1559,64 @@ function buildScenery(Sc) {
   const pd = new THREE.Group(), gold = lam(0xf6d36b), silver = lam(0xd6dbe6), bronze = lam(0xe2b08a);
   for (const [z, hgt, mat] of [[0, 1.1, gold], [-2.4, 0.75, silver], [2.4, 0.45, bronze]]) { const m = new THREE.Mesh(new THREE.BoxGeometry(2.2, hgt, 2.2), mat); m.position.set(0, hgt / 2, z); pd.add(m); }
   pd.position.set(6, 0, 0); pd.visible = false; Sc.add(pd); G3.podiumBase = pd;
-  sph.dispose(); box.dispose(); cone.dispose();
+  sph.dispose(); box.dispose(); hill.dispose();
+}
+// 서킷 브랜딩과 길가의 작은 정원. 표지판 전체가 텍스처 하나·그리기 한 번을 공유.
+function buildTrackside(Sc) {
+  const atlas = canvasTex(1024, 256, (g, w, h) => {
+    const labels = ['NOLJA RACING', 'MONSTER CUP', 'LET’S GO!', 'PLAY TOGETHER'];
+    const colors = ['#ed683a', '#286f70', '#f5d66d', '#263638'];
+    for (let i = 0; i < 4; i++) {
+      const x = i * 256;
+      g.fillStyle = colors[i]; g.fillRect(x, 0, 256, h);
+      g.fillStyle = i === 2 ? '#263638' : '#fff7e5';
+      g.font = `900 27px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(labels[i], x + 128, 126, 236);
+      for (let k = 0; k < 16; k++) for (let j = 0; j < 2; j++) {
+        g.fillStyle = (k + j) % 2 ? '#fff7e5' : '#263638';
+        g.fillRect(x + k * 16, 16 + j * 16, 16, 16); g.fillRect(x + k * 16, h - 48 + j * 16, 16, 16);
+      }
+    }
+  });
+  G3.aniso.push(atlas);
+  const positions = [], uvs = [], indices = [], parts = [];
+  const box = new THREE.BoxGeometry(1, 1, 1), flower = new THREE.IcosahedronGeometry(1, 0);
+  const ink = new THREE.Color('#365458'), cream = new THREE.Color('#fff2cf'), rng = mulberry32(51);
+  for (let i = 0; i < 12; i++) {
+    const s = L * (i + 0.35) / 12, side = i % 2 ? -1 : 1;
+    const p = { ...trackPoint(s, side * (TRACK.wall + 2.2)) };
+    const angle = Math.atan2(p.tz * side, -p.tx * side), m = partM(p.x, 2.6, p.z, 0, angle);
+    const v0 = positions.length / 3, point = new THREE.Vector3();
+    for (const [x, y, u, v] of [[-4, -1.05, 0, 0], [4, -1.05, 1, 0], [-4, 1.05, 0, 1], [4, 1.05, 1, 1]]) {
+      point.set(x, y, 0).applyMatrix4(m); positions.push(point.x, point.y, point.z);
+      uvs.push(((i % 4) + 0.008 + u * 0.984) / 4, v);
+    }
+    indices.push(v0, v0 + 1, v0 + 2, v0 + 1, v0 + 3, v0 + 2);
+    for (const x of [-3.2, 3.2]) {
+      point.set(x, -1, 0).applyMatrix4(m);
+      parts.push({ geo: box, matrix: partM(point.x, 0.85, point.z, 0, angle, 0, 0.12, 1.7, 0.16), color: ink });
+    }
+  }
+  const signs = new THREE.BufferGeometry();
+  signs.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  signs.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); signs.setIndex(indices); signs.computeVertexNormals();
+  Sc.add(new THREE.Mesh(signs, lam(0xffffff, { map: atlas, side: THREE.DoubleSide })));
+  const petals = ['#fff2c9', '#f5cd68', '#ed8968', '#e9b7cc'];
+  for (let i = 0; i < 90; i++) {
+    const s = i * L / 90, side = i % 2 ? 1 : -1, p = { ...trackPoint(s, side * (TRACK.wall + 3 + rng() * 5)) };
+    for (let j = 0; j < 3; j++) {
+      const x = p.x + (rng() - 0.5) * 2, z = p.z + (rng() - 0.5) * 2, h = 0.25 + rng() * 0.3;
+      parts.push({ geo: box, matrix: partM(x, h / 2, z, 0, 0, 0, 0.045, h, 0.045), color: ink });
+      parts.push({ geo: flower, matrix: partM(x, h, z, 0, 0, 0, 0.18, 0.12, 0.18), color: new THREE.Color(petals[i % petals.length]) });
+    }
+  }
+  // 낮은 트랙 바깥 마커는 코스 방향을 가리지 않으면서 리듬을 만듦.
+  for (let i = 0; i < 40; i++) {
+    const p = { ...trackPoint(i * L / 40, (i % 2 ? -1 : 1) * (TRACK.wall + 0.8)) };
+    parts.push({ geo: box, matrix: partM(p.x, 0.7, p.z, 0, 0, 0, 0.15, 1.4, 0.15), color: cream });
+  }
+  Sc.add(new THREE.Mesh(mergeGeoms(parts), G3.matLit));
+  box.dispose(); flower.dispose();
 }
 // 아이템 상자 · 번개 구슬 · 물방울 함정 · 불꽃(점 입자)
 const PT_VS = `attribute float aSize; attribute float aAlpha; attribute vec3 aColor; uniform float uScale; varying float vA; varying vec3 vC;
@@ -1819,7 +1891,19 @@ const MAP = (() => {   // 미니맵: 트랙 모양을 0~1 상자에 맞춤
   for (let i = 0; i < TR.n; i++) { x0 = Math.min(x0, TR.px[i]); x1 = Math.max(x1, TR.px[i]); z0 = Math.min(z0, TR.pz[i]); z1 = Math.max(z1, TR.pz[i]); }
   return { x0, z0, w: x1 - x0, h: z1 - z0 };
 })();
-function outlined(g, text, x, y, fill, lw) { g.lineJoin = 'round'; g.lineWidth = lw; g.strokeStyle = 'rgba(48,36,72,0.82)'; g.strokeText(text, x, y); g.fillStyle = fill; g.fillText(text, x, y); }
+const HUD = { ink: '#263132', cream: '#fff9ed', orange: '#ed683a', muted: '#d3d7cf', panel: 'rgba(30,42,43,0.88)' };
+function outlined(g, text, x, y, fill, lw) { g.lineJoin = 'round'; g.lineWidth = lw; g.strokeStyle = 'rgba(25,36,37,0.9)'; g.strokeText(text, x, y); g.fillStyle = fill; g.fillText(text, x, y); }
+function hudPanel(g, x, y, w, h, u) {
+  g.save();
+  g.shadowColor = 'rgba(16,27,28,0.18)'; g.shadowBlur = 20 * u; g.shadowOffsetY = 5 * u;
+  g.fillStyle = HUD.panel; rr(g, x, y, w, h, 18 * u); g.fill();
+  g.shadowBlur = 0; g.shadowOffsetY = 0;
+  g.strokeStyle = 'rgba(255,249,237,0.18)'; g.lineWidth = 1.5 * u; g.stroke();
+  g.restore();
+}
+function hudLabel(g, text, x, y, u) {
+  g.font = `800 ${20 * u}px ${FONT}`; g.fillStyle = HUD.muted; g.fillText(text, x, y);
+}
 function drawItemIcon(g, kind, x, y, s) {
   g.save(); g.translate(x, y); g.scale(s / 100, s / 100); g.lineJoin = 'round';
   if (kind === 'boost') {
@@ -1841,38 +1925,70 @@ function renderHUD(vs) {
   g.clearRect(0, 0, W, Hh);
   if (game.demo || !racingNow() && game.state !== 'countdown') { drawToast(g, W, Hh); return; }
   for (const v of vs) if (v.p >= 0) drawView(g, { x: v.x * W, y: (1 - v.y - v.h) * Hh, w: v.w * W, h: v.h * Hh }, v.p, v.cs, vs.length > 1, t);
+  // 공유 지도는 구분선 위에 그려 선이 지도를 가로지르지 않게 한다.
+  if (vs.length > 1) { g.fillStyle = HUD.ink; g.fillRect(0, Hh / 2 - Math.max(1, Hh * 0.002), W, Math.max(2, Hh * 0.004)); }
   drawMinimap(g, W, Hh, vs.length > 1);
-  if (vs.length > 1) { g.fillStyle = 'rgba(255,250,242,0.95)'; g.fillRect(0, Hh / 2 - Math.max(1, Hh * 0.002), W, Math.max(2, Hh * 0.004)); }
   drawToast(g, W, Hh);
 }
 function drawView(g, r, p, cs, two, t) {
   const k = humanKart(p); if (!k) return;
   const u = Math.min(r.w / 1920, r.h / (two ? 620 : 1080)), pad = 28 * u;
-  g.textBaseline = 'middle';
-  // 아이템 칸 (왼쪽 위)
-  const bs = 118 * u, bx = r.x + pad, by = r.y + pad;
-  g.fillStyle = 'rgba(255,253,248,0.88)'; rr(g, bx, by, bs, bs, 22 * u); g.fill();
-  g.lineWidth = 5 * u; g.strokeStyle = COLORS[p]; g.stroke();
-  if (k.roulT > 0) drawItemIcon(g, ['boost', 'zap', 'trap'][Math.floor(t * 14) % 3], bx + bs / 2, by + bs / 2, bs * 0.7);
-  else if (k.item) drawItemIcon(g, k.item, bx + bs / 2, by + bs / 2, bs * 0.78);
-  // P 표시
-  if (two) { g.font = `900 ${30 * u}px ${FONT}`; g.textAlign = 'left'; outlined(g, `P${p + 1}`, bx + bs + 16 * u, by + 26 * u, COLORS[p], 7 * u); }
-  // 바퀴 · 시간 (오른쪽 위)
-  g.textAlign = 'right';
+  g.save(); g.beginPath(); g.rect(r.x, r.y, r.w, r.h); g.clip();
+  g.textBaseline = 'middle'; g.textAlign = 'left';
+  // 플레이어와 아이템을 한 카드에 묶어 주행 중에도 빠르게 읽을 수 있게 한다.
+  const bx = r.x + pad, by = r.y + pad, iw = 326 * u, ih = 132 * u;
+  hudPanel(g, bx, by, iw, ih, u);
+  g.fillStyle = COLORS[p]; rr(g, bx + 16 * u, by + 17 * u, 44 * u, 28 * u, 7 * u); g.fill();
+  g.textAlign = 'center'; g.font = `900 ${20 * u}px ${FONT}`; g.fillStyle = HUD.cream;
+  g.fillText(`P${p + 1}`, bx + 38 * u, by + 31 * u);
+  g.textAlign = 'left'; g.font = `800 ${24 * u}px ${FONT}`; g.fillText(nameOf(k), bx + 74 * u, by + 31 * u);
+  const ix = bx + 54 * u, iy = by + 88 * u;
+  g.fillStyle = 'rgba(255,249,237,0.1)'; rr(g, bx + 16 * u, by + 54 * u, 76 * u, 62 * u, 12 * u); g.fill();
+  const item = k.roulT > 0 ? ['boost', 'zap', 'trap'][Math.floor(t * 14) % 3] : k.item;
+  if (item) drawItemIcon(g, item, ix, iy, 52 * u);
+  else { g.textAlign = 'center'; g.fillStyle = HUD.muted; g.font = `800 ${36 * u}px ${FONT}`; g.fillText('?', ix, iy); }
+  g.textAlign = 'left'; hudLabel(g, k.roulT > 0 ? 'ITEM ROULETTE' : 'ITEM', bx + 110 * u, by + 65 * u, u);
+  g.font = `800 ${24 * u}px ${FONT}`; g.fillStyle = HUD.cream;
+  g.fillText(k.roulT > 0 ? '아이템 고르는 중' : item ? ITEMS[item].name : '상자를 지나 보세요', bx + 110 * u, by + 98 * u);
+  // 바퀴와 시간: 동일한 카드 안에서 작은 라벨과 큰 숫자로 구분.
+  const rw = 350 * u, rx = r.x + r.w - pad - rw;
+  hudPanel(g, rx, by, rw, ih, u);
+  hudLabel(g, 'LAP', rx + 23 * u, by + 29 * u, u);
+  hudLabel(g, 'RACE TIME', rx + 154 * u, by + 29 * u, u);
+  g.strokeStyle = 'rgba(255,249,237,0.16)'; g.lineWidth = u;
+  g.beginPath(); g.moveTo(rx + 132 * u, by + 24 * u); g.lineTo(rx + 132 * u, by + 108 * u); g.stroke();
   const lap = clamp(k.lap, 1, game.laps);
-  g.font = `900 ${46 * u}px ${FONT}`; outlined(g, `${lap}/${game.laps} 바퀴`, r.x + r.w - pad, r.y + pad + 26 * u, '#ffffff', 9 * u);
+  g.font = `900 ${58 * u}px ${FONT}`; g.fillStyle = HUD.cream; g.fillText(`${lap}`, rx + 22 * u, by + 82 * u);
+  g.font = `700 ${28 * u}px ${FONT}`; g.fillStyle = HUD.muted; g.fillText(`/ ${game.laps}`, rx + 64 * u, by + 91 * u);
   const el = game.state === 'countdown' ? 0 : (k.finished ? k.finishT : t - game.goT);
-  g.font = `800 ${30 * u}px ${FONT}`; outlined(g, fmtTime(el), r.x + r.w - pad, r.y + pad + 78 * u, '#fff3c4', 7 * u);
-  // 등수 (오른쪽 아래)
-  const place = k.place, big = 108 * u;
-  g.font = `900 ${big}px ${FONT}`;
-  const pc = place === 1 ? '#ffd84d' : place === 2 ? '#e3e8f2' : place === 3 ? '#f0b98a' : '#ffffff';
-  outlined(g, `${place}`, r.x + r.w - pad - 64 * u, r.y + r.h - pad - big * 0.45, pc, 12 * u);
-  g.font = `900 ${44 * u}px ${FONT}`; g.textAlign = 'left';
-  outlined(g, '등', r.x + r.w - pad - 58 * u, r.y + r.h - pad - big * 0.3, pc, 8 * u);
-  // 드리프트 단계 (아이템 칸 아래: 불꽃 색 점 두 개)
-  if (k.drift && k.drift.level) {
-    for (let i = 0; i < 2; i++) { g.fillStyle = i < k.drift.level ? (k.drift.level === 2 ? '#ffae3b' : '#5ec8ff') : 'rgba(255,255,255,0.35)'; g.beginPath(); g.arc(bx + bs / 2 - 17 * u + i * 34 * u, by + bs + 24 * u, 12 * u, 0, Math.PI * 2); g.fill(); }
+  g.font = `800 ${43 * u}px ${FONT}`; g.fillStyle = HUD.cream; g.fillText(fmtTime(el), rx + 153 * u, by + 83 * u);
+  // 실제 주행 단위(m/s)를 표시하고, 부스트 중에는 속도 막대를 주황색으로 강조.
+  const sw = 332 * u, sh = 132 * u, sx = r.x + r.w - pad - sw, sy = r.y + r.h - pad - sh;
+  hudPanel(g, sx, sy, sw, sh, u);
+  hudLabel(g, 'SPEED', sx + 23 * u, sy + 27 * u, u);
+  hudLabel(g, 'POSITION', sx + 196 * u, sy + 27 * u, u);
+  g.font = `900 ${52 * u}px ${FONT}`; g.fillStyle = k.boostT > 0 ? '#ffab7e' : HUD.cream;
+  g.fillText(Math.abs(k.v).toFixed(1), sx + 21 * u, sy + 76 * u);
+  g.font = `700 ${20 * u}px ${FONT}`; g.fillStyle = HUD.muted; g.fillText('m/s', sx + 133 * u, sy + 88 * u);
+  g.fillStyle = 'rgba(255,249,237,0.18)'; rr(g, sx + 24 * u, sy + 109 * u, 140 * u, 5 * u, 2.5 * u); g.fill();
+  const speedW = 140 * u * clamp(Math.abs(k.v) / (KART.VMAX * KART.BOOST), 0, 1);
+  if (speedW > 0) { g.fillStyle = HUD.orange; rr(g, sx + 24 * u, sy + 109 * u, speedW, 5 * u, 2.5 * u); g.fill(); }
+  g.strokeStyle = 'rgba(255,249,237,0.16)'; g.lineWidth = u;
+  g.beginPath(); g.moveTo(sx + 182 * u, sy + 24 * u); g.lineTo(sx + 182 * u, sy + 108 * u); g.stroke();
+  const place = k.place;
+  g.font = `900 ${82 * u}px ${FONT}`; g.fillStyle = place === 1 ? '#ffab7e' : HUD.cream;
+  g.fillText(`${place}`, sx + 194 * u, sy + 84 * u);
+  g.font = `700 ${24 * u}px ${FONT}`; g.fillStyle = HUD.muted; g.fillText('등', sx + 251 * u, sy + 91 * u);
+  g.font = `700 ${17 * u}px ${FONT}`; g.fillText(`/ ${karts.length}`, sx + 285 * u, sy + 93 * u);
+  // 드리프트 충전: 불꽃 색 두 칸과 라벨로 단계를 함께 전달.
+  if (k.drift) {
+    const dy = by + ih + 12 * u, dc = k.drift.level === 2 ? '#ffb365' : '#78d5ef';
+    hudPanel(g, bx, dy, 236 * u, 46 * u, u);
+    hudLabel(g, 'DRIFT', bx + 17 * u, dy + 24 * u, u);
+    for (let i = 0; i < 2; i++) {
+      g.fillStyle = i < k.drift.level ? dc : 'rgba(255,249,237,0.2)';
+      rr(g, bx + (119 + i * 48) * u, dy + 17 * u, 37 * u, 12 * u, 4 * u); g.fill();
+    }
   }
   // 가운데 문구 (카운트다운 · 부스트 · 골인 …)
   g.textAlign = 'center';
@@ -1889,7 +2005,7 @@ function drawView(g, r, p, cs, two, t) {
     }
   }
   if (k.wrongT > 1.2 && !k.finished) { g.font = `900 ${56 * u}px ${FONT}`; outlined(g, '↺ 반대 방향이에요!', cx, cy + 110 * u, '#ff8fa3', 10 * u); }
-  if (tilt[p].joy && tilt[p].upright && !k.finished) { g.font = `800 ${34 * u}px ${FONT}`; outlined(g, '조이콘을 가로로 잡아 주세요', cx, r.y + r.h - pad - 30 * u, '#ffffff', 7 * u); }
+  if (tilt[p].joy && tilt[p].upright && !k.finished) { g.font = `800 ${34 * u}px ${FONT}`; outlined(g, '조이콘을 가로로 잡아 주세요', cx, r.y + r.h - pad - (two ? 116 : 30) * u, HUD.cream, 7 * u); }
   if (k.finished && game.state !== 'countdown') {
     g.font = `900 ${52 * u}px ${FONT}`; outlined(g, `${k.place}등 · ${fmtTime(k.finishT)}`, cx, r.y + r.h * 0.78, '#ffffff', 9 * u);
   }
@@ -1900,6 +2016,7 @@ function drawView(g, r, p, cs, two, t) {
     if (!q) continue;
     g.font = `900 ${28 * u}px ${FONT}`; outlined(g, `P${o.human + 1}`, q.x, q.y, COLORS[o.human], 6 * u);
   }
+  g.restore();
 }
 function proj(cam, x, y, z, r) {
   const K = K3;
@@ -1909,24 +2026,30 @@ function proj(cam, x, y, z, r) {
   if (Math.abs(K.w.x) > 1.1 || Math.abs(K.w.y) > 1.1) return null;
   return { x: r.x + (K.w.x + 1) / 2 * r.w, y: r.y + (1 - K.w.y) / 2 * r.h };
 }
-function drawMinimap(g, W, Hh, two) {   // 혼자면 왼쪽 아래, 둘이면 나눈 선 가운데
-  const u = Math.min(W / 1920, Hh / 1080), mw = (two ? 230 : 260) * u, mh = mw * MAP.h / MAP.w;
-  const x0 = two ? W / 2 - mw / 2 : 30 * u, y0 = two ? Hh / 2 - mh / 2 : Hh - mh - 30 * u;
+function drawMinimap(g, W, Hh, two) {   // 둘이 달릴 때는 구분선을 덮는 작은 공유 지도.
+  const u = Math.min(W / 1920, Hh / 1080), mw = (two ? 190 : 242) * u, mh = mw * MAP.h / MAP.w;
+  const pw = mw + 44 * u, ph = mh + 66 * u;
+  const px = two ? W / 2 - pw / 2 : 28 * u, py = two ? Hh / 2 - ph / 2 : Hh - ph - 28 * u;
+  const x0 = px + 22 * u, y0 = py + 43 * u;
+  g.save(); g.textAlign = 'left'; g.textBaseline = 'middle';
+  hudPanel(g, px, py, pw, ph, u);
+  g.font = `800 ${(two ? 17 : 19) * u}px ${FONT}`; g.fillStyle = HUD.muted; g.fillText('MONSTER CIRCUIT', x0, py + 21 * u);
   const X = x => x0 + (x - MAP.x0) / MAP.w * mw, Y = z => y0 + (z - MAP.z0) / MAP.h * mh;
   g.lineJoin = 'round'; g.lineCap = 'round';
   g.beginPath();
   for (let i = 0; i <= TR.n; i += 4) { const j = i % TR.n; if (i === 0) g.moveTo(X(TR.px[j]), Y(TR.pz[j])); else g.lineTo(X(TR.px[j]), Y(TR.pz[j])); }
   g.closePath();
-  g.strokeStyle = 'rgba(48,36,72,0.55)'; g.lineWidth = 16 * u; g.stroke();
-  g.strokeStyle = 'rgba(255,253,248,0.92)'; g.lineWidth = 9 * u; g.stroke();
+  g.strokeStyle = 'rgba(255,249,237,0.18)'; g.lineWidth = 15 * u; g.stroke();
+  g.strokeStyle = HUD.cream; g.lineWidth = 6 * u; g.stroke();
   const p0 = trackPoint(0, 0);
-  g.fillStyle = '#2f2a3a'; g.fillRect(X(p0.x) - 2 * u, Y(p0.z) - 8 * u, 4 * u, 16 * u);
+  g.fillStyle = HUD.orange; g.fillRect(X(p0.x) - 2 * u, Y(p0.z) - 7 * u, 4 * u, 14 * u);
   for (const k of karts.slice().sort((a, b) => (a.human >= 0) - (b.human >= 0))) {
-    const hu = k.human >= 0, rad = (hu ? 9 : 6) * u;
+    const hu = k.human >= 0, rad = (hu ? 8 : 5) * u;
     g.beginPath(); g.arc(X(k.x), Y(k.z), rad, 0, Math.PI * 2);
-    g.fillStyle = hu ? COLORS[k.human] : k.color; g.fill();
-    g.lineWidth = (hu ? 3 : 2) * u; g.strokeStyle = hu ? '#ffffff' : 'rgba(48,36,72,0.7)'; g.stroke();
+    g.fillStyle = hu ? COLORS[k.human] : HUD.muted; g.fill();
+    g.lineWidth = (hu ? 3 : 2) * u; g.strokeStyle = hu ? HUD.cream : HUD.ink; g.stroke();
   }
+  g.restore();
 }
 function drawToast(g, W, Hh) {
   const tt = gfx.toast; if (!tt) return;
@@ -1935,8 +2058,8 @@ function drawToast(g, W, Hh) {
   g.globalAlpha = clamp((3.5 - age) / 0.4, 0, 1);
   g.font = `700 ${26 * u}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
   const w = g.measureText(tt.text).width + 40 * u;
-  g.fillStyle = 'rgba(40,32,64,0.82)'; rr(g, W / 2 - w / 2, Hh - 90 * u, w, 48 * u, 24 * u); g.fill();
-  g.fillStyle = '#fff'; g.fillText(tt.text, W / 2, Hh - 66 * u);
+  hudPanel(g, W / 2 - w / 2, Hh - 90 * u, w, 48 * u, u);
+  g.fillStyle = HUD.cream; g.fillText(tt.text, W / 2, Hh - 66 * u);
   g.globalAlpha = 1;
 }
 

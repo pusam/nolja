@@ -1,34 +1,426 @@
-/* Kart stage, steering meter and results; the lobby, roster and dialogs come from shared/lobby.css. */
+/* Monster Kart: a sun-warmed racing club with the live circuit at its centre. */
+:root {
+  --kart-orange: #f36c3d; --kart-orange-dark: #b34423; --kart-yellow: #f3d572;
+  --kart-ink: #2c302b; --cream: #f6f4eb; --paper: #fffef8; --forest: #2c302b;
+  --ink: #2c302b; --fg: #2c302b; --muted: #686b60; --line: #deded0;
+  --panel: #fffef8; --accent: #f36c3d;
+}
+html, body { background: #2c302b; }
+button { border-radius: 10px; }
+button:hover { background: #f2eee2; border-color: #a7aa9a; }
+button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible { outline-color: var(--kart-orange-dark); }
+button.primary { background: var(--kart-orange); color: #292a21; border-radius: 10px; }
+button.primary:hover { background: #fa7b4e; color: #292a21; }
+.eyebrow { color: var(--kart-orange-dark); font-family: Arial, sans-serif; font-size: 10px; letter-spacing: 1.7px; }
+.text-button { color: #5c6155; }
+.text-button:hover { color: var(--kart-orange-dark); }
+kbd { background: #f1efe5; border-color: #d9d9cb; color: #666a5e; }
+input[type=range], input[type=checkbox] { accent-color: var(--kart-orange-dark); }
 #kartStage { position: fixed; inset: 0; overflow: hidden; background: #c9dcef; }
 #gl, #hud { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 #hud { pointer-events: none; }
 .court-preview #kartStage { position: absolute; inset: 0; }
-.kart-art { object-fit: contain; }
+.kart-art[hidden] { display: none; }
 
-/* Joy-Con steering check in the controller panel: the dot follows the tilt. */
-.steer-meter { position: relative; flex: 1; min-width: 80px; height: 8px; border-radius: 6px; background: linear-gradient(90deg, #f3cbd6, #ece9e3 50%, #c9d6f3); }
-.steer-meter::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: #b5abd9; }
-.steer-meter i { position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--lavender); box-shadow: 0 1px 4px #4d426c40; transition: left .05s linear; }
+/* One main stage and a compact race-entry panel. */
+.lobby.overlay { background: var(--cream); }
+.club-header { max-width: 1512px; height: 78px; padding: 0 48px; border-bottom-color: var(--line); gap: 48px; }
+.brand-symbol { width: 34px; height: 34px; border-radius: 11px; }
+.brand-word { font-size: 33px; }
+.brand-tag { color: #71766a; font-size: 8px; }
+.club-nav { font-size: 12px; gap: 18px; }
+.current-game { color: #555a4e; }
+.header-button { border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; min-height: 44px; }
+.lobby-main { width: calc(100% - 96px); max-width: 1416px; padding-top: 30px; margin: auto; }
+.page-heading { align-items: center; margin-bottom: 24px; }
+.page-heading .eyebrow { font-size: 9px; letter-spacing: 2px; }
+.page-heading h1 { font-size: 29px; font-weight: 800; letter-spacing: -1.3px; margin-top: 7px; }
+.page-heading h1 > span { color: var(--kart-orange); }
+.page-heading > .text-button { font-size: 12px; gap: 9px; }
+.page-heading > .text-button .icon { width: 19px; height: 19px; }
+.lobby-grid { grid-template-columns: minmax(0, 1.75fr) minmax(360px, 1fr); gap: 24px; }
+.game-feature { border: 1px solid var(--line); border-radius: 20px; background: var(--paper); box-shadow: none; }
+.feature-copy { display: block; min-height: 0; padding: 23px 30px 25px; background: var(--kart-orange); color: var(--kart-ink); }
+.feature-topline { margin-bottom: 22px; }
+.sport-badge { color: #342e24; font: 800 9px Arial, sans-serif; letter-spacing: 1.2px; gap: 9px; }
+.checkered-mark, .sport-badge > .checkered-mark { display: block; width: 24px; height: 18px; border-radius: 0; background: repeating-conic-gradient(#2c302b 0% 25%, transparent 0% 50%) 0 0 / 12px 12px; flex: 0 0 auto; }
+.feature-edition { font: 700 8px Arial, sans-serif; letter-spacing: 1.4px; color: #563a29; }
+.feature-intro { padding: 0; max-width: calc(100% - 130px); }
+.feature-copy h2 { color: var(--kart-ink); font-size: clamp(35px, 3.8vw, 59px); font-weight: 900; letter-spacing: -2.8px; line-height: 1.12; margin: 0 0 14px; }
+.feature-copy h2 > span { font: 800 11px/1.3 Arial, sans-serif; letter-spacing: 4.1px; color: #593b29; margin-top: 10px; }
+.feature-intro > p { color: #43382a; font-size: 12px; line-height: 1.7; }
+.feature-race-number { position: absolute; right: 29px; top: 61px; display: flex; flex-direction: column; text-align: right; font: italic 900 108px/.9 Arial, sans-serif; letter-spacing: -10px; color: #2c302b; opacity: .15; }
+.feature-race-number > span { font: 800 8px/1 Arial, sans-serif; letter-spacing: 2px; margin-top: 13px; }
+.court-preview { flex: 1 1 auto; min-height: 280px; height: 320px; border: 0; background: #c7dec7; }
+.preview-caption { top: 18px; left: 20px; gap: 7px; border-radius: 5px; background: #fffef8ef; color: #343b2f; padding: 9px 11px; font-size: 9px; font-weight: 700; letter-spacing: .6px; box-shadow: 0 2px 8px #2933240d; }
+.live-dot { width: 6px; height: 6px; background: #679351; box-shadow: 0 0 0 3px #67935116; }
+.caption-divider { color: #9a9e8d; }
+.preview-toggle { width: 44px; height: 44px; min-height: 44px; top: 13px; right: 15px; border-radius: 7px; background: #fffef8ef; border-color: #fffef8a6; color: #343b2f; }
+.preview-toggle:hover { background: var(--paper); border-color: var(--paper); }
+.court-watermark { bottom: 16px; right: 18px; color: #fffef8; opacity: .8; font-size: 8px; letter-spacing: 2px; text-shadow: 0 1px 5px #18342070; }
+.circuit-strip { display: flex; align-items: center; gap: 14px; padding: 15px 23px; background: var(--kart-ink); color: #f7f4e8; }
+.circuit-number { border-right: 1px solid #ffffff2e; padding-right: 14px; color: var(--kart-yellow); font: italic 800 27px/.95 Arial, sans-serif; letter-spacing: -1px; }
+.circuit-strip > div { display: flex; align-items: center; gap: 12px; }
+.circuit-strip strong { font-size: 12px; font-weight: 700; letter-spacing: -.3px; }
+.circuit-strip > div > span { color: #c0c5b7; font: 8px Arial, sans-serif; letter-spacing: 1.4px; }
+.circuit-fact { margin-left: auto; font-size: 10px; color: #d3d6c9; }
+.circuit-strip > .checkered-mark { margin-left: 5px; background-image: repeating-conic-gradient(#f3d572 0% 25%, transparent 0% 50%); opacity: .8; }
+.feature-perks { padding: 17px 23px; min-height: 51px; font-size: 10px; color: #646a5b; background: var(--paper); gap: 12px; }
+.feature-perks .icon { width: 16px; height: 16px; color: #69745b; }
+.match-setup { padding: 26px; border-radius: 20px; border-color: var(--line); background: var(--paper); box-shadow: none; }
+.setup-heading { margin-bottom: 24px; }
+.setup-heading .eyebrow { font-size: 8px; color: #757b6c; letter-spacing: 1.5px; }
+.setup-heading h2 { font-size: 27px; font-weight: 800; letter-spacing: -1.2px; margin-top: 7px; }
+.setup-ball-wrap { width: 46px; height: 46px; border-radius: 50%; background: #f6eac2; transform: rotate(-13deg); }
+.setup-ball { width: 29px; height: 29px; stroke: #70663d; stroke-width: 1.35; }
+.setup-group legend { font-size: 13px; margin-bottom: 13px; gap: 9px; }
+.step-number { color: var(--kart-orange-dark); font: 800 10px Arial, sans-serif; }
+.mode-options { gap: 10px; }
+.mode-options button { border-radius: 11px; padding: 16px 13px 14px; min-height: 120px; gap: 8px; border-color: var(--line); }
+.mode-options button > .icon { color: #7b826e; width: 23px; height: 23px; }
+.mode-options strong { font-size: 14px; color: #32382d; }
+.mode-options button > span { font-size: 10px; color: #6b7063; white-space: normal; line-height: 1.5; }
+.choice-dot { top: 17px; right: 13px; width: 14px; height: 14px; border-color: #adb39f; }
+.mode-options button.on { border: 1px solid var(--kart-orange); background: #fff3d1; color: #33372c; box-shadow: inset 0 0 0 1px var(--kart-orange); }
+.mode-options button.on .icon { color: var(--kart-orange-dark); }
+.mode-options button.on .choice-dot { border: 4px solid var(--kart-orange-dark); background: #fff3d1; }
+.mode-options button:hover { background: #faf4df; border-color: #bc8a4e; }
+.level-options { margin-top: 12px; min-height: 44px; gap: 8px; }
+.level-options > span { font-size: 12px; color: #666d5b; }
+.level-options .row { gap: 2px; padding: 3px; background: #f2f0e5; border-radius: 8px; }
+.level-options button { min-height: 44px; padding: 6px 12px; border-radius: 6px; color: #656c5a; font-size: 11px; }
+.level-options button.on { background: var(--paper); color: #303729; font-weight: 750; box-shadow: 0 1px 4px #3a402015; }
+.field-hint { font-size: 11px; color: #6f7465; line-height: 1.65; margin-top: 9px; }
+.win-group { margin-top: 21px; padding-top: 21px; }
+.win-options { gap: 8px; }
+.win-options button { border-radius: 9px; border-color: var(--line); min-height: 48px; font-size: 22px; font-weight: 800; }
+.win-options button span { font-size: 11px; color: #737969; }
+.win-options button.on { background: var(--kart-ink); border-color: var(--kart-ink); color: #fffef8; }
+.win-options button.on span { color: #ecebdb; }
+.start-area { padding-top: 18px; }
+.setup-summary { min-height: 14px; margin: 0 0 11px; color: #717765; font: 700 9px/1.5 Arial, "Malgun Gothic", sans-serif; letter-spacing: 1px; }
+.start-button.primary { background: var(--kart-orange); color: #282c24; border-radius: 10px; box-shadow: inset 0 -3px 0 #bd4f262e; min-height: 56px; padding: 14px 20px; font-size: 15px; gap: 16px; margin: 0; }
+.start-button.primary:hover { background: #fa7b4e; box-shadow: inset 0 -3px 0 #bd4f262e; }
+.start-button .icon { margin-left: auto; width: 22px; height: 22px; }
+.start-hint { margin-top: 12px; color: #737969; font-size: 10px; }
+.start-hint kbd { font-size: 9px; }
 
+/* Optional controls stay below the main decision. */
+.connection-card { margin-top: 20px; padding: 18px 23px; border-color: var(--line); border-radius: 14px; background: #efeee3; gap: 16px; }
+.connection-icon { width: 44px; height: 44px; border-radius: 50%; color: #5f6b50; background: #e0e4ce; }
+.connection-icon .icon { width: 25px; height: 25px; }
+.connection-copy h2 { font-size: 13px; font-weight: 750; letter-spacing: -.3px; }
+.connection-copy p { font-size: 11px; color: #696f5e; }
+.connection-actions { gap: 22px; }
+.connect-button { background: var(--paper); border-color: #b3b9a6; color: #424c36; border-radius: 8px; font-size: 12px; }
+.connection-actions .text-button { font-size: 11px; }
+.secondary-grid { gap: 24px; margin-top: 8px; }
+.club-details summary { font-size: 11px; color: #676e5e; min-height: 47px; }
+.seg button { min-height: 44px; }
+.seg button.on { background: var(--kart-ink); border-color: var(--kart-ink); color: var(--paper); }
+.club-footer { font-size: 10px; color: #727867; gap: 22px; }
+.footer-signoff { font-size: 8px; letter-spacing: 1.4px; }
+.steer-meter { position: relative; flex: 1; min-width: 80px; height: 8px; border-radius: 6px; background: linear-gradient(90deg, #edcdbf, #e5e5d9 50%, #cdd6ba); }
+.steer-meter::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: #939c82; }
+.steer-meter i { position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--kart-orange); box-shadow: 0 1px 4px #3b452e35; transition: left .05s linear; }
+.guide-dialog { background: var(--paper); border-radius: 20px; box-shadow: 0 24px 90px #252d2b40; }
+.guide-dialog::backdrop { background: #292e2a99; }
+.guide-steps > div > span { color: var(--kart-orange-dark); font: 800 12px Arial, sans-serif; }
+.keyboard-guide { background: #f3efdf; border-radius: 12px; }
 .joy-map { margin: 0 0 16px; }
 .keyboard-players kbd + kbd { margin-left: 2px; }
 
-.result-panel { max-height: calc(100dvh - 32px); overflow: auto; }
-.result-list { list-style: none; margin: 6px auto 0; padding: 0; max-width: 470px; text-align: left; }
-.result-list li { display: grid; grid-template-columns: 50px minmax(0, 1fr) auto 64px; gap: 10px; align-items: center; padding: 5px 12px; border-radius: 10px; font-size: 14px; line-height: 1.6; }
-.result-list li:nth-child(odd) { background: #f6f3fb; }
+/* The live garage floor remains visible between roster and driver cards. */
+.overlay.sel { padding: 25px 4vw 24px; background: linear-gradient(#faf7ee 0%, #faf7eef7 30%, #faf7ee18 59%, #28332a26 67%, #28332aeb 100%); gap: 24px; }
+.selection-top { max-width: 1280px; }
+.selection-top > .eyebrow { font-size: 9px; color: var(--kart-orange-dark); letter-spacing: 2px; }
+.seltitle { font-size: 30px; font-weight: 850; color: var(--kart-ink); letter-spacing: -1.2px; margin: 10px 0 8px; }
+.seltitle > span { color: var(--kart-orange); }
+.selection-subtitle { color: #6c735f; font-size: 12px; margin-bottom: 13px; }
+.roster { grid-template-columns: repeat(8, minmax(0, 1fr)); max-width: 1056px; max-height: 288px; padding: 13px 10px 16px; gap: 10px; scrollbar-color: #a6ad96 #ececdd; }
+.roster::-webkit-scrollbar-track { background: #ececdd; }
+.roster::-webkit-scrollbar-thumb { background: #a6ad96; border-color: #ececdd; }
+.roster .tile { min-height: 118px; border: 1px solid #dbddcc; border-radius: 12px; background: #fffef8; color: #3d4535; padding: 8px 5px 9px; box-shadow: 0 3px 0 #dce0ce66; }
+.roster .tile:nth-child(4n+2) { background: #f3f3e7; }
+.roster .tile:nth-child(4n+3) { background: #fcf4e4; }
+.roster .tile:nth-child(4n+4) { background: #edf1e4; }
+.roster .tile:hover { border-color: #8e997b; background: #f4f0db; box-shadow: 0 3px 0 #bec7a966; }
+.tile canvas { width: 70px; height: 70px; }
+.tile .tn { font-size: 12px; margin-top: 4px; }
+.tile .character-type { color: #6b745e; font-size: 9px; margin-top: 4px; }
+.roster .tile.p1 { border: 2px solid var(--p1); padding: 7px 4px 8px; background: #eaf0fd; box-shadow: 0 3px 0 #6e8de04d; }
+.roster .tile.p2 { border: 2px solid var(--p2); padding: 7px 4px 8px; background: #fff0f3; box-shadow: 0 3px 0 #d982a04d; }
+.roster .tile.p1.p2 { border-color: #9b79c4; background: #f2eafb; box-shadow: 0 3px 0 #9b79c44d; }
+.tg { border-radius: 5px; top: -9px; font-size: 9px; }
+.hint { background: #fffef8d9; color: #647055; border-color: #dce0cf; font-size: 10px; border-radius: 6px; padding: 7px 12px; }
+.roster-scroll-hint { color: #637052; font-size: 10px; }
+.selbottom { max-width: 1120px; gap: 25px; align-items: center; }
+.sel.solo .selbottom { grid-template-columns: minmax(0, 420px) 190px; max-width: 635px; }
+.selcard { background: #fffef8f7; border: 1px solid var(--line); border-radius: 15px; padding: 17px 20px; box-shadow: 0 7px 30px #28332a1a; }
+.selcard .nm { color: var(--kart-ink); font-size: 24px; letter-spacing: -1px; }
+.selcard .st { font-size: 11px; color: #6d765e; margin-left: auto; }
+.selcard .row { gap: 8px; margin-top: 6px; }
+.selcard .row > button { min-width: 44px; min-height: 44px; border-radius: 8px; }
+.selcard .row > button:last-child { padding: 8px 24px; background: var(--kart-orange); border-color: var(--kart-orange); color: var(--kart-ink); font-size: 13px; font-weight: 750; }
+.selcard .small { color: #6b745e; font-size: 10px; line-height: 1.7; }
+.selcard.rd { border-color: #86a168; box-shadow: 0 0 0 3px #b6ce9733; background: #f4f8e9f7; }
+.selcard.rd .st { color: #4d7039; font-weight: 750; }
+.selcard.rd .row > button:last-child { background: #dceabf; border-color: #c5d79f; color: #3b542b; }
+.selmsg { color: #fffdf2; text-shadow: 0 2px 5px #1a2f1c80; font-size: 14px; line-height: 1.6; max-width: 190px; }
+.selmid > button { background: #fffef8ee; color: #566447; border-color: transparent; border-radius: 8px; font-size: 11px; }
+.overlay:not(.lobby):not(.sel):not(.bottom) { background: #26332888; backdrop-filter: blur(7px); }
+.panel { border-radius: 19px; box-shadow: 0 20px 80px #1c2d274d; }
+.pause-panel { width: min(490px, 100%); padding: 34px; }
+.pit-stop-icon { width: 61px; height: 61px; background: #f6e9ba; color: #6e643d; display: grid; place-items: center; border-radius: 50%; margin: 0 auto 22px; }
+.pit-stop-icon .icon { width: 35px; height: 35px; }
+.big { font-size: 31px; font-weight: 850; color: var(--kart-ink); letter-spacing: -1.4px; margin: 13px 0; }
+.pause-panel .sub { font-size: 13px; }
+.modal-actions { margin-top: 22px; gap: 8px; }
+.modal-actions button { min-height: 46px; border-radius: 9px; font-size: 12px; }
+.modal-actions .primary { font-size: 13px; padding: 12px 22px; }
+.modal-actions .primary > span { margin-left: 16px; }
+.overlay.bottom { background: linear-gradient(#29352a00 22%, #29352a33 42%, #29352ae6); padding: 18px 18px 4vh; }
+.result-panel { position: relative; width: min(650px, 100%); max-height: calc(100dvh - 32px); overflow: auto; padding: 34px 30px 25px; border: 0; }
+.finish-line { position: absolute; top: 0; left: 0; right: 0; height: 9px; background: repeating-conic-gradient(#2c302b 0% 25%, #f3d572 0% 50%) 0 0 / 18px 18px; }
+.result-panel .eyebrow { font-size: 9px; }
+.result-panel .big { font-size: 34px; margin: 13px 0 20px; }
+.result-list { list-style: none; margin: 0 auto; padding: 0; max-width: 510px; text-align: left; }
+.result-list li { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto 65px; gap: 10px; align-items: center; padding: 10px 13px; border-radius: 7px; font-size: 13px; line-height: 1.55; }
+.result-list li:nth-child(odd) { background: #f3f1e6; }
+.result-list li:first-child { background: #fff0c7; margin-bottom: 4px; }
 .result-list li.me { font-weight: 800; }
-.result-list li.p1 { box-shadow: inset 4px 0 0 var(--p1); }
-.result-list li.p2 { box-shadow: inset 4px 0 0 var(--p2); }
-.result-list b { color: var(--lavender-dark); }
-.result-list .tag { font: 700 10px Arial, sans-serif; letter-spacing: .5px; color: var(--muted); }
-.result-list .time { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
-
-/* The race HUD owns the corners, so the in-race toolbar sits at the top centre. */
-.kart-toolbar { left: 50%; right: auto; transform: translateX(-50%); opacity: .82; }
+.result-list li.p1 { box-shadow: inset 3px 0 0 var(--p1); }
+.result-list li.p2 { box-shadow: inset 3px 0 0 var(--p2); }
+.result-list b { color: #71612c; font-size: 12px; }
+.result-list li:first-child b { color: var(--kart-orange-dark); }
+.result-list .tag { font: 700 9px Arial, sans-serif; letter-spacing: .5px; color: #737b65; }
+.result-list .time { text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; color: #69745a; }
+.result-hint { margin-top: 17px; color: #717a62; font-size: 10px; }
+.kart-toolbar { left: 50%; right: auto; transform: translateX(-50%); opacity: .85; }
 .kart-toolbar:hover, .kart-toolbar:focus-within { opacity: 1; }
+.kart-toolbar button { background: #fffef8ed; border-color: #dddccc; color: #3c4532; border-radius: 7px; min-height: 44px; box-shadow: 0 3px 14px #23391e15; }
 
+@media (min-width: 1550px) {
+  .lobby-main { padding-top: 38px; }
+  .court-preview { height: 355px; min-height: 320px; }
+  .feature-copy { padding-top: 25px; padding-bottom: 28px; }
+}
+@media (max-width: 1150px) {
+  .club-header { padding: 0 28px; gap: 32px; height: 72px; }
+  .lobby-main { width: calc(100% - 56px); padding-top: 26px; }
+  .lobby-grid { grid-template-columns: minmax(0, 1.4fr) minmax(330px, 1fr); gap: 18px; }
+  .page-heading h1 { font-size: 25px; }
+  .feature-copy { padding: 23px; }
+  .feature-edition { display: none; }
+  .feature-copy h2 { font-size: 43px; letter-spacing: -2px; }
+  .feature-copy h2 > span { font-size: 10px; letter-spacing: 2.8px; }
+  .feature-intro { max-width: calc(100% - 85px); }
+  .feature-intro > p { font-size: 11px; }
+  .feature-race-number { right: 25px; top: 70px; font-size: 87px; letter-spacing: -8px; }
+  .court-preview { min-height: 280px; height: 320px; }
+  .circuit-strip { padding: 15px 18px; gap: 11px; }
+  .circuit-strip > div { gap: 8px; }
+  .circuit-strip > div > span { display: none; }
+  .circuit-fact { font-size: 9px; }
+  .feature-perks { padding: 15px 18px; font-size: 9px; flex-wrap: wrap; gap: 10px; }
+  .feature-perks > span:first-child { flex-basis: auto; }
+  .match-setup { padding: 25px 22px; }
+  .mode-options button { padding: 15px 11px; }
+  .mode-options button > span { font-size: 10px; }
+  .connection-actions { gap: 15px; }
+  .roster { grid-template-columns: repeat(6, minmax(0, 1fr)); max-width: 810px; max-height: 280px; }
+  .selbottom { gap: 18px; }
+  .selcard { padding: 15px; }
+  .selcard .nm { font-size: 21px; }
+}
+@media (max-width: 850px) {
+  .lobby-grid { grid-template-columns: minmax(0, 1.2fr) minmax(315px, 1fr); gap: 15px; }
+  .brand-tag { display: none; }
+  .club-nav { gap: 13px; font-size: 11px; }
+  .feature-copy { padding: 22px 20px; }
+  .feature-copy h2 { font-size: 35px; letter-spacing: -1.8px; }
+  .feature-copy h2 > span { font-size: 9px; letter-spacing: 1.9px; }
+  .feature-intro { max-width: none; }
+  .feature-race-number { display: none; }
+  .circuit-fact { display: none; }
+  .circuit-strip > .checkered-mark { margin-left: auto; }
+  .feature-perks { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .feature-perks .icon { width: 14px; height: 14px; }
+  .connection-copy h2 { font-size: 12px; }
+  .selmsg { font-size: 12px; max-width: 150px; }
+}
 @media (max-width: 700px) {
-  .result-list li { grid-template-columns: 42px minmax(0, 1fr) auto 56px; font-size: 12px; padding: 4px 8px; }
-  .kart-toolbar { top: 6px; }
+  .club-header { height: 67px; padding: 0 20px; }
+  .brand-word { font-size: 31px; }
+  .brand-symbol { width: 31px; height: 31px; }
+  .header-button { min-width: 44px; min-height: 44px; padding: 8px; gap: 3px; }
+  .header-button kbd { display: none; }
+  .lobby-main { width: calc(100% - 36px); margin: auto; padding-top: 25px; }
+  .page-heading { gap: 14px; margin-bottom: 20px; align-items: flex-end; }
+  .page-heading h1 { font-size: 23px; line-height: 1.4; max-width: 250px; letter-spacing: -1px; }
+  .page-heading .eyebrow { font-size: 8px; letter-spacing: 1.4px; }
+  .page-heading > .text-button { font-size: 11px; gap: 5px; white-space: nowrap; }
+  .page-heading > .text-button .icon { display: none; }
+  .lobby-grid { display: flex; flex-direction: column; gap: 18px; }
+  .game-feature, .match-setup { border-radius: 17px; }
+  .feature-copy { padding: 22px 23px 24px; }
+  .feature-topline { margin-bottom: 21px; }
+  .sport-badge { font-size: 8px; letter-spacing: 1.1px; }
+  .feature-intro { max-width: calc(100% - 85px); }
+  .feature-copy h2 { font-size: clamp(33px, 8.7vw, 48px); letter-spacing: -2px; }
+  .feature-copy h2 > span { font-size: 9px; letter-spacing: 2.5px; }
+  .feature-intro > p { font-size: 11px; }
+  .feature-race-number { display: flex; font-size: 85px; top: 69px; right: 25px; }
+  .court-preview { flex: none; min-height: 0; height: 255px; }
+  .preview-caption { top: 15px; left: 15px; font-size: 8px; padding: 9px; }
+  .preview-toggle { top: 10px; right: 11px; }
+  .court-watermark { bottom: 13px; right: 15px; font-size: 7px; letter-spacing: 1.5px; }
+  .circuit-strip { padding: 15px 18px; }
+  .circuit-strip > div > span { display: inline; font-size: 7px; letter-spacing: 1px; }
+  .circuit-strip strong { font-size: 12px; }
+  .feature-perks { flex-direction: row; justify-content: flex-start; flex-wrap: wrap; padding: 15px 18px; gap: 11px 15px; font-size: 9px; }
+  .feature-perks > span { gap: 5px; }
+  .feature-perks > span:first-child { flex-basis: auto; }
+  .match-setup { padding: 25px; }
+  .setup-heading { margin-bottom: 24px; }
+  .setup-heading h2 { font-size: 27px; }
+  .mode-options button { min-height: 117px; padding: 16px 14px; }
+  .mode-options button > span { font-size: 10px; }
+  .level-options { margin-top: 13px; }
+  .level-options button { min-height: 44px; padding: 7px 12px; }
+  .field-hint { font-size: 11px; }
+  .start-area { padding-top: 21px; }
+  .connection-card { margin-top: 18px; padding: 17px; gap: 12px; }
+  .connection-copy h2 { font-size: 13px; }
+  .connection-copy p { font-size: 11px; }
+  .connection-actions { padding-top: 12px; gap: 14px; }
+  .secondary-grid { grid-template-columns: 1fr; gap: 0; margin-top: 7px; }
+  .club-details summary { min-height: 50px; font-size: 12px; }
+  .club-footer { gap: 7px; padding-top: 9px; padding-bottom: 22px; }
+  .club-footer > span { font-size: 9px; }
+  .guide-dialog { padding: 23px; }
+  .overlay.sel { padding: 22px 15px 18px; gap: 25px; }
+  .selection-top { margin-bottom: 10px; }
+  .seltitle { font-size: 24px; }
+  .selection-subtitle { font-size: 11px; line-height: 1.7; margin-bottom: 10px; }
+  .roster { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 580px; max-height: 256px; gap: 9px; padding: 12px 8px 14px; }
+  .roster .tile { min-height: 105px; padding: 8px 3px; border-radius: 10px; }
+  .roster .tile.p1, .roster .tile.p2 { padding: 7px 2px; }
+  .tile canvas { width: 62px; height: 62px; }
+  .tile .tn { font-size: 11px; }
+  .tile .character-type { font-size: 8px; }
+  .selection-hint .hint { font-size: 9px; line-height: 1.7; padding: 6px 10px; }
+  .selbottom { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; align-items: stretch; }
+  .sel.solo .selbottom { grid-template-columns: 1fr; max-width: 430px; }
+  .selmid { grid-column: 1/-1; grid-row: 2; flex-direction: row; justify-content: space-between; padding: 0; }
+  .selmsg { font-size: 11px; max-width: none; text-align: left; }
+  .selcard { padding: 12px; border-radius: 12px; }
+  .selcard .nm { font-size: 18px; margin: 0 1px; }
+  .selcard .row { gap: 5px; }
+  .selcard .st { font-size: 10px; margin-left: 0; }
+  .selcard .row > button { min-width: 40px; min-height: 44px; padding: 7px; font-size: 12px; }
+  .selcard .row > button:last-child { padding: 7px 10px; font-size: 12px; }
+  .selcard .small { font-size: 9px; }
+  .result-panel { padding: 31px 18px 23px; border-radius: 17px; }
+  .result-panel .big { font-size: 29px; }
+  .result-list li { grid-template-columns: 38px minmax(0, 1fr) auto 56px; gap: 6px; font-size: 12px; padding: 9px 10px; }
+  .result-list .tag { font-size: 8px; }
+  .result-list .time { font-size: 11px; }
+  .modal-actions { gap: 7px; }
+  .modal-actions button { padding: 10px 12px; font-size: 11px; }
+  .modal-actions .primary { font-size: 12px; padding: 11px 17px; }
+  .pause-panel { padding: 28px 22px; }
+  .big { font-size: 27px; }
+  .kart-toolbar { top: 6px; gap: 5px; }
+  .kart-toolbar button { min-height: 44px; padding: 6px 10px; font-size: 10px; }
+}
+@media (max-width: 480px) {
+  .selbottom { grid-template-columns: 1fr 1fr; max-width: 430px; }
+  .selmid { grid-row: 2; }
+  .sel.solo .selmid { grid-row: 2; }
+  .selcard { padding: 9px 8px; }
+  .selcard .row { gap: 4px; }
+  .selcard .row:first-child { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3px 5px; }
+  .selcard .st { grid-column: 1/-1; line-height: 1.35; }
+  .selcard .row > button { min-width: 44px; }
+  .selcard .small { font-size: 9px; line-height: 1.5; margin-top: 7px; }
+}
+@media (max-width: 380px) {
+  .page-heading h1 { font-size: 21px; max-width: 210px; }
+  .page-heading > .text-button { font-size: 10px; }
+  .feature-intro { max-width: none; }
+  .feature-race-number { display: none; }
+  .circuit-strip > div > span { display: none; }
+  .match-setup { padding: 23px 20px; }
+  .selcard { padding: 10px 8px; }
+  .selcard .row > button:last-child { padding: 7px 9px; }
+}
+/* Reserve the middle of a laptop screen for the full-size live karts. */
+@media (max-height: 850px) and (min-width: 901px) {
+  .club-header { height: 64px; }
+  .lobby-main { padding-top: 20px; }
+  .page-heading { margin-bottom: 18px; }
+  .page-heading h1 { font-size: 26px; }
+  .feature-copy { padding: 18px 24px; }
+  .feature-topline { margin-bottom: 12px; }
+  .feature-copy h2 { font-size: 42px; margin-bottom: 9px; }
+  .feature-copy h2 > span { font-size: 9px; margin-top: 6px; }
+  .feature-intro > p { font-size: 11px; line-height: 1.55; }
+  .feature-race-number { top: 49px; right: 25px; font-size: 90px; }
+  .court-preview { height: 245px; min-height: 230px; }
+  .circuit-strip { min-height: 48px; padding: 11px 20px; }
+  .feature-perks { min-height: 44px; padding: 14px 20px; }
+  .match-setup { padding: 22px; }
+  .setup-heading { margin-bottom: 16px; }
+  .setup-heading h2 { font-size: 25px; }
+  .setup-ball-wrap { width: 40px; height: 40px; }
+  .setup-ball { width: 26px; height: 26px; }
+  .setup-group legend { margin-bottom: 10px; }
+  .mode-options button { min-height: 100px; padding: 13px 12px; gap: 6px; }
+  .mode-options button > .icon { width: 21px; height: 21px; }
+  .mode-options strong { margin-top: 0; }
+  .level-options { margin-top: 10px; }
+  .match-setup .field-hint { display: none; }
+  .win-group { margin-top: 14px; padding-top: 14px; }
+  .win-options button { min-height: 44px; }
+  .start-area { padding-top: 14px; }
+  .setup-summary { margin-bottom: 7px; }
+  .start-button.primary { min-height: 52px; }
+  .start-hint { margin-top: 9px; font-size: 9px; }
+}
+@media (max-height: 850px) and (min-width: 701px) {
+  .overlay.sel { padding-top: 17px; padding-bottom: 17px; gap: 15px; }
+  .seltitle { font-size: 25px; margin: 7px 0 6px; }
+  .selection-subtitle { margin-bottom: 6px; font-size: 11px; }
+  .roster { max-height: 145px; padding-top: 12px; padding-bottom: 13px; }
+  .roster .tile { min-height: 116px; }
+  .tile canvas { width: 64px; height: 64px; }
+  .tile .tn { line-height: 16px; }
+  .tile .character-type { line-height: 12px; }
+  .roster-scroll-hint { display: block; }
+  .selcard { padding: 12px 15px; }
+  .selcard .nm { font-size: 20px; }
+  .selcard .small { font-size: 9px; }
+}
+@media (max-height: 850px) and (max-width: 700px) {
+  .overlay.sel { padding-top: 18px; padding-bottom: 16px; gap: 16px; }
+  .selection-top { margin-bottom: 0; }
+  .selection-top > .eyebrow { font-size: 8px; }
+  .seltitle { font-size: 22px; line-height: 1.25; margin: 8px 0 6px; }
+  .selection-subtitle { font-size: 10px; line-height: 1.6; margin-bottom: 7px; }
+  .roster { max-height: 128px; padding-top: 11px; padding-bottom: 12px; }
+  .tile canvas { width: 54px; height: 54px; }
+  .tile .tn { line-height: 14px; }
+  .tile .character-type { line-height: 10px; }
+  .selection-hint { margin-top: 4px; }
+  .selection-hint .hint { display: none; }
+  .roster-scroll-hint { display: block; margin-top: 0; font-size: 9px; line-height: 14px; }
+}
+@media (max-width: 349px) {
+  .selbottom { grid-template-columns: 1fr; max-width: 430px; }
+  .selmid { grid-row: 3; }
+  .sel.solo .selmid { grid-row: 2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  button, .chevron, .steer-meter i { transition: none; }
 }
