@@ -101,9 +101,9 @@ function run(sec, each) {
 // 카트를 길 위 (s, d)에 길 방향(back이면 반대)으로 세움
 function placeK(k, s, d, v = 0, back = false) {
   const p = KT.trackPoint(s, d);
-  Object.assign(k, { x: p.x, z: p.z, y: 0, a: Math.atan2(p.tx, p.tz) + (back ? Math.PI : 0), v, vl: 0, vy: 0, vyG: 0, air: false, rampAir: false, trick: false, hop: false,
+  Object.assign(k, { x: p.x, z: p.z, y: p.y, a: Math.atan2(p.tx, p.tz) + (back ? Math.PI : 0), v, vl: 0, vy: 0, vyG: 0, air: false, rampAir: false, trick: false, hop: false,
     drift: null, driftArm: false, spinT: 0, immuneT: 0, boostT: 0, roulT: 0, item: null, stuckT: 0, wrongT: 0, steer: 0 });
-  const q = KT.locate(k.x, k.z, -1); k.seg = q.i; k.s = q.s; k.d = q.d;
+  const q = KT.locate(k.x, k.z, Math.floor(((s % KT.L) + KT.L) % KT.L / KT.TR.step) % KT.TR.n); k.seg = q.i; k.s = q.s; k.d = q.d;   // 다리 위·아래 중 제 층으로 (s 근처부터 찾음)
 }
 function startRace(mode, forceCPU = null) {
   KT.settings.mode = mode; G.forceCPU = forceCPU; G.only = null;
@@ -393,9 +393,9 @@ pads = []; JC.list.length = 0;
 // ---------- 12. 난이도 (아이 운전 흉내) ----------
 console.log('\n[12] 난이도');
 // 조이콘 기울기로 운전하는 아이: 0.3초 늦게 보고, 손이 흔들리고, 길 가운데 ±3m를 왔다갔다, 가끔 0.6초 딴짓
-function kidRace(level, seed) {
+function kidRace(level, seed, laps = 3) {
   randomSeed = seed >>> 0;
-  KT.settings.cpuLevel = level; KT.settings.laps = 3; JC.list.length = 0;
+  KT.settings.cpuLevel = level; KT.settings.laps = laps; JC.list.length = 0;
   const jc = { ok: true, player: 0, kind: 'R', accel: { x: 0, y: 0, z: 1 }, hold: 0, stick: { x: 2048, y: 2048 } };
   startRace('1p'); JC.list.push(jc);
   const me = KT.humanKart(0), hist = [], st = { wander: 0, wanderAt: 0, idle: 0, noise: 0 };
@@ -488,7 +488,8 @@ KT.settings.cpuLevel = 1; startRace('1p'); skipCountdown();
 
 // ---------- 14. 코스 넷: 바닷가 · 눈꽃 마을 · 사탕 공원 ----------
 console.log('\n[14] 코스 넷');
-assert(KT.COURSES.length === 4 && KT.COURSES.every(c => c.cps[0][1] === 0 && c.cps[1][1] === 0), '코스 4개 · 모두 출발선이 z=0 직선');
+assert(KT.COURSES.length === 5 && KT.COURSES.every(c => c.cps[0][1] === 0 && c.cps[1][1] === 0), '코스 5개 · 모두 출발선이 z=0 직선');
+assert(KT.GP_COURSES.join() === '0,1,2,3', '그랑프리는 코스 넷 그대로 (도전 코스 용암 성은 빠짐)');
 // (s, d)가 든 바닥 구역 (kart.js zoneAt과 같은 규칙)
 const zoneOf = (s, d) => KT.ZONES.find(z => { const u = KT.sdiff(s, z.s); return u >= 0 && u <= z.len && d >= z.d0 && d <= z.d1; }) || null;
 const halfRoad = z => z.d1 - z.d0 < 2 * KT.TRACK.halfW;
@@ -665,23 +666,23 @@ console.log('\n[17] 코스마다 레이스 곡 · 주변 소리');
 {
   const songs = [], ambs = [];
   let menuQuiet = true;
-  for (let c = 0; c < 4; c++) {
+  for (let c = 0; c < 5; c++) {
     KT.settings.course = c; KT.settings.gp = false; KT.toMenu(); run(0.2);
     menuQuiet = menuQuiet && !AU.nat;
     startRace('1p', true); skipCountdown(); run(0.5);
     songs.push(AU.mus && AU.mus.name); ambs.push(AU.nat && AU.nat.kind);
     for (let i = 0; i < 120; i++) { run(0.1); AU.pump(); AU.naturePump(); }   // 테스트엔 타이머가 없어서 곡·주변 소리를 직접 12초 돌림 (파도·갈매기·바람·풍경·새까지)
   }
-  assert(songs.join(',') === KT.COURSES.map(c => c.song).join(',') && new Set(songs).size === 4, `코스마다 다른 레이스 곡 (${songs.join(', ')})`);
-  assert(ambs.join(',') === 'meadow,beach,snow,candy' && menuQuiet, `코스마다 주변 소리, 메뉴에선 없음 (${ambs.join(', ')})`);
+  assert(songs.join(',') === KT.COURSES.map(c => c.song).join(',') && new Set(songs).size === 5, `코스마다 다른 레이스 곡 (${songs.join(', ')})`);
+  assert(ambs.join(',') === 'meadow,beach,snow,candy,lava' && menuQuiet, `코스마다 주변 소리, 메뉴에선 없음 (${ambs.join(', ')})`);
   KT.pause(); run(0.1);
   const pausedQuiet = !AU.nat;
   KT.resume(); run(0.1);
-  assert(pausedQuiet && AU.nat && AU.nat.kind === 'candy', '일시정지면 주변 소리를 끄고, 다시 달리면 켬');
+  assert(pausedQuiet && AU.nat && AU.nat.kind === 'lava', '일시정지면 주변 소리를 끄고, 다시 달리면 켬');
   KT.toMenu(); run(0.1);
   assert(!AU.nat && AU.mus && AU.mus.name === 'menu', '메뉴로 나가면 주변 소리 없이 메뉴 곡');
   const S = AU.SONGS, okSong = k => S[k] && S[k].chords.length === 8 && S[k].melody.length === 8 && S[k].melody.every(bar => bar.every(([at, n, len]) => at >= 0 && at + len <= 16 && n >= 60 && n <= 96));
-  assert(['beach', 'snow', 'candy'].every(okSong), '새 곡 악보: 8마디 · 음 위치·높이가 정상');
+  assert(['beach', 'snow', 'candy', 'lava'].every(okSong), '새 곡 악보: 8마디 · 음 위치·높이가 정상');
   G.forceCPU = null; KT.settings.course = 0;
 }
 
@@ -717,7 +718,7 @@ console.log('\n[18] 아이템 두 칸 · 새 아이템');
   const blocked = KT.spinOut(me, 'zap');
   assert(blocked === 'block' && me.spinT === 0 && me.shieldT === 0, '보호막이 번개 구슬을 한 번 막고 터짐');
   me.shieldT = 10; placeK(me, 40, 0, 10); KT.traps.length = 0;
-  { const p = KT.trackPoint(44, 0); KT.traps.push({ x: p.x, z: p.z, s: 44, d: 0, owner: c1, t0: KT.T() - 5 }); }
+  { const p = KT.trackPoint(44, 0); KT.traps.push({ x: p.x, y: p.y, z: p.z, s: 44, d: 0, owner: c1, t0: KT.T() - 5 }); }
   run(1);
   assert(KT.traps.length === 0 && me.spinT === 0 && me.shieldT === 0, '보호막이 함정도 막음 (함정은 터짐)');
   // 자석: 앞 카트에게 빠르게 끌려가다 바로 뒤에서 휙
@@ -771,6 +772,95 @@ console.log('\n[18] 아이템 두 칸 · 새 아이템');
   const used = Object.keys(G.stats.used || {});
   assert(['shield', 'magnet', 'ball', 'paint'].filter(x => used.includes(x)).length >= 3, `CPU가 새 아이템을 씀 (${used.join(', ')})`);
   G.forceCPU = null; KT.toMenu();
+}
+
+// ---------- 20. 도전 코스: 용암 성 (2층 다리 · 머리핀 · 불기둥 · 용암 강) ----------
+console.log('\n[20] 도전 코스: 용암 성');
+{
+  KT.settings.course = 4; KT.settings.gp = false; KT.settings.cpuLevel = 1; KT.settings.laps = 3; KT.toMenu(); KT.switchCourse(4); KT.toMenu();
+  const C = KT.COURSE, T2 = KT.TR, BR = C.bridge;
+  assert(C.name === '용암 성' && C.hard && G3.courseFor === C && els.courseName.textContent === '용암 성', '용암 성을 고르면 길·장면·메뉴 띠가 바뀜');
+  assert(T2.len > 1300 && T2.len < 1500, `한 바퀴 ${T2.len.toFixed(0)}m (다른 코스의 두 배쯤)`);
+  let r2 = Infinity, sharp = 0;
+  for (let j = 0; j < T2.n; j++) { const r = 1 / Math.max(1e-6, Math.abs(T2.curv[j])); r2 = Math.min(r2, r); if (r < 30) sharp++; }
+  assert(r2 > 17 && sharp > 120, `가장 급한 커브 반지름 ${r2.toFixed(1)}m · 반지름 30m 안쪽 급커브 ${sharp}m (머리핀)`);
+  let g2 = Infinity, cross = 0;   // 높이가 4.5m 넘게 다르면 다리 위·아래라 겹쳐도 됨
+  for (let a = 0; a < T2.n; a += 2) for (let b = a + 2; b < T2.n; b += 2) {
+    const ds = Math.min(b - a, T2.n - (b - a)); if (ds <= 90) continue;
+    const gap = Math.hypot(T2.px[a] - T2.px[b], T2.pz[a] - T2.pz[b]);
+    if (Math.abs(T2.py[a] - T2.py[b]) >= 4.5) { if (gap < 2 * KT.TRACK.wall) cross++; continue; }
+    g2 = Math.min(g2, gap);
+  }
+  assert(g2 > 2 * KT.TRACK.wall + 4 && cross > 0, `같은 층 구간끼리 벽이 안 겹침 (${g2.toFixed(0)}m) · 2층 다리에서만 길이 겹침`);
+  const p20 = { ...KT.trackPoint(20, 0) }, p40 = { ...KT.trackPoint(40, 0) };
+  assert(Math.abs(p20.z) < 1 && Math.abs(p40.z) < 1 && p40.x > p20.x && p20.y === 0, '출발선 부근은 +x 평지 직선');
+  const top = { ...KT.trackPoint(BR.s, 0) };
+  let far = 0, fd = Infinity; for (let j = 0; j < T2.n; j++) { const dd = Math.hypot(T2.px[j] - top.x, T2.pz[j] - top.z); if (Math.abs(KT.sdiff(j * T2.step, BR.s)) > 100 && dd < fd) { fd = dd; far = j; } }
+  const under = { ...KT.locate(top.x, top.z, far) }, below = KT.sdiff(under.s, BR.s);
+  assert(Math.abs(top.y - 7) < 0.01 && Math.abs(below) > 300 && KT.groundAt(under.s, under.d) === 0, `다리 위는 7m, 바로 아래 (s ${under.s.toFixed(0)})는 땅 높이`);
+  let steep = 0; for (let s = BR.s - 120; s < BR.s + 120; s += 0.5) steep = Math.max(steep, Math.abs(KT.groundAt(s + 0.5, 0) - KT.groundAt(s, 0)) / 0.5);
+  assert(steep < 0.2 && KT.groundAt(BR.s + 98, 14) === 0, `다리 오르막·내리막 기울기 ${(steep * 100).toFixed(0)}% 안 · 다리가 끝나면 땅`);
+  const onZone = s => KT.ZONES.some(z => { const u = KT.sdiff(s, z.s); return u > -2 && u < z.len + 2; }), onJet = s => KT.JETS.some(j => Math.abs(KT.sdiff(s, j.s)) < 6);
+  assert(!KT.PANELS.some(p => onZone(p.s) || onJet(p.s)) && !KT.BOX_ROWS.some(s => onZone(s) || onJet(s)) && !onZone(KT.RAMP.s) && KT.boxes.length === 15, '대시 판·상자·점프대는 용암·불기둥과 안 겹침 · 상자 15개');
+  const river = KT.ZONES.find(z => !halfRoad(z)), pools = KT.ZONES.filter(z => halfRoad(z) && z.type === 'lava');
+  assert(river && river.type === 'lava' && KT.sdiff(river.s, KT.RAMP.s) > 0 && KT.sdiff(river.s, KT.RAMP.s) < KT.RAMP.len + 6, '점프대 바로 뒤에 길을 가로지르는 용암 강');
+  assert(pools.length === 2 && pools.every(z => Math.sign(z.d0 + z.d1) === Math.sign(T2.curv[Math.floor((z.s + z.len / 2) / T2.step)]) && Math.abs(T2.curv[Math.floor((z.s + z.len / 2) / T2.step)]) > 0.03), '용암 웅덩이 둘은 머리핀 커브 안쪽');
+  assert(KT.JETS.length >= 4 && G3.jets.length === KT.JETS.length && G3.snowfall, `불기둥 ${KT.JETS.length}개 · 날리는 불티`);
+  // 시범 레이스: 다리 위에선 다리 높이, 아래 길에선 땅 높이로 (층이 섞이지 않음)
+  const lapB = karts.map(k => k.lap), r0 = G.stats.rescues, prevSpin = karts.map(() => 0);
+  let bad = -1, layerBad = 0, upT = 0, downT = 0, jetHits = 0, puddleT = 0;
+  run(150, j => {
+    if (bad < 0 && !karts.every(finite)) bad = j;
+    karts.forEach((k, i) => {
+      if (!k.air && Math.abs(KT.sdiff(k.s, BR.s)) < 25) { upT += 1 / 60; if (Math.abs(k.y - 7) > 0.2) layerBad++; }
+      if (!k.air && Math.abs(KT.sdiff(k.s, under.s)) < 25) { downT += 1 / 60; if (k.y > 0.2) layerBad++; }
+      const z = zoneOf(k.s, k.d); if (z && halfRoad(z)) puddleT += 1 / 60;
+      if (k.spinT > prevSpin[i] + 0.5 && KT.JETS.some(q => Math.abs(KT.sdiff(k.s, q.s)) < 4)) jetHits++;
+      prevSpin[i] = k.spinT;
+    });
+  });
+  assert(bad < 0 && karts.every(k => k.lap - lapB[k.slot] >= 2), `시범 레이스: 150초에 모두 2바퀴 이상 (${karts.map((k, i) => k.lap - lapB[i]).join(',')})`);
+  assert(G.stats.rescues - r0 <= 2, `끼여서 다시 세운 횟수 ${G.stats.rescues - r0}`);
+  assert(layerBad === 0 && upT > 10 && downT > 10, `다리 위 ${upT.toFixed(0)}초는 7m, 굴다리 ${downT.toFixed(0)}초는 땅에서 (층이 안 섞임)`);
+  assert(puddleT < 4 && jetHits <= 4, `CPU는 머리핀 안쪽 용암 웅덩이(${puddleT.toFixed(1)}초)와 불기둥(빙글 ${jetHits}번)을 피해 감`);
+  // 직접 달려 보기
+  startRace('1p'); skipCountdown();
+  const me = KT.humanKart(0); G.only = [me];
+  assert(KT.COURSE === C, '레이스도 용암 성에서');
+  placeK(me, BR.s, 2, 0); const q = KT.locate(me.x, me.z, me.seg);
+  assert(Math.abs(KT.sdiff(q.s, BR.s)) < 1 && me.y === 7, '다리 위에 세운 카트는 다리 높이 · 아래 길로 잘못 잡히지 않음');
+  jumpOver('용암 강');
+  // 불기둥: 솟을 때 닿으면 빙글, 잠잠할 때는 그냥 지나감
+  const jet = KT.JETS[0], clockAt = st => { for (let t = 0; t < KT.JET.period * 2; t += 0.02) if (KT.jetState(jet, KT.T() + t) === st && KT.jetState(jet, KT.T() + t + 0.5) === st) return t; return 0; };
+  const quiet = clockAt(0); run(quiet + 0.05);
+  placeK(me, jet.s - 1, jet.d, 6); me.immuneT = 0; run(0.25);
+  assert(me.spinT === 0, '불기둥이 잠잠할 때 지나가면 괜찮음');
+  const fire = clockAt(1); run(fire + 0.1);
+  placeK(me, jet.s, jet.d, 6); me.immuneT = 0; run(0.1);
+  assert(me.spinT > 0, '불기둥이 솟을 때 닿으면 앗 뜨거! 빙글');
+  // 용암 웅덩이: 빙글 + 살짝 튀어 오름, 강은 빙글 없이 느려지기만
+  const pool = pools[0];
+  placeK(me, pool.s + 3, (pool.d0 + pool.d1) / 2, 12); me.immuneT = 0; let hopped = false;
+  run(0.3, () => { if (me.y > 0.3) hopped = true; });
+  assert(me.spinT > 0 && hopped, '용암 웅덩이에 닿으면 빙글 돌며 튀어 오름');
+  placeK(me, river.s + 1, 0, 10); me.immuneT = 0; run(0.3);
+  assert(me.wet && me.spinT === 0, '용암 강에 빠지면 빙글 없이 느려짐');
+  // 2층: 다리 위에 놓은 함정은 아래 길 카트가 안 밟음, 아래 길의 카트끼리만 부딪힘
+  const other = karts.find(k => k.human < 0); G.only = [me, other];
+  const tp = { ...KT.trackPoint(BR.s, 0) };
+  placeK(me, BR.s + 40, 0, 0);
+  KT.traps.length = 0; KT.traps.push({ x: tp.x, y: tp.y, z: tp.z, s: BR.s, d: 0, owner: other, t0: KT.T() });
+  placeK(other, under.s - 3, under.d, 8);
+  run(0.6);
+  assert(KT.traps.length === 1 && other.spinT === 0 && other.y < 0.2, '다리 위 함정은 굴다리로 지나가는 카트와 상관없음');
+  placeK(me, BR.s - 3, 0, 8); run(0.6);
+  assert(KT.traps.length === 0 && me.spinT > 0, '다리 위 카트는 다리 위 함정을 밟음');
+  KT.traps.length = 0; G.only = null;
+  // 쉬움: 아이처럼 흔들리며 달려도 이김 (2바퀴)
+  const kids = [kidRace(0, 1000, 2), kidRace(0, 1077, 2)];
+  assert(avgPlace(kids) <= 2, `용암 성 쉬움: 아이처럼 달려도 평균 ${avgPlace(kids).toFixed(1)}등`);
+  KT.settings.course = 0; KT.settings.laps = 3; KT.settings.cpuLevel = 1; G.forceCPU = null; KT.toMenu(); KT.switchCourse(0); KT.toMenu();
+  assert(KT.COURSE.name === '몬스터 서킷' && !G3.snowfall && G3.jets.length === 0, '다시 몬스터 서킷으로 (불티·불기둥도 사라짐)');
 }
 
 // ---------- 19. 그 밖 ----------
