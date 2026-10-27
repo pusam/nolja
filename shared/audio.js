@@ -12,6 +12,7 @@
  *  - 카트:   engine(id, 속도 0~1.4, 부스트 0~1, 드리프트 0~1) 엔진·타이어 소리 (계속, engine(id, null)이면 끔) · enginesOff()
  *            countdown(숫자, 0이면 출발) · boost() · spark(단계) · itemBox() · roulette() · itemGet() · zap() · crash()
  *            plop() · splash() · bump(세기) · trick() · land() · finalLap()
+ *            아이템: shield() 보호막 · pop() 보호막 터짐 · magnet() 자석 · thunder() 천둥 · boing() 통통 공 · splat() 물감
  * ============================================================ */
 (function () {
   'use strict';
@@ -439,6 +440,41 @@
       const t = this.ctx.currentTime + 0.02, out = this.bus.music;
       [67, 72, 76, 79].forEach((n, i) => this.tone(t + i * 0.09, mtof(n), mtof(n), 0.2, 0.12, 'square', out));
       this.tone(t + 0.38, mtof(84), mtof(84), 0.6, 0.12, 'triangle', out);
+    },
+    shield() {   // 방울 보호막 "뾰로롱": 위로 올라가는 맑은 소리 두 겹 + 반짝
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      this.tone(t, 520, 1150, 0.35, 0.09, 'sine'); this.tone(t + 0.05, 780, 1700, 0.3, 0.045, 'triangle');
+      this.noise(t, 0.3, 6000, 2, 0.025, null, 'highpass');
+    },
+    pop() {   // 보호막이 대신 맞고 터짐 "퐁"
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      this.tone(t, 950, 280, 0.14, 0.14); this.noise(t, 0.08, 2400, 1.2, 0.08);
+    },
+    magnet() {   // 자석 "위이잉": 올라가며 떨리는 소리
+      if (!this.live()) return;
+      const c = this.ctx, t = c.currentTime, o = this.tone(t, 260, 900, 0.7, 0.06, 'square');
+      const lfo = c.createOscillator(), depth = c.createGain();
+      lfo.frequency.value = 16; depth.gain.value = 40; lfo.connect(depth).connect(o.frequency); lfo.start(t); lfo.stop(t + 0.75);
+    },
+    thunder() {   // 천둥 번개 "쾅 우르르": 날카롭게 갈라지는 잡음 + 낮게 길게 울림
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      this.noise(t, 0.18, 3200, 0.6, 0.3, null, 'highpass');
+      this.noise(t + 0.03, 1.6, 180, 0.7, 0.35, null, 'lowpass');
+      this.tone(t, 90, 38, 0.9, 0.3);
+    },
+    boing() {   // 통통 공 "통": 짧게 위로 튀는 소리
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      this.tone(t, 240, 640, 0.13, 0.09, 'triangle'); this.tone(t, 120, 70, 0.08, 0.08);
+    },
+    splat() {   // 물감 폭탄 "철퍽": 젖은 잡음이 아래로
+      if (!this.live()) return;
+      const t = this.ctx.currentTime, f = this.noise(t, 0.3, 1600, 0.8, 0.22, null, 'lowpass');
+      f.frequency.exponentialRampToValueAtTime(260, t + 0.25);
+      this.tone(t, 420, 110, 0.18, 0.1);
     },
   };
   if (saved && typeof saved === 'object') for (const k of ['music', 'sfx', 'crowd']) if (Number.isFinite(saved[k])) A.vol[k] = clamp(saved[k], 0, 1);

@@ -253,7 +253,8 @@ loadCourse(lobbyCourse());
 // ============================================================
 const KART = { R: 1.05, VMAX: 23, ACC: 17, COAST: 4.5, BRAKE: 22, REV: 6, TURN: 1.75, G: 17, BOOST: 1.36 };
 const H = 1 / 120;
-const ITEMS = { boost: { name: '불꽃 대시' }, triple: { name: '불꽃 대시 ×3' }, star: { name: '반짝 별' }, zap: { name: '번개 구슬' }, trap: { name: '물방울 함정' } };
+const ITEMS = { boost: { name: '불꽃 대시' }, triple: { name: '불꽃 대시 ×3' }, star: { name: '반짝 별' }, zap: { name: '번개 구슬' }, trap: { name: '물방울 함정' },
+  shield: { name: '방울 보호막' }, magnet: { name: '자석' }, bolt: { name: '천둥 번개' }, ball: { name: '통통 공' }, paint: { name: '물감 폭탄' } };
 const DRIFT = [   // 드리프트 불꽃 단계: 모은 양 · 부스트 시간 · 처음 속도 · 이름 · 색
   null,
   { charge: 1.0, dur: 0.7, kick: 1.06, name: '부스트!', color: '#5ec8ff', hex: 0x5ec8ff },
@@ -265,16 +266,17 @@ const DRIFT = [   // 드리프트 불꽃 단계: 모은 양 · 부스트 시간 
 const CPU_SPEED = [0.78, 0.9, 0.98];
 const CPU_CATCHUP = [0.04, 0.08, 0.1];   // 사람보다 많이 뒤처진 CPU가 빨라지는 최대 비율
 const karts = [];
-const boxes = [], shots = [], traps = [];
+const boxes = [], shots = [], traps = [], balls = [];
 function makeKart(slot, ch, human) {
   return { slot, ch, human, color: human >= 0 ? COLORS[human] : CHARS[ch].body,
     x: 0, y: 0, z: 0, a: 0, v: 0, vl: 0, vy: 0, vyG: 0, air: false, hop: false, rampAir: false, trick: false, trickT: -9,
     steer: 0, drift: null, driftArm: false, prevDrift: false, prevItem: false, boostT: 0, boostFx: 0, spinT: 0, spinAt: -9, immuneT: 0, panelT: 0,
-    item: null, itemN: 0, roulT: 0, roulTick: 0, lap: 0, s: 0, d: 0, seg: -1, prog: 0, place: 1, finished: false, finishT: 0,
+    item: null, itemN: 0, item2: null, itemN2: 0, swapAt: -9, prevSwap: false, roulT: 0, roulTick: 0, lap: 0, s: 0, d: 0, seg: -1, prog: 0, place: 1, finished: false, finishT: 0,
     lapMax: 0, lapT0: 0, bestLap: 0, newLap: false, newRace: false,
+    shieldT: 0, magnetT: 0, magnetTarget: null, paintT: 0, paintAt: -9, boltFx: -9,
     offroad: false, wrongT: 0, stuckT: 0, gasSince: null, speedMul: 1, bumpAt: -9, starT: 0, draft: 0, landT: -9,
     ai: { lane: rand(-3, 3), laneAt: 0, d: 0, itemAt: 0, drifting: false, driftSkill: 0 },
-    ctl: { steer: 0, gas: false, brake: false, drift: false, item: false, gasBtn: false }, mesh: null };
+    ctl: { steer: 0, gas: false, brake: false, drift: false, item: false, swap: false, gasBtn: false }, mesh: null };
 }
 const humanKart = p => karts.find(k => k.human === p) || null;
 const isAI = k => k.human < 0 || k.finished || !!game.forceCPU;
@@ -282,7 +284,7 @@ const nameOf = k => CHARS[k.ch].name;
 const tagOf = k => k.human === 0 ? 'P1' : k.human === 1 ? 'P2' : 'CPU';
 
 function setupRace(demo) {
-  karts.length = 0; shots.length = 0; traps.length = 0;
+  karts.length = 0; shots.length = 0; traps.length = 0; balls.length = 0;
   const humans = demo ? 0 : (settings.mode === '2p' ? 2 : 1);
   let chars = !demo && gp.on && gp.roster ? gp.roster.slice() : null;   // 그랑프리는 네 코스 내내 같은 6명 (자리 번호도 같게)
   if (!chars) {
@@ -329,13 +331,23 @@ function endDrift(k, released) {
   k.drift = null;
   if (released && D && !k.offroad) { game.stats.drifts++; giveBoost(k, D.dur, D.kick); if (k.human >= 0) showMsg(k.human, D.name, D.color); }
 }
+const HIT_MSG = { trap: '미끄덩!', zap: '찌릿!', ball: '통!', bolt: '번쩍!', star: '빙글!' };
+// 맞으면 빙글: true. 별·무적이면 그냥 false, 보호막이 대신 터지면 'block'
 function spinOut(k, why) {
   if (k.spinT > 0 || k.immuneT > 0 || k.starT > 0) return false;   // 반짝 별이면 아무것도 안 통함
-  k.spinT = 1.25; k.spinAt = T(); k.immuneT = 2.6; k.v *= 0.35; k.vl = 0; k.drift = null; k.boostT = 0; k.trick = false; game.stats.spins++;   // 공중에서 맞으면 트릭 부스트도 없음
-  burst(k.x, k.y + 1.2, k.z, 14, why === 'trap' ? [0x7dd3fc, 0xffffff] : [0xfde047, 0xffffff], 6, 0.6);
-  if (k.human >= 0) { sfx(why === 'trap' ? 'splash' : 'crash'); if (why === 'trap') sfx('crash'); rumble(k.human, 0.9, 260); showMsg(k.human, why === 'trap' ? '미끄덩!' : '찌릿!', '#7dd3fc'); game.shake[k.human] = 0.6; }
+  if (k.shieldT > 0) { popShield(k); return 'block'; }
+  k.spinT = 1.25; k.spinAt = T(); k.immuneT = 2.6; k.v *= 0.35; k.vl = 0; k.drift = null; k.boostT = 0; k.trick = false; k.magnetT = 0; game.stats.spins++;   // 공중에서 맞으면 트릭 부스트도 없음
+  burst(k.x, k.y + 1.2, k.z, 14, why === 'trap' ? [0x7dd3fc, 0xffffff] : why === 'ball' ? [0x6ee7a0, 0xffffff] : [0xfde047, 0xffffff], 6, 0.6);
+  if (k.human >= 0) { sfx(why === 'trap' ? 'splash' : 'crash'); if (why === 'trap') sfx('crash'); rumble(k.human, 0.9, 260); showMsg(k.human, HIT_MSG[why] || '찌릿!', '#7dd3fc'); game.shake[k.human] = 0.6; }
   return true;
 }
+function popShield(k) {   // 보호막이 대신 맞고 "퐁" 터짐
+  k.shieldT = 0;
+  burst(k.x, k.y + 1, k.z, 18, [0x9be7ff, 0xffffff], 6, 0.5);
+  if (k.human >= 0) { sfx('pop'); showMsg(k.human, '보호막이 막았어요!', '#9be7ff'); rumble(k.human, 0.3, 80); }
+}
+// 물감 폭탄·천둥 번개처럼 멀리서 오는 것: 별이면 안 통하고 보호막은 대신 터짐
+function shrug(k) { if (k.starT > 0) return true; if (k.shieldT > 0) { popShield(k); return true; } return false; }
 function doTrick(k) {
   if (!k.rampAir || k.trick || k.spinT > 0) return;   // 맞아서 빙글 도는 중엔 트릭 못 함
   k.trick = true; k.trickT = T(); game.stats.tricks++;
@@ -355,10 +367,16 @@ function assistSteer(k, steer) {
 
 function driveKart(k, c, h) {
   k.boostT = Math.max(0, k.boostT - h); k.panelT = Math.max(0, k.panelT - h); k.immuneT = Math.max(0, k.immuneT - h); k.starT = Math.max(0, k.starT - h);
+  k.shieldT = Math.max(0, k.shieldT - h); k.paintT = Math.max(0, k.paintT - h);
   if (k.roulT > 0) {
     k.roulT -= h;
     if (k.human >= 0 && T() >= k.roulTick) { k.roulTick = T() + 0.08; sfx('roulette'); }
-    if (k.roulT <= 0) { k.roulT = 0; k.item = rollItem(k); k.itemN = k.item === 'triple' ? 3 : 1; if (k.human >= 0) sfx('itemGet'); k.ai.itemAt = T() + rand(0.6, 2.2) + (2 - settings.cpuLevel) * 0.8; }
+    if (k.roulT <= 0) {
+      k.roulT = 0;
+      const it = rollItem(k), n = it === 'triple' ? 3 : 1;
+      if (!k.item) { k.item = it; k.itemN = n; } else { k.item2 = it; k.itemN2 = n; }   // 굴리는 동안 첫 칸을 썼으면 첫 칸으로
+      if (k.human >= 0) sfx('itemGet'); k.ai.itemAt = T() + rand(0.6, 2.2) + (2 - settings.cpuLevel) * 0.8;
+    }
   }
   let steer = c.steer, gas = c.gas, brake = c.brake;
   if (k.spinT > 0) { k.spinT = Math.max(0, k.spinT - h); steer = 0; gas = false; brake = false; }
@@ -368,14 +386,16 @@ function driveKart(k, c, h) {
   let vmax = KART.VMAX * k.speedMul;
   if ((k.offroad || k.wet) && k.boostT <= 0 && k.starT <= 0) vmax *= k.wet ? 0.6 : 0.5;
   if (k.starT > 0) vmax = Math.max(vmax, KART.VMAX * 1.2 * kartClass(k));   // 반짝 별: 풀밭도 그대로, 조금 더 빠르게
+  if (k.magnetT > 0) vmax = Math.max(vmax, KART.VMAX * 1.2 * kartClass(k));
+  if (k.paintT > 0 && k.human < 0) vmax *= 0.92;
   if (k.boostT > 0) vmax = KART.VMAX * KART.BOOST * kartClass(k);
   if (k.spinT > 0) k.v *= Math.exp(-h * 2.2);
   else if (k.air) { /* 공중에선 속도 그대로 */ }
   else if (brake && !(k.boostT > 0)) {
     if (k.v > 0.5) k.v -= KART.BRAKE * h;
     else k.v = Math.max(-KART.REV, k.v - 9 * h);
-  } else if (gas || k.boostT > 0 || k.starT > 0) {
-    if (k.v < vmax) k.v = Math.min(vmax, k.v + (k.boostT > 0 || k.starT > 0 ? 34 : KART.ACC * Math.max(0.15, 1 - Math.max(0, k.v) / vmax)) * h);
+  } else if (gas || k.boostT > 0 || k.starT > 0 || k.magnetT > 0) {
+    if (k.v < vmax) k.v = Math.min(vmax, k.v + (k.boostT > 0 || k.starT > 0 || k.magnetT > 0 ? 34 : KART.ACC * Math.max(0.15, 1 - Math.max(0, k.v) / vmax)) * h);
     else k.v = Math.max(vmax, k.v - (k.offroad ? 26 : 6) * h);
   } else {
     const dec = (k.offroad ? 14 : KART.COAST) * h;
@@ -404,6 +424,12 @@ function driveKart(k, c, h) {
   const turn = -yaw * h;
   k.a = wrapA(k.a + turn);
   if (icy) k.vl += k.v * Math.sin(turn) * 0.45;   // 차는 돌아도 가던 쪽으로 계속 미끄러짐 (커브 바깥으로 밀림)
+  if (k.magnetT > 0) {
+    k.magnetT = Math.max(0, k.magnetT - h);
+    const o = k.magnetTarget, ds = o ? sdiff(o.s, k.s) : 0;
+    if (o && (ds < 3.5 || ds > 220 || o.finished)) { k.magnetT = 0; if (ds < 3.5 && ds > -2) giveBoost(k, 0.6, 1.06); }   // 바로 뒤까지 끌려오면 휙 추월
+    else if (o && k.spinT <= 0) { const p = trackPoint(k.s + Math.min(ds, 14), o.d), err = wrapA(Math.atan2(p.x - k.x, p.z - k.z) - k.a); k.a = wrapA(k.a + clamp(err, -0.6, 0.6) * 2.4 * h); }
+  }
   // 움직이기 (앞 + 옆으로 밀림. 얼음판에선 옆으로 밀린 게 천천히 멈춤)
   k.vl *= Math.exp(-h * (icy ? 2 : 5));
   const fx = Math.sin(k.a), fz = Math.cos(k.a), ox = k.x, oz = k.z, oSeg = k.seg, oS = k.s, oD = k.d;
@@ -559,29 +585,42 @@ function collideKarts() {
     }
   }
 }
-const WV = { x: 0, z: 0 };
+const WV = { x: 0, z: 0 }, BL = { i: 0, s: 0, d: 0 };   // BL: 통통 공 자리 찾기용
 function worldVel(k) { const fx = Math.sin(k.a), fz = Math.cos(k.a); WV.x = fx * k.v - fz * k.vl; WV.z = fz * k.v + fx * k.vl; return WV; }
 function push(k, dvx, dvz) { const fx = Math.sin(k.a), fz = Math.cos(k.a); k.v += dvx * fx + dvz * fz; k.vl += -dvx * fz + dvz * fx; }
 
 // ============================================================
-// 아이템: 상자를 지나가면 1초 동안 룰렛 → 등수에 따라 (앞이면 함정, 뒤면 부스트·별이 잘 나옴)
+// 아이템: 상자를 지나가면 1초 동안 룰렛 → 등수에 따라 (앞이면 함정·보호막, 뒤면 부스트·별·자석·번개가 잘 나옴)
+//  두 칸까지 들고 다니며 첫 칸부터 씀. 바꾸기 버튼으로 두 칸 순서를 바꿈
 //  불꽃 대시 ×3은 세 번 나눠 쓰고, 반짝 별은 6초 동안 무적 + 조금 빠르게 (부딪힌 카트는 빙글)
+//  방울 보호막은 한 번 막아 줌 · 자석은 바로 앞 카트에게 끌려감 · 천둥 번개는 내 앞 카트 모두 빙글
+//  통통 공은 곧장 날아가 벽에 튕김 · 물감 폭탄은 앞 카트들 화면에 물감 (CPU는 휘청)
 // ============================================================
-const ITEM_KEYS = ['boost', 'triple', 'star', 'zap', 'trap'];
+const ITEM_KEYS = ['boost', 'triple', 'star', 'zap', 'trap', 'shield', 'magnet', 'bolt', 'ball', 'paint'];
 function rollItem(k) {
   const f = karts.length > 1 ? (k.place - 1) / (karts.length - 1) : 0.5;   // 0 = 1등 · 1 = 꼴등
   const w = { boost: 0.1 + 0.35 * f, triple: 0.5 * Math.max(0, f - 0.35), star: 0.45 * Math.max(0, f - 0.6),
-    zap: 0.3 + 0.1 * Math.sin(f * Math.PI), trap: 0.6 - 0.5 * f };
-  if (k.human < 0 && !game.demo && settings.cpuLevel === 0) w.zap = w.star = 0;   // 쉬움: CPU는 번개 구슬·별을 안 씀 (아이가 덜 맞게)
+    zap: 0.3 + 0.1 * Math.sin(f * Math.PI), trap: 0.6 - 0.5 * f,
+    shield: 0.3 - 0.2 * f, magnet: 0.4 * Math.max(0, f - 0.2), bolt: 0.3 * Math.max(0, f - 0.7), ball: 0.25, paint: 0.25 * Math.max(0, f - 0.3) };
+  if (k.human < 0 && !game.demo && settings.cpuLevel === 0) w.zap = w.star = w.bolt = w.ball = w.paint = 0;   // 쉬움: CPU는 공격 아이템을 안 씀 (아이가 덜 맞게)
   let r = Math.random() * ITEM_KEYS.reduce((a, key) => a + w[key], 0);
   for (const key of ITEM_KEYS) { r -= w[key]; if (r <= 0) return key; }
   return 'boost';
 }
+const shiftItems = k => { k.item = k.item2; k.itemN = k.itemN2; k.item2 = null; k.itemN2 = 0; };   // 둘째 칸이 첫 칸으로
+function swapItems(k) {   // 두 칸 순서 바꾸기 (룰렛 도는 중엔 안 됨)
+  if (!k.item || !k.item2 || k.roulT > 0) return;
+  [k.item, k.item2, k.itemN, k.itemN2] = [k.item2, k.item, k.itemN2, k.itemN];
+  k.swapAt = T();
+  if (k.human >= 0) sfx('tick');
+}
+// 바로 앞(같은 바퀴 기준 거리) 카트
+function nextAhead(k, range) { let best = null, bd = range; for (const o of karts) { const ds = sdiff(o.s, k.s); if (o !== k && !o.finished && ds > 2 && ds < bd) { bd = ds; best = o; } } return best; }
 function useItem(k) {
   const it = k.item;
-  if (!it || k.roulT > 0 || k.spinT > 0) return;
-  game.stats.items++;
-  if (it === 'triple' && --k.itemN > 0) { /* 아직 남음 */ } else { k.item = null; k.itemN = 0; }
+  if (!it || k.spinT > 0) return;
+  game.stats.items++; game.stats.used = game.stats.used || {}; game.stats.used[it] = (game.stats.used[it] || 0) + 1;
+  if (it === 'triple' && --k.itemN > 0) { /* 아직 남음 */ } else shiftItems(k);
   if (it === 'boost' || it === 'triple') { giveBoost(k, it === 'triple' ? 1.2 : 1.5, 1.12); if (k.human >= 0) showMsg(k.human, it === 'triple' ? `불꽃 대시! ${k.itemN ? '×' + k.itemN + ' 남음' : ''}` : '불꽃 대시!', '#fb923c'); }
   else if (it === 'star') {
     k.starT = 6; k.v = Math.max(k.v, KART.VMAX * 1.1 * kartClass(k)); k.drift = null;
@@ -597,6 +636,28 @@ function useItem(k) {
     traps.push({ x: p.x, z: p.z, s, d: k.d, owner: k, t0: T() });
     if (traps.length > 14) traps.shift();
     if (k.human >= 0) sfx('plop');
+  } else if (it === 'shield') {
+    k.shieldT = 10;
+    if (k.human >= 0) { sfx('shield'); showMsg(k.human, '방울 보호막!', '#9be7ff', '한 번 막아 줘요'); }
+  } else if (it === 'magnet') {
+    k.magnetT = 3.5; k.magnetTarget = nextAhead(k, 160); k.drift = null;
+    if (k.human >= 0) { sfx('magnet'); showMsg(k.human, '자석!', '#ff8fa3', k.magnetTarget ? `${nameOf(k.magnetTarget)}에게 끌려가요` : ''); }
+  } else if (it === 'bolt') {   // 내 앞 카트 모두 (보호막·별은 막음)
+    let hit = 0;
+    for (const o of karts) if (o !== k && !o.finished && o.prog > k.prog) { o.boltFx = T(); if (spinOut(o, 'bolt') === true) hit++; for (let y = 1; y < 11; y += 1.2) spark(o.x + rand(-0.3, 0.3), o.y + y, o.z + rand(-0.3, 0.3), 0xfff27a, 0.9, 0, -2, 0, 0.3); }
+    sfx('thunder');
+    if (k.human >= 0) showMsg(k.human, '천둥 번개!', '#ffe14d', hit ? `앞 친구 ${hit}명 번쩍!` : '');
+  } else if (it === 'ball') {   // 곧장 날아가다 벽에 튕김
+    const fx = Math.sin(k.a), fz = Math.cos(k.a), sp = Math.max(32, k.v + 15);
+    balls.push({ owner: k, x: k.x + fx * 2.6, z: k.z + fz * 2.6, y: k.y + 0.6, vx: fx * sp, vz: fz * sp, life: 5, bounces: 0, t0: T(), seg: k.seg });
+    if (balls.length > 12) balls.shift();
+    sfx('boing');
+  } else if (it === 'paint') {   // 앞쪽 150m 안 카트들 화면에 물감 (CPU는 3.5초 동안 휘청·조금 느리게)
+    let hit = 0;
+    for (const o of karts) { const ds = sdiff(o.s, k.s); if (o !== k && !o.finished && ds > 0 && ds < 150 && !shrug(o)) { o.paintT = 3.5; o.paintAt = T(); hit++; if (o.human >= 0) { sfx('splat'); showMsg(o.human, '물감 철퍽!', '#ff9ad5'); } } }
+    burst(k.x, k.y + 2, k.z, 24, [0xff6fa8, 0xffd166, 0x7ad3ff, 0x86efac, 0xa78bfa], 7, 0.7);
+    sfx('splat');
+    if (k.human >= 0) showMsg(k.human, '물감 폭탄!', '#ff9ad5', hit ? `앞 친구 ${hit}명 철퍽!` : '');
   }
 }
 function updateItems(h) {
@@ -608,7 +669,7 @@ function updateItems(h) {
       if (!b.alive || (k.x - b.x) ** 2 + (k.z - b.z) ** 2 > 2.1 * 2.1) continue;
       b.alive = false; b.at = t + 2.6;
       burst(b.x, 1.2, b.z, 12, [0xf472b6, 0x60a5fa, 0xfacc15, 0x4ade80], 5, 0.5);
-      if (!k.item && k.roulT <= 0) { k.roulT = 1.0; k.roulTick = 0; }
+      if ((!k.item || !k.item2) && k.roulT <= 0) { k.roulT = 1.0; k.roulTick = 0; }   // 빈 칸이 있으면 룰렛
       if (k.human >= 0) { sfx('itemBox'); rumble(k.human, 0.25, 60); }
     }
     if (!k.air && k.panelT <= 0) {
@@ -630,7 +691,7 @@ function updateItems(h) {
       if (gone || (k === sh.owner && t - sh.t0 < 0.6)) continue;
       if ((k.x - sh.x) ** 2 + (k.z - sh.z) ** 2 < 1.8 * 1.8 && Math.abs(k.y + 0.6 - sh.y) < 1.8) {
         gone = true;   // 반짝 별이면 구슬만 깨지고 끝
-        if (spinOut(k, 'zap') && sh.owner.human >= 0 && k !== sh.owner) showMsg(sh.owner.human, '맞혔다!', '#fde047');
+        if (spinOut(k, 'zap') === true && sh.owner.human >= 0 && k !== sh.owner) showMsg(sh.owner.human, '맞혔다!', '#fde047');
       }
     }
     for (let j = traps.length - 1; j >= 0 && !gone; j--) {
@@ -638,6 +699,31 @@ function updateItems(h) {
       if ((tr.x - sh.x) ** 2 + (tr.z - sh.z) ** 2 < 1.6 * 1.6) { traps.splice(j, 1); gone = true; burst(tr.x, 0.4, tr.z, 10, [0x7dd3fc, 0xffffff], 4, 0.4); }
     }
     if (gone) { burst(sh.x, sh.y, sh.z, 10, [0xfde047, 0xffffff], 5, 0.35); shots.splice(i, 1); }
+  }
+  for (let i = balls.length - 1; i >= 0; i--) {   // 통통 공: 곧장 날아가다 벽에서 튕김. 카트·함정에 맞거나 5초·네 번 튕기면 끝
+    const b = balls[i];
+    b.life -= h; b.x += b.vx * h; b.z += b.vz * h;
+    locate(b.x, b.z, b.seg, BL); b.seg = BL.i;
+    const lim = TRACK.wall - 0.6;
+    if (Math.abs(BL.d) > lim) {
+      const nx = -TR.tz[BL.i], nz = TR.tx[BL.i], side = Math.sign(BL.d), vn = (b.vx * nx + b.vz * nz) * side, over = Math.abs(BL.d) - lim;
+      b.x -= nx * side * over; b.z -= nz * side * over;
+      if (vn > 0) { b.vx -= 2 * vn * nx * side; b.vz -= 2 * vn * nz * side; b.bounces++; if (karts.some(o => o.human >= 0 && (o.x - b.x) ** 2 + (o.z - b.z) ** 2 < 1600)) sfx('boing'); }
+    }
+    b.y = groundAt(BL.s, BL.d) + 0.55 + Math.abs(Math.sin((t - b.t0) * 9)) * 0.35;
+    let gone = b.life <= 0 || b.bounces > 4;
+    for (const k of karts) {
+      if (gone || (k === b.owner && t - b.t0 < 0.5)) continue;
+      if ((k.x - b.x) ** 2 + (k.z - b.z) ** 2 < 1.7 * 1.7 && Math.abs(k.y + 0.6 - b.y) < 1.8) {
+        gone = true;
+        if (spinOut(k, 'ball') === true && b.owner.human >= 0 && k !== b.owner) showMsg(b.owner.human, '맞혔다!', '#86efac');
+      }
+    }
+    for (let j = traps.length - 1; j >= 0 && !gone; j--) {
+      const tr = traps[j];
+      if ((tr.x - b.x) ** 2 + (tr.z - b.z) ** 2 < 1.6 * 1.6) { traps.splice(j, 1); gone = true; burst(tr.x, 0.4, tr.z, 10, [0x7dd3fc, 0xffffff], 4, 0.4); }
+    }
+    if (gone) { burst(b.x, b.y, b.z, 12, [0x6ee7a0, 0xffffff], 5, 0.35); balls.splice(i, 1); }
   }
   for (let i = traps.length - 1; i >= 0; i--) {
     const tr = traps[i];
@@ -661,7 +747,7 @@ function aiControl(k, h) {
   if (t > ai.laneAt) { ai.lane = rand(-3.8, 3.8); ai.laneAt = t + rand(3, 7); }
   const look = 6 + Math.max(0, k.v) * 0.45;
   let target = ai.lane + clamp(curvSpan(k.s + 6, k.s + 6 + look * 1.5, true) * 150, -4.5, 4.5);
-  if (!k.item && k.roulT <= 0) {   // 아이템이 없으면 앞 상자 줄로
+  if ((!k.item || !k.item2) && k.roulT <= 0) {   // 빈 칸이 있으면 앞 상자 줄로
     for (const s of BOX_ROWS) {
       const ds = sdiff(s, k.s);
       if (ds > 3 && ds < 45) {
@@ -699,11 +785,18 @@ function aiControl(k, h) {
   // 아이템
   c.item = false;
   if (k.item && t > ai.itemAt) {
-    if (k.item === 'boost' || k.item === 'triple') c.item = (curvSpan(k.s, k.s + 40) < 0.016 || t > ai.itemAt + 4) && k.boostT <= 0 && !k.prevItem;
-    else if (k.item === 'star') c.item = true;
-    else if (k.item === 'zap') c.item = karts.some(o => o !== k && sdiff(o.s, k.s) > 3 && sdiff(o.s, k.s) < 70) || t > ai.itemAt + 8;
-    else c.item = karts.some(o => o !== k && sdiff(k.s, o.s) > 2 && sdiff(k.s, o.s) < 25) || t > ai.itemAt + 6;
+    const it = k.item, ahead = (a, b) => karts.some(o => o !== k && sdiff(o.s, k.s) > a && sdiff(o.s, k.s) < b);
+    let want;
+    if (it === 'boost' || it === 'triple') want = (curvSpan(k.s, k.s + 40) < 0.016 || t > ai.itemAt + 4) && k.boostT <= 0;
+    else if (it === 'star' || it === 'shield' || it === 'bolt') want = it !== 'shield' || k.shieldT <= 0;
+    else if (it === 'zap') want = ahead(3, 70) || t > ai.itemAt + 8;
+    else if (it === 'magnet') want = ahead(15, 90) || t > ai.itemAt + 8;
+    else if (it === 'ball') want = karts.some(o => o !== k && sdiff(o.s, k.s) > 5 && sdiff(o.s, k.s) < 40 && Math.abs(o.d - k.d) < 2.5) && curvSpan(k.s, k.s + 30) < 0.02 || t > ai.itemAt + 9;
+    else if (it === 'paint') want = ahead(3, 100) || t > ai.itemAt + 8;
+    else want = karts.some(o => o !== k && sdiff(k.s, o.s) > 2 && sdiff(k.s, o.s) < 25) || t > ai.itemAt + 6;   // 함정: 바로 뒤에 누가 오면
+    c.item = !!want && !k.prevItem;   // 누를 때마다 하나씩 (두 칸 연달아 쓸 때도)
   }
+  if (k.paintT > 0) c.steer = clamp(c.steer + Math.sin(t * 7 + k.slot * 1.7) * 0.45, -1, 1);   // 물감 맞으면 앞이 안 보여 휘청
   c.gasBtn = c.gas;
   return c;
 }
@@ -736,9 +829,10 @@ function step(h) {
     if (game.only && !game.only.includes(k)) continue;
     const c = isAI(k) ? aiControl(k, h) : k.ctl;
     if (!racing) { k.v = 0; k.vl = 0; continue; }   // 출발 신호 전
-    const item = !!c.item;
+    const item = !!c.item, swap = !!c.swap;
     if (item && !k.prevItem) useItem(k);
-    k.prevItem = item;
+    if (swap && !k.prevSwap) swapItems(k);
+    k.prevItem = item; k.prevSwap = swap;
     if (k.rampAir && c.drift && !k.prevDrift && !k.trick) doTrick(k);
     driveKart(k, c, h);
     if (isAI(k) && k.rampAir && !k.trick && k.vy < 1 && Math.random() < (k.human >= 0 ? 1 : 0.3 + 0.3 * settings.cpuLevel) * h * 4) doTrick(k);
@@ -810,16 +904,16 @@ function countdown(t) {
 // ============================================================
 const keys = new Set();
 const KB = [
-  { left: ['KeyA'], right: ['KeyD'], gas: ['KeyW'], brake: ['KeyS'], drift: ['Space', 'ShiftLeft'], item: ['KeyE', 'KeyQ'] },
-  { left: ['ArrowLeft', 'KeyJ'], right: ['ArrowRight', 'KeyL'], gas: ['ArrowUp', 'KeyI'], brake: ['ArrowDown', 'KeyK'], drift: ['ShiftRight', 'Slash', 'KeyU'], item: ['Period', 'KeyO'] },
+  { left: ['KeyA'], right: ['KeyD'], gas: ['KeyW'], brake: ['KeyS'], drift: ['Space', 'ShiftLeft'], item: ['ControlLeft', 'KeyE'], swap: ['KeyQ'] },
+  { left: ['ArrowLeft', 'KeyJ'], right: ['ArrowRight', 'KeyL'], gas: ['ArrowUp', 'KeyI'], brake: ['ArrowDown', 'KeyK'], drift: ['ShiftRight', 'Slash', 'KeyU'], item: ['ControlRight', 'Period', 'KeyO'], swap: ['Comma', 'KeyP'] },
 ];
 const GAME_KEYS = new Set(KB.flatMap(m => Object.values(m).flat()));
-// 조이콘을 가로로 쥐었을 때(스틱이 왼쪽) 앞면 버튼 자리: 오른쪽 = 가속 · 아래 = 브레이크 · 위 = 드리프트 · 왼쪽 = 아이템. 레일의 SR = 드리프트 · SL = 아이템
+// 조이콘을 가로로 쥐었을 때(스틱이 왼쪽) 앞면 버튼 자리: 오른쪽 = 가속 · 아래 = 브레이크 · 위 = 드리프트 · 왼쪽 = 아이템. 레일의 SR = 드리프트 · SL = 아이템 · 스틱 누르기 = 아이템 바꾸기
 const B = JC.BTN;
 const JMAP = {
-  R: { gas: B.X, brake: B.A, drift: B.Y | B.SR, item: B.B | B.SL },
-  L: { gas: B.DOWN, brake: B.LEFT, drift: B.RIGHT | B.SR, item: B.UP | B.SL },
-  pro: { gas: B.A, brake: B.B, drift: B.SHOULDER | B.Y, item: B.TRIGGER | B.X },
+  R: { gas: B.X, brake: B.A, drift: B.Y | B.SR, item: B.B | B.SL, swap: B.STICK },
+  L: { gas: B.DOWN, brake: B.LEFT, drift: B.RIGHT | B.SR, item: B.UP | B.SL, swap: B.STICK },
+  pro: { gas: B.A, brake: B.B, drift: B.SHOULDER | B.Y, item: B.TRIGGER | B.X, swap: B.STICK },
 };
 const tilt = [{ v: 0, upright: false, angle: 0, joy: false }, { v: 0, upright: false, angle: 0, joy: false }];
 // 조이콘 기울기 → 핸들 (-1 왼쪽 ~ +1 오른쪽). 긴 축(X, 어깨 버튼 쪽 +)이 수평에서 기운 각도로 봄
@@ -847,7 +941,7 @@ function joySteer(p, jc) {
 const padPrev = {}, padSel = {}, padSlot = {};   // padSlot: 패드 번호 → 선수. 다른 패드가 빠져도 자리가 안 바뀜
 const tiltSel = [{ dir: 0, at: 0 }, { dir: 0, at: 0 }];
 function readInputs(t) {
-  const out = [0, 1].map(() => ({ steer: 0, gas: false, brake: false, drift: false, item: false, joySteer: null }));
+  const out = [0, 1].map(() => ({ steer: 0, gas: false, brake: false, drift: false, item: false, swap: false, joySteer: null }));
   // 키보드
   const any = list => list.some(c => keys.has(c));
   for (const p of [0, 1]) {
@@ -856,7 +950,7 @@ function readInputs(t) {
       if (any(m.left)) out[p].steer -= 1;
       if (any(m.right)) out[p].steer += 1;
       out[p].gas = out[p].gas || any(m.gas); out[p].brake = out[p].brake || any(m.brake);
-      out[p].drift = out[p].drift || any(m.drift); out[p].item = out[p].item || any(m.item);
+      out[p].drift = out[p].drift || any(m.drift); out[p].item = out[p].item || any(m.item); out[p].swap = out[p].swap || any(m.swap);
     }
   }
   pollGamepads(out);
@@ -866,7 +960,7 @@ function readInputs(t) {
     if (!jc.ok || (jc.player !== 0 && jc.player !== 1)) continue;
     const p = jc.player, c = out[p], m = JMAP[jc.kind] || JMAP.R, hold = jc.hold || 0;
     c.gas = c.gas || !!(hold & m.gas); c.brake = c.brake || !!(hold & m.brake);
-    c.drift = c.drift || !!(hold & m.drift); c.item = c.item || !!(hold & m.item);
+    c.drift = c.drift || !!(hold & m.drift); c.item = c.item || !!(hold & m.item); c.swap = c.swap || !!(hold & m.swap);
     const st = joySteer(p, jc);
     if (c.joySteer === null || Math.abs(st) > Math.abs(c.joySteer)) c.joySteer = st;
     tilt[p].joy = true;
@@ -928,7 +1022,7 @@ function pollGamepads(out) {
     if (std && now[14]) st = -1;
     if (std && now[15]) st = 1;
     c.steer += st;
-    if (std) { c.gas = c.gas || !!(now[0] || now[7]); c.brake = c.brake || !!(now[1] || now[6]); c.drift = c.drift || !!(now[5] || now[2]); c.item = c.item || !!(now[4] || now[3]); }
+    if (std) { c.gas = c.gas || !!(now[0] || now[7]); c.brake = c.brake || !!(now[1] || now[6]); c.drift = c.drift || !!(now[5] || now[2]); c.item = c.item || !!(now[4] || now[3]); c.swap = c.swap || !!(now[12] || now[13] || now[8]); }
     else { c.gas = c.gas || !!now[0]; c.brake = c.brake || !!now[1]; c.drift = c.drift || !!now[2]; c.item = c.item || !!now[3]; }
   }
 }
@@ -955,7 +1049,7 @@ window.addEventListener('keydown', e => {
     return;
   }
   if (e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); onConfirm(); return; }
-  if (racingNow() && GAME_KEYS.has(e.code)) e.preventDefault();   // 경주 중엔 화면 스크롤·브라우저 단축키(파이어폭스 '/' 찾기 등)가 안 끼어들게
+  if (racingNow() && (GAME_KEYS.has(e.code) || e.ctrlKey)) e.preventDefault();   // 경주 중엔 화면 스크롤·브라우저 단축키(파이어폭스 '/' 찾기 등)가 안 끼어들게
 });
 window.addEventListener('keyup', e => keys.delete(e.code));
 window.addEventListener('blur', () => keys.clear());
@@ -1124,7 +1218,7 @@ function openSelect() {
   $('select').classList.remove('hidden');
   assignJoyCons();
   for (const i of [0, 1]) { sel[i].idx = settings.chars[i]; sel[i].ready = selCPU(i); }
-  karts.length = 0; shots.length = 0; traps.length = 0;
+  karts.length = 0; shots.length = 0; traps.length = 0; balls.length = 0;
   rebuildKarts3D(); buildShowroom();
   renderSelect();
   revealRosterCharacter(sel[0].idx);
@@ -1271,8 +1365,15 @@ function syncMenu() {
   renderSlots();
 }
 function toggleFull() {
-  try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch (e) { /* 무시 */ }
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else {
+      const p = document.documentElement.requestFullscreen();
+      if (p && p.then && navigator.keyboard && navigator.keyboard.lock) p.then(() => navigator.keyboard.lock()).catch(() => {});   // Ctrl+W 같은 브라우저 단축키도 게임 키로 (Esc는 길게 눌러야 전체화면이 풀림)
+    }
+  } catch (e) { /* 무시 */ }
 }
+window.addEventListener('beforeunload', e => { if (racingNow()) { e.preventDefault(); e.returnValue = ''; } });
 
 // ============================================================
 // 그래픽 단계 · 화면 크기
@@ -2315,6 +2416,11 @@ function buildItemsFx(Sc) {
   G3.shotMesh.count = 0; Sc.add(G3.shotMesh);
   G3.trapMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), lam(0x7dc8f7, { transparent: true, opacity: 0.85, emissive: 0x16406a }), 16);
   G3.trapMesh.count = 0; Sc.add(G3.trapMesh);
+  G3.ballMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.5, 14, 10), lam(0x6ee7a0, { emissive: 0x1d5c3a }), 12);
+  G3.ballMesh.count = 0; Sc.add(G3.ballMesh);
+  G3.shieldMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 14), basic(0x9be7ff, { transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending }), 10);
+  G3.magnetMesh = new THREE.InstancedMesh(new THREE.TorusGeometry(1.7, 0.1, 8, 28), basic(0xff8fa3, { transparent: true, opacity: 0.75, depthWrite: false }), 10);
+  for (const m of [G3.shieldMesh, G3.magnetMesh]) { m.count = 0; m.frustumCulled = false; Sc.add(m); }
   G3.ptsAdd = makePoints(700, true); G3.ptsNorm = makePoints(420, false);
   Sc.add(G3.ptsAdd, G3.ptsNorm);
   // 모든 카트의 바퀴를 한 번에 (카트 10대 × 4)
@@ -2531,6 +2637,18 @@ function sync3D(dt) {
   G3.trapMesh.count = raceView ? Math.min(traps.length, 16) : 0;
   for (let i = 0; i < G3.trapMesh.count; i++) { const tr = traps[i], k = 1 + Math.sin(t * 4 + i) * 0.06; K.m.compose(K.v.set(tr.x, groundAt(tr.s, tr.d) + 0.03, tr.z), K.q.identity(), K.w.set(0.95 * k, 0.35, 0.95 * k)); G3.trapMesh.setMatrixAt(i, K.m); }
   G3.trapMesh.instanceMatrix.needsUpdate = true;
+  G3.ballMesh.count = raceView ? Math.min(balls.length, 12) : 0;
+  for (let i = 0; i < G3.ballMesh.count; i++) { const b = balls[i]; K.e.set(t * 7 + i, t * 5, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(b.x, b.y, b.z), K.q, K.w.set(1, 1, 1)); G3.ballMesh.setMatrixAt(i, K.m); }
+  G3.ballMesh.instanceMatrix.needsUpdate = true;
+  // 보호막: 카트를 감싼 방울 (끝나기 2초 전부터 깜빡) · 자석: 카트 둘레를 도는 고리
+  let ns = 0, nmg = 0;
+  if (raceView) for (const k of karts) {
+    if (!k.mesh || !k.mesh.group.visible) continue;
+    if (k.shieldT > 0 && ns < 10 && (k.shieldT > 2 || Math.floor(t * 8) % 2 === 0)) { const sc = 1.85 + Math.sin(t * 6 + k.slot) * 0.06; K.m.compose(K.v.set(k.x, k.y + 0.95, k.z), K.q.identity(), K.w.set(sc, sc * 0.82, sc)); G3.shieldMesh.setMatrixAt(ns++, K.m); }
+    if (k.magnetT > 0 && nmg < 10) { K.e.set(Math.PI / 2, 0, t * 6); K.q.setFromEuler(K.e); const sc = 1 + Math.sin(t * 14) * 0.12; K.m.compose(K.v.set(k.x, k.y + 0.6, k.z), K.q, K.w.set(sc, sc, sc)); G3.magnetMesh.setMatrixAt(nmg++, K.m); }
+  }
+  G3.shieldMesh.count = ns; G3.magnetMesh.count = nmg;
+  G3.shieldMesh.instanceMatrix.needsUpdate = true; G3.magnetMesh.instanceMatrix.needsUpdate = true;
   if (G3.panelTex) G3.panelTex.offset.y = -(t * 1.6) % 1;
   if (G3.seaTex) { G3.seaTex.offset.set((t * 0.004) % 1, (t * 0.01) % 1); G3.foam.material.opacity = 0.55 + 0.3 * Math.sin(t * 1.3); }   // 일렁이는 바다 · 들락날락하는 파도
   for (const z of G3.zoneTex) z.tex.offset.y = (t * z.flow) % 1;   // 개울·초콜릿 강은 흐르고, 얼음은 가만히
@@ -2646,6 +2764,43 @@ function drawItemIcon(g, kind, x, y, s) {
     g.fillStyle = '#6cc3f5'; g.strokeStyle = '#2f6f9b'; g.lineWidth = 5;
     g.beginPath(); g.moveTo(0, -44); g.bezierCurveTo(14, -20, 34, 0, 34, 18); g.arc(0, 18, 34, 0, Math.PI); g.bezierCurveTo(-34, 0, -14, -20, 0, -44); g.closePath(); g.fill(); g.stroke();
     g.fillStyle = 'rgba(255,255,255,0.85)'; g.beginPath(); g.ellipse(-12, 14, 7, 12, 0.4, 0, Math.PI * 2); g.fill();
+  } else if (kind === 'shield') {   // 방울 보호막: 하늘색 방울 + 반짝
+    const gr = g.createRadialGradient(-12, -14, 4, 0, 0, 44); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.45, '#bdefff'); gr.addColorStop(1, '#5cc8f0');
+    g.fillStyle = gr; g.strokeStyle = '#2f86ad'; g.lineWidth = 5;
+    g.beginPath(); g.arc(0, 0, 42, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.9)'; g.beginPath(); g.ellipse(-15, -17, 9, 5, -0.6, 0, Math.PI * 2); g.fill();
+  } else if (kind === 'magnet') {   // 자석: 빨간 말굽 + 은색 끝
+    g.lineCap = 'butt'; g.strokeStyle = '#e5484d'; g.lineWidth = 22;
+    g.beginPath(); g.arc(0, -4, 26, Math.PI, 0); g.lineTo(26, 26); g.moveTo(-26, -4); g.lineTo(-26, 26); g.stroke();
+    g.fillStyle = '#e8eef5'; g.fillRect(-37, 22, 22, 16); g.fillRect(15, 22, 22, 16);
+    g.strokeStyle = '#7a2a2d'; g.lineWidth = 3; g.strokeRect(-37, 22, 22, 16); g.strokeRect(15, 22, 22, 16);
+  } else if (kind === 'bolt') {   // 천둥 번개: 회색 구름 + 노란 번개
+    g.fillStyle = '#b8c2d6'; g.beginPath(); g.arc(-16, -14, 18, 0, Math.PI * 2); g.arc(6, -22, 22, 0, Math.PI * 2); g.arc(24, -10, 16, 0, Math.PI * 2); g.fill();
+    g.fillRect(-30, -12, 56, 16);
+    g.fillStyle = '#ffe14d'; g.strokeStyle = '#8a6a12'; g.lineWidth = 4;
+    g.beginPath(); g.moveTo(6, -2); g.lineTo(-14, 26); g.lineTo(0, 26); g.lineTo(-8, 48); g.lineTo(18, 16); g.lineTo(4, 16); g.lineTo(14, -2); g.closePath(); g.fill(); g.stroke();
+  } else if (kind === 'ball') {   // 통통 공: 초록 공 + 하얀 줄무늬 + 튀는 선
+    g.fillStyle = '#5fd690'; g.strokeStyle = '#1e7a48'; g.lineWidth = 5;
+    g.beginPath(); g.arc(0, -4, 34, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.strokeStyle = '#f2fff6'; g.lineWidth = 6; g.beginPath(); g.arc(0, -4, 34, -2.4, -0.7); g.stroke(); g.beginPath(); g.arc(0, -4, 34, 0.7, 2.4); g.stroke();
+    g.strokeStyle = '#1e7a48'; g.lineWidth = 4; g.beginPath(); g.moveTo(-20, 42); g.lineTo(-8, 34); g.moveTo(20, 42); g.lineTo(8, 34); g.stroke();
+  } else if (kind === 'paint') {   // 물감 폭탄: 동그란 폭탄 + 알록달록 물감 방울
+    g.fillStyle = '#4b3f72'; g.beginPath(); g.arc(-4, 8, 30, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#8a6a12'; g.lineWidth = 5; g.beginPath(); g.moveTo(14, -16); g.quadraticCurveTo(26, -34, 36, -30); g.stroke();
+    for (const [x, y, r, c] of [[-14, 0, 9, '#ff6fa8'], [8, 12, 8, '#ffd166'], [-6, 22, 7, '#7ad3ff'], [10, -6, 6, '#86efac'], [36, -32, 7, '#ffd166']]) { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+  }
+  g.restore();
+}
+// 물감 폭탄을 맞은 사람 화면: 알록달록 물감 자국 (3.5초, 마지막에 흐려짐)
+function paintSplats(g, r, u, k, t) {
+  const rng = mulberry32(Math.floor(k.paintAt * 1000)), a = clamp(k.paintT / 0.8, 0, 1), cols = ['#ff6fa8', '#ffd166', '#7ad3ff', '#86efac', '#a78bfa'];
+  g.save(); g.globalAlpha = 0.88 * a;
+  for (let i = 0; i < 7; i++) {
+    const x = r.x + r.w * (0.12 + rng() * 0.76), y = r.y + r.h * (0.18 + rng() * 0.6), rad = (110 + rng() * 120) * u;
+    g.fillStyle = cols[i % cols.length];
+    g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
+    for (let j = 0; j < 6; j++) { const an = rng() * Math.PI * 2, d = rad * (0.9 + rng() * 0.5); g.beginPath(); g.arc(x + Math.cos(an) * d, y + Math.sin(an) * d, rad * (0.12 + rng() * 0.18), 0, Math.PI * 2); g.fill(); }
+    g.fillRect(x - rad * 0.12, y, rad * 0.24, rad * (0.9 + rng() * 0.6));   // 흘러내리는 물감
   }
   g.restore();
 }
@@ -2706,24 +2861,31 @@ function drawView(g, r, p, cs, two, t) {
   speedLines(g, r, u, k, t);
   g.textBaseline = 'middle'; g.textAlign = 'left';
   // 플레이어와 아이템을 한 카드에 묶어 주행 중에도 빠르게 읽을 수 있게 한다.
-  const bx = r.x + pad, by = r.y + pad, iw = 326 * u, ih = 132 * u;
+  if (k.paintT > 0) paintSplats(g, r, u, k, t);
+  const bolt = t - k.boltFx;
+  if (bolt >= 0 && bolt < 0.35) { g.fillStyle = `rgba(255,252,220,${0.65 * (1 - bolt / 0.35)})`; g.fillRect(r.x, r.y, r.w, r.h); }   // 천둥 번개 번쩍
+  const bx = r.x + pad, by = r.y + pad, iw = 392 * u, ih = 132 * u;
   hudPanel(g, bx, by, iw, ih, u);
   g.fillStyle = COLORS[p]; rr(g, bx + 16 * u, by + 17 * u, 44 * u, 28 * u, 7 * u); g.fill();
   g.textAlign = 'center'; g.font = `900 ${20 * u}px ${FONT}`; g.fillStyle = HUD.cream;
   g.fillText(`P${p + 1}`, bx + 38 * u, by + 31 * u);
   g.textAlign = 'left'; g.font = `800 ${24 * u}px ${FONT}`; g.fillText(nameOf(k), bx + 74 * u, by + 31 * u);
-  const ix = bx + 54 * u, iy = by + 88 * u;
+  // 아이템 두 칸: 큰 칸 = 다음에 쓸 것, 작은 칸 = 그다음 (바꾸기 버튼으로 순서를 바꿈)
+  const ix = bx + 54 * u, iy = by + 88 * u, jx = bx + 122 * u, jy = by + 92 * u;
   g.fillStyle = 'rgba(255,249,237,0.1)'; rr(g, bx + 16 * u, by + 54 * u, 76 * u, 62 * u, 12 * u); g.fill();
-  const item = k.roulT > 0 ? ITEM_KEYS[Math.floor(t * 14) % ITEM_KEYS.length] : k.item;
-  if (item) drawItemIcon(g, item, ix, iy, 52 * u);
+  g.fillStyle = 'rgba(255,249,237,0.07)'; rr(g, bx + 100 * u, by + 70 * u, 44 * u, 44 * u, 10 * u); g.fill();
+  const rolling = k.roulT > 0 ? (k.item ? 2 : 1) : 0, spin = ITEM_KEYS[Math.floor(t * 14) % ITEM_KEYS.length];
+  const it1 = rolling === 1 ? spin : k.item, it2 = rolling === 2 ? spin : k.item2;
+  const swp = t - k.swapAt, swPop = swp >= 0 && swp < 0.25 ? 1 + 0.25 * Math.sin(swp / 0.25 * Math.PI) : 1;   // 바꾸면 통통
+  if (it1) drawItemIcon(g, it1, ix, iy, 52 * u * swPop);
   else { g.textAlign = 'center'; g.fillStyle = HUD.muted; g.font = `800 ${36 * u}px ${FONT}`; g.fillText('?', ix, iy); }
-  if (k.roulT <= 0 && item === 'triple') {   // 남은 개수 배지
-    g.fillStyle = HUD.orange; g.beginPath(); g.arc(bx + 82 * u, by + 108 * u, 14 * u, 0, Math.PI * 2); g.fill();
-    g.textAlign = 'center'; g.font = `900 ${17 * u}px ${FONT}`; g.fillStyle = HUD.cream; g.fillText(`×${k.itemN}`, bx + 82 * u, by + 108 * u);
-  }
-  g.textAlign = 'left'; hudLabel(g, k.roulT > 0 ? 'ITEM ROULETTE' : 'ITEM', bx + 110 * u, by + 65 * u, u);
+  if (it2) drawItemIcon(g, it2, jx, jy, 30 * u * swPop);
+  const badge = (x, y, n, rad) => { g.fillStyle = HUD.orange; g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill(); g.textAlign = 'center'; g.font = `900 ${rad * 1.2}px ${FONT}`; g.fillStyle = HUD.cream; g.fillText(`×${n}`, x, y); };
+  if (rolling !== 1 && it1 === 'triple') badge(bx + 82 * u, by + 108 * u, k.itemN, 14 * u);   // 남은 개수 배지
+  if (rolling !== 2 && it2 === 'triple') badge(bx + 138 * u, by + 110 * u, k.itemN2, 10 * u);
+  g.textAlign = 'left'; hudLabel(g, k.roulT > 0 ? 'ITEM ROULETTE' : it2 ? 'ITEM  ⇄' : 'ITEM', bx + 160 * u, by + 65 * u, u);
   g.font = `800 ${24 * u}px ${FONT}`; g.fillStyle = HUD.cream;
-  g.fillText(k.roulT > 0 ? '아이템 고르는 중' : item === 'triple' ? `불꽃 대시 ×${k.itemN}` : item ? ITEMS[item].name : '상자를 지나 보세요', bx + 110 * u, by + 98 * u);
+  g.fillText(rolling === 1 ? '아이템 고르는 중' : it1 === 'triple' ? `불꽃 대시 ×${k.itemN}` : it1 ? ITEMS[it1].name : '상자를 지나 보세요', bx + 160 * u, by + 98 * u, 220 * u);
   // 바퀴와 시간: 동일한 카드 안에서 작은 라벨과 큰 숫자로 구분.
   const rw = 350 * u, rx = r.x + r.w - pad - rw;
   hudPanel(g, rx, by, rw, ih, u);
@@ -2973,7 +3135,7 @@ requestAnimationFrame(frame);
 window.__KT = { game, karts, settings, T, update, render: renderFrame, startRace, toMenu, openSelect, selMove, selReady, selSet, sel, pause, resume,
   TRACK, boxes, shots, traps, KART, trackPoint, locate, groundAt, sdiff, useItem, spinOut, joySteer, tilt, readInputs, keys, inCreek,
   gfx, G3, Q, applyQuality, autoStep, parts, CHARS, joycon: JC, setDemoPaused, showResult, mergeGeoms, views, humanKart, levelFor,
-  COURSES, switchCourse, DRIFT, ITEM_KEYS, gp, GP_COURSES, GP_POINTS, resultNext, REC, lodFor,
+  COURSES, switchCourse, DRIFT, ITEM_KEYS, gp, GP_COURSES, GP_POINTS, resultNext, REC, lodFor, rollItem, balls,
   get TR() { return TR; }, get L() { return L; }, get RAMP() { return RAMP; }, get PANELS() { return PANELS; }, get ZONES() { return ZONES; },
   get COURSE() { return COURSE; }, get BOX_ROWS() { return BOX_ROWS; },
   setClock: f => { realNow = f; } };

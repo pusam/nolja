@@ -685,8 +685,96 @@ console.log('\n[17] 코스마다 레이스 곡 · 주변 소리');
   G.forceCPU = null; KT.settings.course = 0;
 }
 
-// ---------- 18. 그 밖 ----------
-console.log('\n[18] 그 밖');
+// ---------- 18. 아이템 두 칸 · 새 아이템 ----------
+console.log('\n[18] 아이템 두 칸 · 새 아이템');
+{
+  KT.settings.course = 0; KT.settings.gp = false; KT.settings.cpuLevel = 1; KT.toMenu();
+  startRace('1p'); skipCountdown();
+  const me = KT.humanKart(0), cpus = karts.filter(k => k.human < 0), [c1, c2] = cpus;
+  const tap = code => { press(code); run(0.05); release(code); run(0.05); };
+  const clear = k => Object.assign(k, { item: null, itemN: 0, item2: null, itemN2: 0, roulT: 0, shieldT: 0, magnetT: 0, paintT: 0, spinT: 0, immuneT: 0, starT: 0 });
+  const keepPlace = (k, s, d, v) => { const keep = { item: k.item, itemN: k.itemN, item2: k.item2, itemN2: k.itemN2 }; placeK(k, s, d, v); Object.assign(k, keep); };   // placeK는 첫 칸을 비우니 아이템은 그대로 두고 옮김
+  const park = list => list.forEach((k, i) => placeK(k, 300 + i * 9, 0, 0));   // 테스트에 안 쓰는 카트는 멀리 세워 둠
+  G.only = [me]; clear(me);
+  // 두 칸: 상자 줄을 두 번 지나면 두 칸이 차고, 쓰면 둘째 칸이 앞으로
+  const row = KT.BOX_ROWS[0], box = KT.boxes.find(b => b.s === row && b.d === 0);
+  keepPlace(me, row - 6, 0, 14); run(1.6);
+  const first = me.item;
+  for (const b of KT.boxes) b.alive = true;
+  keepPlace(me, row - 6, 0, 14); run(1.6);
+  assert(first && me.item === first && me.item2 && box, `상자 두 번이면 두 칸 (${me.item} · ${me.item2})`);
+  me.item = 'ball'; me.itemN = 1; me.item2 = 'shield'; me.itemN2 = 1;
+  tap('KeyQ');
+  assert(me.item === 'shield' && me.item2 === 'ball', 'Q로 두 칸 순서 바꾸기');
+  keepPlace(me, 40, 0, 15); tap('ControlLeft');
+  assert(me.shieldT > 9 && me.item === 'ball' && !me.item2, '왼쪽 Ctrl로 첫 칸을 쓰면 둘째 칸이 앞으로');
+  me.item = 'triple'; me.itemN = 2; me.item2 = 'zap'; me.itemN2 = 1; tap('KeyQ');
+  assert(me.item === 'zap' && me.item2 === 'triple' && me.itemN2 === 2, '불꽃 대시 ×3은 남은 개수째로 자리를 바꿈');
+  clear(me); me.item = 'boost'; me.itemN = 1; tap('ControlRight');
+  assert(!me.item && me.boostT > 0, '혼자 할 땐 오른쪽 Ctrl도 아이템');
+  // 방울 보호막: 한 번 막아 줌 (번개 구슬·함정)
+  clear(me); me.shieldT = 10;
+  const blocked = KT.spinOut(me, 'zap');
+  assert(blocked === 'block' && me.spinT === 0 && me.shieldT === 0, '보호막이 번개 구슬을 한 번 막고 터짐');
+  me.shieldT = 10; placeK(me, 40, 0, 10); KT.traps.length = 0;
+  { const p = KT.trackPoint(44, 0); KT.traps.push({ x: p.x, z: p.z, s: 44, d: 0, owner: c1, t0: KT.T() - 5 }); }
+  run(1);
+  assert(KT.traps.length === 0 && me.spinT === 0 && me.shieldT === 0, '보호막이 함정도 막음 (함정은 터짐)');
+  // 자석: 앞 카트에게 빠르게 끌려가다 바로 뒤에서 휙
+  clear(me); G.only = [me]; placeK(me, 40, -3, 15); placeK(c1, 100, 3, 0);
+  me.item = 'magnet'; me.itemN = 1; tap('ControlLeft');
+  let maxV = 0, endT = -1; const d0 = KT.sdiff(c1.s, me.s);
+  run(4, i => { maxV = Math.max(maxV, me.v); if (endT < 0 && me.magnetT === 0) endT = i / 60; });
+  assert(me.magnetTarget === c1 && maxV > KT.KART.VMAX * 1.1 && endT > 0 && endT < 3.5 && KT.sdiff(c1.s, me.s) < 5, `자석: ${d0.toFixed(0)}m 앞 카트에게 ${endT.toFixed(1)}초 만에 (최고 ${maxV.toFixed(1)}m/s)`);
+  // 천둥 번개: 내 앞 카트만 빙글 (보호막이 있으면 보호막만 터짐)
+  clear(me); clear(c1); clear(c2); const c3 = cpus[2]; clear(c3);
+  G.only = [me, c1, c2, c3]; placeK(me, 60, 0, 10); placeK(c1, 120, 0, 10); placeK(c2, 30, 0, 10); placeK(c3, 140, 0, 10); c3.shieldT = 10; run(0.1);
+  me.item = 'bolt'; me.itemN = 1; tap('ControlLeft');
+  assert(c1.spinT > 0 && c2.spinT === 0 && c3.spinT === 0 && c3.shieldT === 0 && me.spinT === 0, `천둥 번개: 앞 카트는 빙글, 뒤 카트는 그대로, 보호막은 대신 터짐 (앞 ${c1.spinT.toFixed(2)} 뒤 ${c2.spinT.toFixed(2)} 보호막 ${c3.spinT.toFixed(2)}/${c3.shieldT} 나 ${me.spinT.toFixed(2)})`);
+  // 통통 공: 곧장 날아가 벽에서 튕기고, 맞으면 빙글
+  clear(me); clear(c1); G.only = [me, c1];
+  placeK(me, 20, 0, 0); me.a += 0.55; placeK(c1, 400, 0, 0);
+  me.item = 'ball'; me.itemN = 1; tap('ControlLeft');
+  let bounced = 0; run(1.2, () => { if (KT.balls[0]) bounced = Math.max(bounced, KT.balls[0].bounces); });
+  assert(bounced >= 1, `통통 공이 벽에서 튕김 (${bounced}번)`);
+  KT.balls.length = 0; clear(c1); park(cpus.slice(1));
+  placeK(me, 20, 0, 0); placeK(c1, 34, 0, 0);
+  me.item = 'ball'; me.itemN = 1; tap('ControlLeft'); run(1);
+  assert(c1.spinT > 0 || c1.spinAt > KT.T() - 1.2, '통통 공이 앞 카트에 맞으면 빙글');
+  // 물감 폭탄: 앞쪽 카트들 화면에 물감, CPU는 휘청
+  clear(me); clear(c1); clear(c2); G.only = [me, c1, c2];
+  placeK(me, 40, 0, 10); placeK(c1, 100, 0, 10); placeK(c2, 20, 0, 10);
+  me.item = 'paint'; me.itemN = 1; tap('ControlLeft');
+  assert(c1.paintT > 3 && c2.paintT === 0, '물감 폭탄: 앞 카트만 물감');
+  me.paintT = 3.5; me.paintAt = KT.T(); KT.render();
+  G.only = null;
+  // 쉬움 CPU는 공격 아이템을 못 받음 · 꼴등은 번개·자석도 나옴
+  KT.settings.cpuLevel = 0; c1.place = 6;
+  const got = new Set(); for (let i = 0; i < 3000; i++) got.add(KT.rollItem(c1));
+  const attack = ['zap', 'star', 'bolt', 'ball', 'paint'].filter(x => got.has(x));
+  KT.settings.cpuLevel = 1; me.place = 6;
+  const gotMe = new Set(); for (let i = 0; i < 3000; i++) gotMe.add(KT.rollItem(me));
+  assert(attack.length === 0 && ['bolt', 'magnet', 'star', 'paint', 'ball'].every(x => gotMe.has(x)), `쉬움 CPU는 공격 아이템 없음 · 꼴등은 새 아이템이 다 나옴 (${[...gotMe].join(',')})`);
+  // 경주 중엔 탭을 닫으려 하면 한 번 물어봄 (Ctrl+W 실수)
+  const ev = { preventDefault: noop, returnValue: undefined };
+  for (const f of windowEvents.beforeunload || []) f(ev);
+  assert(ev.returnValue === '', '경주 중 탭을 닫으려 하면 붙잡음');
+  KT.toMenu();
+  const ev2 = { preventDefault: noop, returnValue: undefined };
+  for (const f of windowEvents.beforeunload || []) f(ev2);
+  assert(ev2.returnValue === undefined, '메뉴에선 그냥 닫힘');
+}
+{
+  // CPU도 새 아이템을 씀 (보통, 사람도 CPU처럼)
+  KT.settings.cpuLevel = 1; G.stats.used = {};
+  startRace('1p', true); skipCountdown(); run(90);
+  const used = Object.keys(G.stats.used || {});
+  assert(['shield', 'magnet', 'ball', 'paint'].filter(x => used.includes(x)).length >= 3, `CPU가 새 아이템을 씀 (${used.join(', ')})`);
+  G.forceCPU = null; KT.toMenu();
+}
+
+// ---------- 19. 그 밖 ----------
+console.log('\n[19] 그 밖');
 KT.toMenu(); KT.setDemoPaused(true); KT.render();
 assert(karts.every(k => k.mesh.group.position.distanceTo(new sandbox.THREE.Vector3(k.x, k.y, k.z)) < 0.01) && !G3.podiumBase.visible && G3.showroom.every(m => !m.group.visible),
   '시범 레이스를 멈춰 둬도 카트가 제자리에 그려지고 시상대·선택 화면 카트는 숨김');
