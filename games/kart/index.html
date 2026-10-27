@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#f76b39">
 <title>몬스터 카트 · 놀자</title>
-<link rel="stylesheet" href="../../shared/nolja.css?v=20261027f">
-<link rel="stylesheet" href="../../shared/lobby.css?v=20261027f">
-<link rel="stylesheet" href="kart.css?v=20261027f">
+<link rel="stylesheet" href="../../shared/nolja.css?v=20261027g">
+<link rel="stylesheet" href="../../shared/lobby.css?v=20261027g">
+<link rel="stylesheet" href="kart.css?v=20261027g">
 </head>
 <body>
 <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -51,7 +51,7 @@
     <section class="connection-card" aria-labelledby="controllerTitle"><span class="connection-icon"><svg aria-hidden="true" class="icon"><use href="#i-wheel"/></svg></span><div class="connection-copy"><h2 id="controllerTitle">손안의 작은 핸들, 조이콘</h2><p id="connectionStatus">키보드만으로도 바로 달릴 수 있어요.</p></div><div class="connection-actions"><button id="btnSwap" class="text-button">P1 ↔ P2 바꾸기</button><button id="btnConnect" class="connect-button"><span class="plus-icon" aria-hidden="true">+</span> 조이콘 연결</button></div></section>
     <div class="secondary-grid">
       <details class="club-details" id="controllerDetails"><summary><span><svg aria-hidden="true" class="icon"><use href="#i-pad"/></svg> 컨트롤러 상태 · 연결 방법</span><svg aria-hidden="true" class="icon chevron"><use href="#i-chevron"/></svg></summary><div class="details-content"><p class="small">윈도우 블루투스에서 조이콘 측면의 동그란 버튼을 길게 눌러 페어링한 뒤, ‘조이콘 연결’을 눌러주세요. 두 개를 연결하려면 한 번씩 눌러주세요. 조이콘을 가로로 잡고(스틱이 왼쪽) 기울이면 아래 눈금이 움직여요.</p><div id="hidWarn" class="warn hidden" role="status"></div><div id="slots" aria-live="polite"></div></div></details>
-      <details class="club-details" id="settingsDetails"><summary><span><svg aria-hidden="true" class="icon"><use href="#i-sliders"/></svg> 그래픽 · 플레이 설정</span><svg aria-hidden="true" class="icon chevron"><use href="#i-chevron"/></svg></summary><div class="details-content"><div class="setting-title">그래픽 품질</div><div id="qRow" class="row seg"><button data-q="auto">자동</button><button data-q="high">높음</button><button data-q="mid">보통</button><button data-q="low">낮음</button></div><div id="gfxInfo" class="small gfx-info"></div><label class="set" for="steer">핸들 감도 <input id="steer" type="range" min="15" max="45" step="1"><span id="steerV" class="small"></span></label><p class="small">조이콘을 이만큼 기울이면 핸들이 끝까지 꺾여요. 작을수록 예민해요.</p><label class="set guide-setting"><input id="autoGas" type="checkbox"> 자동 가속</label><p class="small">가속 버튼을 안 눌러도 계속 달려요. 아이들과 할 때 좋아요.</p><label class="set guide-setting"><input id="assist" type="checkbox"> 핸들 보조</label><p class="small">길 밖으로 나가려 하면 살짝 돌려줘요.</p><label class="set guide-setting"><input id="flip0" type="checkbox"> P1 핸들 방향 반대로</label><label class="set"><input id="flip1" type="checkbox"> P2 핸들 방향 반대로</label><p class="small">조이콘을 오른쪽으로 기울였는데 왼쪽으로 가면 켜 주세요.</p><div class="setting-title sound-title">소리 크기</div><label class="set" for="volMusic">음악 <input id="volMusic" type="range" min="0" max="100" step="5"><span id="volMusicV" class="small"></span></label><label class="set" for="volSfx">효과음 <input id="volSfx" type="range" min="0" max="100" step="5"><span id="volSfxV" class="small"></span></label><label class="set" for="volCrowd">관중 <input id="volCrowd" type="range" min="0" max="100" step="5"><span id="volCrowdV" class="small"></span></label><p class="small">레이스 중엔 신나는 곡과 엔진 소리가 나와요. 0이면 꺼져요.</p></div></details>
+      <details class="club-details" id="settingsDetails"><summary><span><svg aria-hidden="true" class="icon"><use href="#i-sliders"/></svg> 그래픽 · 플레이 설정</span><svg aria-hidden="true" class="icon chevron"><use href="#i-chevron"/></svg></summary><div class="details-content"><div class="setting-title">그래픽 품질</div><div id="qRow" class="row seg"><button data-q="auto">자동</button><button data-q="high">높음</button><button data-q="mid">보통</button><button data-q="low">낮음</button></div><div id="gfxInfo" class="small gfx-info"></div><label class="set" for="steer">핸들 감도 <input id="steer" type="range" min="15" max="45" step="1"><span id="steerV" class="small"></span></label><p class="small">조이콘을 이만큼 기울이면 핸들이 끝까지 꺾여요. 작을수록 예민해요.</p><label class="set guide-setting"><input id="autoGas" type="checkbox"> 자동 가속</label><p class="small">가속 버튼을 안 눌러도 계속 달려요. 아이들과 할 때 좋아요.</p><label class="set guide-setting"><input id="assist" type="checkbox"> 핸들 보조</label><p class="small">길 밖으로 나가려 하면 살짝 돌려줘요.</p><label class="set guide-setting"><input id="flip0" type="checkbox"> P1 핸들 방향 반대로</label><label class="set"><input id="flip1" type="checkbox"> P2 핸들 방향 반대로</label><p class="small">조이콘을 오른쪽으로 기울였는데 왼쪽으로 가면 켜 주세요.</p><div class="setting-title sound-title">소리 크기</div><label class="set" for="volMusic">음악 <input id="volMusic" type="range" min="0" max="100" step="5"><span id="volMusicV" class="small"></span></label><label class="set" for="volSfx">효과음 <input id="volSfx" type="range" min="0" max="100" step="5"><span id="volSfxV" class="small"></span></label><label class="set" for="volCrowd">관중·주변 소리 <input id="volCrowd" type="range" min="0" max="100" step="5"><span id="volCrowdV" class="small"></span></label><p class="small">레이스 중엔 코스마다 다른 곡과 엔진 소리, 파도·바람·새 같은 주변 소리가 나와요. 0이면 꺼져요.</p></div></details>
     </div>
     <footer class="club-footer"><button id="btnHome" class="text-button">← 놀자 라운지</button><span>조이콘 스트랩을 꼭 끼고, 주변 공간을 확보해 주세요.</span><span class="footer-signoff">LITTLE FRIENDS, LOVELY GAMES.</span></footer>
   </main>
@@ -63,11 +63,11 @@
 <div id="pause" class="overlay hidden"><div class="panel center pause-panel"><span class="pit-stop-icon"><svg aria-hidden="true" class="icon"><use href="#i-wheel"/></svg></span><p class="eyebrow">A LITTLE PIT STOP</p><div class="big">잠깐, 쉬어갈까요?</div><p id="pauseSub" class="sub">카트는 그대로 기다리고 있어요.</p><div class="row modal-actions"><button id="btnResume" class="primary">계속 달리기 <span aria-hidden="true">→</span></button><button id="btnRestart">처음부터 다시</button><button id="btnQuit">레이스 설정으로</button></div><div id="pauseInfo" class="small"></div></div></div>
 <div id="result" class="overlay bottom hidden"><div class="panel center result-panel"><div class="finish-line" aria-hidden="true"></div><p id="resEyebrow" class="eyebrow">ACROSS THE FINISH LINE</p><div id="resTitle" class="big"></div><p id="resRecord" class="result-record hidden"></p><div id="resBody" class="sub"></div><div class="row modal-actions"><button id="btnAgain" class="primary">한 판 더! <span aria-hidden="true">↗</span></button><button id="btnReselect">레이서 바꾸기</button><button id="btnMenu">레이스 설정</button></div><div id="resHint" class="small result-hint">조이콘 버튼 / Enter = 다시 달리기</div></div></div>
 <script src="../../shared/vendor/three.min.js"></script>
-<script src="../../shared/store.js?v=20261027f"></script>
-<script src="../../shared/audio.js?v=20261027f"></script>
-<script src="../../shared/joycon.js?v=20261027f"></script>
-<script src="../../shared/characters.js?v=20261027f"></script>
-<script src="kart.js?v=20261027f"></script>
-<script src="kart-ui.js?v=20261027f"></script>
+<script src="../../shared/store.js?v=20261027g"></script>
+<script src="../../shared/audio.js?v=20261027g"></script>
+<script src="../../shared/joycon.js?v=20261027g"></script>
+<script src="../../shared/characters.js?v=20261027g"></script>
+<script src="kart.js?v=20261027g"></script>
+<script src="kart-ui.js?v=20261027g"></script>
 </body>
 </html>

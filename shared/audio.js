@@ -6,7 +6,8 @@
  *  - 효과음: hit(세기, { spin, perfect, wrong, kind }) · bounce(속도 m/s) · net() · whoosh(세기) · toss() · squeak()
  *            point() · tick() · ready()
  *  - 관중:   ambience(켜기) 웅성거림 · applause(세기 0~1) 박수 · ooh() 감탄 · groan() 아쉬움 · cheer(초) 함성
- *  - 음악:   music(켜기, 곡) 곡 'menu' 밝은 배경 음악 · 'race' 신나는 레이스 곡 (계속 반복) · tempo(배) 빠르기
+ *            nature(종류) 카트 코스 주변 소리 'meadow' 새·산들바람 · 'beach' 파도·갈매기 · 'snow' 바람·풍경 · 'candy' 반짝반짝 (null이면 끔)
+ *  - 음악:   music(켜기, 곡) 곡 'menu' 밝은 배경 음악 · 'race' 신나는 레이스 곡 · 코스 곡 'beach' 'snow' 'candy' (계속 반복) · tempo(배) 빠르기
  *            jingle(크게) 이겼을 때 짧은 축하
  *  - 카트:   engine(id, 속도 0~1.4, 부스트 0~1, 드리프트 0~1) 엔진·타이어 소리 (계속, engine(id, null)이면 끔) · enginesOff()
  *            countdown(숫자, 0이면 출발) · boost() · spark(단계) · itemBox() · roulette() · itemGet() · zap() · crash()
@@ -180,6 +181,75 @@
       src.connect(f).connect(g).connect(this.bus.crowd); src.start(t); src.stop(t + len + 0.05);
       this.applause(clamp(len / 2.2, 0.4, 1));
     },
+    // ---------- 카트 코스 주변 소리 (관중 줄기로: 관중 소리 크기로 함께 조절) ----------
+    // 계속 깔리는 소리는 잡음을 걸러서 만들고, 가끔 생기는 소리(파도·갈매기·바람·풍경·반짝·새)는 0.12초마다 예약
+    nature(kind) {
+      if (!this.ctx || (this.nat ? this.nat.kind : null) === (kind || null)) return;
+      const c = this.ctx, t = c.currentTime;
+      if (this.nat) {   // 지금 소리는 1초 동안 줄이고 끔
+        const { out, nodes, timer } = this.nat; this.nat = null; clearInterval(timer);
+        out.gain.cancelScheduledValues(t); out.gain.setValueAtTime(Math.max(0.0001, out.gain.value), t); out.gain.linearRampToValueAtTime(0.0001, t + 1);
+        for (const n of nodes) n.stop(t + 1.05);
+        setTimeout(() => out.disconnect(), 1300);
+      }
+      if (!kind) return;
+      const out = c.createGain(); out.gain.setValueAtTime(0.0001, t); out.gain.linearRampToValueAtTime(1, t + 2); out.connect(this.bus.crowd);
+      const nat = this.nat = { kind, out, nodes: [], next: t + rnd(0.5, 2), beds: [] };
+      const bed = (freq, q, gain, type, sway = 0, swayDepth = 0, sweep = 0, sweepDepth = 0) => {   // 걸러 낸 잡음 + 크기·높이를 천천히 흔드는 LFO
+        const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+        src.buffer = this.buf; src.loop = true; src.playbackRate.value = rnd(0.8, 1);
+        f.type = type; f.frequency.value = freq; f.Q.value = q; g.gain.value = gain;
+        src.connect(f).connect(g).connect(out); src.start(t, Math.random()); nat.nodes.push(src);
+        for (const [rate, depth, param] of [[sway, swayDepth, g.gain], [sweep, sweepDepth, f.frequency]]) {
+          if (!rate) continue;
+          const l = c.createOscillator(), d = c.createGain(); l.frequency.value = rate; d.gain.value = depth;
+          l.connect(d).connect(param); l.start(t); nat.nodes.push(l);
+        }
+        nat.beds.push({ f, g, gain, freq });
+      };
+      if (kind === 'beach') bed(480, 0.7, 0.02, 'lowpass');                                        // 바다 바탕 (파도가 밀려올 때 커짐)
+      else if (kind === 'snow') { bed(420, 1.4, 0.032, 'bandpass', 0.09, 0.02, 0.06, 220); bed(900, 2.2, 0.016, 'bandpass', 0.13, 0.011, 0.11, 380); }   // 바람 두 갈래 "휘이잉"
+      else if (kind === 'meadow') bed(1100, 0.8, 0.012, 'bandpass', 0.11, 0.007);                    // 아주 약한 산들바람
+      else if (kind === 'candy') bed(2400, 3, 0.004, 'bandpass', 0.2, 0.003);                       // 아주 약한 반짝이 바탕
+      nat.timer = setInterval(() => this.naturePump(), 120);
+    },
+    naturePump() {
+      const n = this.nat; if (!n || !this.live()) return;
+      const t = this.ctx.currentTime, out = n.out;
+      if (t < n.next) return;
+      if (n.kind === 'beach') {   // 파도: 바다 바탕이 커지며 밝아졌다가 "쏴아" 부서지고 물러남. 가끔 갈매기
+        const W = n.beds[0], up = rnd(2.2, 3.2), down = rnd(3, 4.5);
+        W.g.gain.cancelScheduledValues(t); W.g.gain.setValueAtTime(W.gain, t); W.g.gain.linearRampToValueAtTime(rnd(0.045, 0.07), t + up); W.g.gain.exponentialRampToValueAtTime(W.gain, t + up + down);
+        W.f.frequency.cancelScheduledValues(t); W.f.frequency.setValueAtTime(W.freq, t); W.f.frequency.linearRampToValueAtTime(1500, t + up); W.f.frequency.exponentialRampToValueAtTime(W.freq, t + up + down);
+        this.noise(t + up - 0.15, 1.3, 2800, 0.6, 0.018, out, 'highpass');
+        if (Math.random() < 0.4) this.gull(t + rnd(0.5, up + down), out);
+        n.next = t + up + down + rnd(0.3, 1.8);
+      } else if (n.kind === 'snow') {   // 바람이 "휘잉" 세졌다가 가라앉음. 가끔 처마 끝 풍경 "딸랑"
+        for (const W of n.beds) { W.g.gain.setTargetAtTime(W.gain * rnd(1.8, 2.6), t, 1); W.g.gain.setTargetAtTime(W.gain, t + rnd(2.5, 4), 1.4); }
+        if (Math.random() < 0.45) this.chimes(t + rnd(0.5, 3), out);
+        n.next = t + rnd(7, 12);
+      } else if (n.kind === 'candy') {   // 높은 반짝 소리 한두 개 (펜타토닉이라 아무렇게나 울려도 예쁨), 가끔 거품 "뽁"
+        for (let i = 0, k = 1 + (Math.random() < 0.4); i < k; i++) { const f = mtof([88, 90, 93, 95, 97, 100][Math.floor(Math.random() * 6)]); this.tone(t + i * 0.12, f, f, 0.45, 0.02, 'sine', out, 0.002); }
+        if (Math.random() < 0.25) this.tone(t + 0.3, 380, 950, 0.08, 0.028, 'sine', out);
+        n.next = t + rnd(0.8, 2.2);
+      } else if (n.kind === 'meadow') {   // 새가 "짹짹" 두세 번 (가끔 "삐요" 내려오는 소리)
+        const f0 = rnd(2600, 3400), k = 2 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < k; i++) this.tone(t + i * rnd(0.09, 0.14), f0 * rnd(0.95, 1.05), f0 * 1.3, 0.06, 0.026, 'sine', out);
+        if (Math.random() < 0.3) this.tone(t + 0.6, f0 * 1.2, f0 * 0.75, 0.22, 0.02, 'sine', out);
+        n.next = t + rnd(2.5, 6);
+      }
+    },
+    gull(t, out) {   // 갈매기 "꺄~ 꺄~": 올라갔다 내려오는 높은 소리 두세 번
+      for (let i = 0, k = 2 + (Math.random() < 0.5); i < k; i++) {
+        const t0 = t + i * rnd(0.32, 0.45), f = rnd(1300, 1600);
+        this.tone(t0, f, f * 1.45, 0.1, 0.022, 'triangle', out, 0.01);
+        this.tone(t0 + 0.1, f * 1.45, f * 0.9, 0.24, 0.02, 'triangle', out, 0.01);
+      }
+    },
+    chimes(t, out) {   // 풍경: 높은 종 서너 개가 엇갈려 "딸랑" (눈 마을 곡과 같은 D장조 펜타토닉)
+      const notes = [86, 88, 90, 93, 95];
+      for (let i = 0, k = 3 + Math.floor(Math.random() * 2); i < k; i++) { const f = mtof(notes[Math.floor(Math.random() * notes.length)]); this.tone(t + i * rnd(0.08, 0.2), f, f, rnd(0.6, 1.1), 0.01, 'sine', out, 0.002); }
+    },
 
     // ---------- 음악 ----------
     // menu: 밝은 4/4 · 112bpm · C-G-Am-F-C-G-F-G 8마디 반복. 마림바 멜로디 + 엇박 코드 + 베이스 + 가벼운 드럼
@@ -213,6 +283,25 @@
         if (s % 4 === 0) this.tone(t, 130, 45, 0.13, 0.24, 'sine', out);                                                                                  // 쿵쿵 킥
         if (s === 4 || s === 12) this.noise(t, 0.1, 1900, 0.8, 0.075, out);                                                                              // 스네어
         if (s % 2 === 1) this.noise(t, 0.02, 9000, 0.7, 0.02, out, 'highpass');                                                                         // 하이햇
+      } else if (song.style === 'surf') {   // 바닷가: "둥 · 둥둥" 칼립소 베이스 · 우쿨렐레 엇박 · 림 "탁" · 셰이커
+        if (s === 0 || s === 6 || s === 8 || s === 14) { const n = chord.bass - 12 + (s === 6 || s === 14 ? 7 : 0); this.tone(t, mtof(n), mtof(n), q * 0.45, 0.21, 'triangle', out, 0.006); }
+        if (s % 4 === 2 || s === 7 || s === 15) for (const n of chord.keys) this.tone(t, mtof(n), mtof(n), 0.09, 0.038, 'triangle', out);
+        if (s === 0 || s === 8) this.tone(t, 110, 50, 0.12, 0.17, 'sine', out);
+        if (s === 4 || s === 12) this.noise(t, 0.04, 2600, 4, 0.07, out);
+        this.noise(t, 0.035, 7600, 1, s % 2 ? 0.011 : 0.02, out, 'highpass');
+      } else if (song.style === 'sleigh') {   // 눈 마을: "쿵(으뜸음)·짝(5도)" 베이스 · 마디마다 포근하게 깔리는 화음 · 썰매 방울 "찰랑"
+        if (s % 4 === 0) { const n = chord.bass - 12 + (s % 8 ? 7 : 0); this.tone(t, mtof(n), mtof(n), q * 0.8, 0.2, 'triangle', out, 0.01); }
+        if (s === 0) for (const n of chord.keys) this.tone(t, mtof(n), mtof(n), q * 3.6, 0.022, 'triangle', out, 0.08);
+        if (s % 4 === 2) for (const n of chord.keys) this.tone(t, mtof(n + 12), mtof(n + 12), 0.1, 0.016, 'sine', out);
+        if (s === 0 || s === 8) this.tone(t, 115, 50, 0.12, 0.15, 'sine', out);
+        if (s === 4 || s === 12) this.noise(t, 0.08, 1900, 0.8, 0.045, out);
+        if (s % 2 === 0) { this.noise(t, 0.09, 7200, 2.5, s % 4 ? 0.03 : 0.05, out); this.noise(t + 0.02, 0.07, 9200, 3, 0.022, out); }
+      } else if (song.style === 'bubble') {   // 사탕 공원: 통통 튀는 옥타브 베이스 · 16분음표로 굴리는 반짝 화음 · 손뼉 "짝"
+        if (s % 2 === 0) { const n = chord.bass - (s % 4 ? 0 : 12); this.tone(t, mtof(n), mtof(n), q * 0.35, 0.08, 'square', out, 0.004); this.tone(t, mtof(n), mtof(n), q * 0.4, 0.13, 'triangle', out, 0.004); }
+        { const n = chord.keys[s % 3] + 12; this.tone(t, mtof(n), mtof(n), 0.07, 0.016, 'triangle', out); }
+        if (s === 0 || s === 8) this.tone(t, 125, 48, 0.12, 0.2, 'sine', out);
+        if (s === 4 || s === 12) { this.noise(t, 0.07, 1500, 1.1, 0.06, out); this.noise(t + 0.012, 0.06, 2300, 1.4, 0.035, out); }
+        if (s % 2 === 1) this.noise(t, 0.018, 9500, 0.7, 0.012, out, 'highpass');
       } else {
         if (s % 4 === 0) this.tone(t, mtof(chord.bass - 12) * (s === 8 ? 1.5 : 1), mtof(chord.bass - 12), q * 0.9, 0.22, 'triangle', out, 0.01);
         if (s % 4 === 2) for (const n of chord.keys) this.tone(t, mtof(n), mtof(n), 0.16, 0.045, 'triangle', out);   // 엇박 코드 "짠"
@@ -222,9 +311,23 @@
       }
       for (const [at, note, len] of song.melody[bar]) {
         if (at !== s) continue;
+        const f = mtof(note);
         if (song.style === 'drive') {   // 리드: 살짝 거친 네모파 + 맑은 사인파
-          this.tone(t, mtof(note), mtof(note), Math.min(0.45, len * q / 4 + 0.05), 0.045, 'square', out);
-          this.tone(t, mtof(note), mtof(note), Math.min(0.45, len * q / 4 + 0.05), 0.07, 'sine', out);
+          this.tone(t, f, f, Math.min(0.45, len * q / 4 + 0.05), 0.045, 'square', out);
+          this.tone(t, f, f, Math.min(0.45, len * q / 4 + 0.05), 0.07, 'sine', out);
+        } else if (song.style === 'surf') {   // 스틸드럼: 맑은 사인 + 살짝 어긋난 배음이 빨리 사라짐
+          const d = Math.min(0.5, len * q / 4 + 0.12);
+          this.tone(t, f, f, d, 0.115, 'sine', out);
+          this.tone(t, f * 2.02, f * 2.02, d * 0.5, 0.036, 'sine', out);
+          this.tone(t, f * 3.01, f * 3.01, 0.06, 0.014, 'triangle', out);
+        } else if (song.style === 'sleigh') {   // 글로켄슈필: 맑고 오래 울리는 종 + 종 특유의 어긋난 배음
+          this.tone(t, f, f, 0.55, 0.075, 'sine', out, 0.002);
+          this.tone(t, f * 2.76, f * 2.76, 0.18, 0.018, 'sine', out, 0.002);
+        } else if (song.style === 'bubble') {   // 통통 튀는 네모파 + 세모파, 한 옥타브 위 반짝
+          const d = Math.min(0.35, len * q / 4 + 0.04);
+          this.tone(t, f, f, d, 0.035, 'square', out);
+          this.tone(t, f, f, d, 0.05, 'triangle', out);
+          this.tone(t, f * 2, f * 2, 0.06, 0.018, 'sine', out);
         } else {
           this.tone(t, mtof(note), mtof(note), Math.min(0.5, len * q / 4 + 0.08), 0.1, 'sine', out);                  // 마림바
           this.tone(t, mtof(note) * 4, mtof(note) * 4, 0.05, 0.02, 'sine', out);
@@ -384,10 +487,60 @@
     [[0, 79, 2], [2, 83, 2], [4, 86, 4], [8, 83, 2], [10, 79, 2], [12, 74, 4]],
     [[0, 80, 4], [4, 76, 2], [6, 80, 2], [8, 83, 6], [14, 80, 2]],
   ];
+  // 카트 코스 곡 (8마디 반복, 마지막 마디는 다시 처음으로 끌어당김)
+  // 노을 바닷가: 132bpm · F-B♭-C-F-Dm-B♭-C-C7. 엇박으로 통통 튀는 스틸드럼
+  const BEACH_CHORDS = [
+    { bass: 41, keys: [65, 69, 72] }, { bass: 46, keys: [65, 70, 74] }, { bass: 48, keys: [64, 67, 72] }, { bass: 41, keys: [65, 69, 72] },
+    { bass: 50, keys: [65, 69, 74] }, { bass: 46, keys: [65, 70, 74] }, { bass: 48, keys: [64, 67, 72] }, { bass: 48, keys: [64, 70, 72] },
+  ];
+  const BEACH_MELODY = [
+    [[0, 81, 2], [3, 79, 1], [4, 77, 2], [6, 81, 2], [8, 84, 3], [11, 81, 1], [12, 79, 4]],
+    [[0, 82, 2], [3, 81, 1], [4, 79, 2], [6, 77, 2], [8, 74, 4], [12, 77, 4]],
+    [[0, 79, 2], [3, 77, 1], [4, 76, 2], [6, 79, 2], [8, 84, 3], [11, 82, 1], [12, 79, 4]],
+    [[0, 81, 3], [3, 77, 1], [4, 72, 4], [8, 77, 2], [10, 81, 2], [12, 84, 4]],
+    [[0, 86, 2], [3, 84, 1], [4, 81, 2], [6, 77, 2], [8, 81, 3], [11, 84, 1], [12, 86, 4]],
+    [[0, 86, 2], [2, 84, 2], [4, 82, 2], [6, 81, 2], [8, 82, 4], [12, 77, 4]],
+    [[0, 79, 2], [3, 81, 1], [4, 82, 2], [6, 84, 2], [8, 79, 3], [11, 76, 1], [12, 72, 4]],
+    [[0, 76, 2], [2, 79, 2], [4, 82, 2], [6, 84, 2], [8, 88, 4], [12, 84, 2], [14, 82, 2]],
+  ];
+  // 눈꽃 마을: 144bpm · D-Bm-G-A-D-Bm-Em-A7. 썰매 방울과 글로켄슈필
+  const SNOW_CHORDS = [
+    { bass: 38, keys: [62, 66, 69] }, { bass: 47, keys: [62, 66, 71] }, { bass: 43, keys: [62, 67, 71] }, { bass: 45, keys: [61, 64, 69] },
+    { bass: 38, keys: [62, 66, 69] }, { bass: 47, keys: [62, 66, 71] }, { bass: 40, keys: [62, 67, 71] }, { bass: 45, keys: [61, 67, 69] },
+  ];
+  const SNOW_MELODY = [
+    [[0, 81, 2], [2, 78, 2], [4, 74, 2], [6, 78, 2], [8, 81, 4], [12, 86, 4]],
+    [[0, 83, 2], [2, 81, 2], [4, 78, 2], [6, 81, 2], [8, 83, 6], [14, 81, 2]],
+    [[0, 79, 2], [2, 83, 2], [4, 86, 4], [8, 83, 2], [10, 79, 2], [12, 74, 4]],
+    [[0, 76, 2], [2, 78, 2], [4, 79, 2], [6, 81, 2], [8, 76, 4], [12, 73, 4]],
+    [[0, 81, 2], [2, 78, 2], [4, 74, 2], [6, 78, 2], [8, 81, 2], [10, 86, 2], [12, 85, 2], [14, 83, 2]],
+    [[0, 83, 4], [4, 81, 2], [6, 78, 2], [8, 74, 4], [12, 78, 4]],
+    [[0, 79, 2], [2, 78, 2], [4, 76, 2], [6, 79, 2], [8, 83, 4], [12, 81, 4]],
+    [[0, 79, 2], [2, 76, 2], [4, 73, 2], [6, 76, 2], [8, 79, 2], [10, 81, 2], [12, 85, 4]],
+  ];
+  // 하트 사탕 공원: 156bpm · A-F♯m-D-E-A-F♯m-D-E7. 통통 튀는 사탕 팝
+  const CANDY_CHORDS = [
+    { bass: 45, keys: [61, 64, 69] }, { bass: 42, keys: [61, 66, 69] }, { bass: 38, keys: [62, 66, 69] }, { bass: 40, keys: [59, 64, 68] },
+    { bass: 45, keys: [61, 64, 69] }, { bass: 42, keys: [61, 66, 69] }, { bass: 38, keys: [62, 66, 69] }, { bass: 40, keys: [62, 64, 68] },
+  ];
+  const CANDY_MELODY = [
+    [[0, 81, 1], [2, 85, 1], [4, 88, 2], [6, 85, 2], [8, 81, 2], [10, 83, 2], [12, 85, 4]],
+    [[0, 85, 1], [2, 81, 1], [4, 78, 2], [6, 81, 2], [8, 85, 4], [12, 83, 2], [14, 81, 2]],
+    [[0, 78, 2], [2, 81, 2], [4, 86, 2], [6, 85, 2], [8, 83, 2], [10, 81, 2], [12, 78, 4]],
+    [[0, 80, 2], [2, 83, 2], [4, 88, 4], [8, 86, 2], [10, 83, 2], [12, 80, 4]],
+    [[0, 81, 1], [2, 85, 1], [4, 88, 2], [6, 90, 2], [8, 88, 2], [10, 85, 2], [12, 81, 4]],
+    [[0, 78, 2], [2, 81, 2], [4, 85, 2], [6, 81, 2], [8, 90, 4], [12, 88, 4]],
+    [[0, 86, 2], [2, 85, 2], [4, 83, 2], [6, 81, 2], [8, 78, 2], [10, 81, 2], [12, 86, 4]],
+    [[0, 88, 2], [2, 86, 2], [4, 83, 2], [6, 80, 2], [8, 83, 2], [10, 86, 2], [12, 88, 4]],
+  ];
   const SONGS = {
     menu: { bpm: 112, style: 'pop', chords: CHORDS, melody: MELODY },
     race: { bpm: 148, style: 'drive', chords: RACE_CHORDS, melody: RACE_MELODY },
+    beach: { bpm: 132, style: 'surf', chords: BEACH_CHORDS, melody: BEACH_MELODY },
+    snow: { bpm: 144, style: 'sleigh', chords: SNOW_CHORDS, melody: SNOW_MELODY },
+    candy: { bpm: 156, style: 'bubble', chords: CANDY_CHORDS, melody: CANDY_MELODY },
   };
+  A.SONGS = SONGS;   // (테스트에서 곡 목록 확인용)
 
   // 다른 탭으로 가면 소리를 멈췄다가 돌아오면 다시
   if (typeof document !== 'undefined' && document.addEventListener) {

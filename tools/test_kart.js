@@ -660,8 +660,33 @@ console.log('\n[16] 바퀴 시간 · 기록 · 처음부터 다시');
   KT.settings.gp = false; G.only = null; G.forceCPU = null; KT.toMenu();
 }
 
-// ---------- 17. 그 밖 ----------
-console.log('\n[17] 그 밖');
+// ---------- 17. 코스마다 레이스 곡 · 주변 소리 ----------
+console.log('\n[17] 코스마다 레이스 곡 · 주변 소리');
+{
+  const songs = [], ambs = [];
+  let menuQuiet = true;
+  for (let c = 0; c < 4; c++) {
+    KT.settings.course = c; KT.settings.gp = false; KT.toMenu(); run(0.2);
+    menuQuiet = menuQuiet && !AU.nat;
+    startRace('1p', true); skipCountdown(); run(0.5);
+    songs.push(AU.mus && AU.mus.name); ambs.push(AU.nat && AU.nat.kind);
+    for (let i = 0; i < 120; i++) { run(0.1); AU.pump(); AU.naturePump(); }   // 테스트엔 타이머가 없어서 곡·주변 소리를 직접 12초 돌림 (파도·갈매기·바람·풍경·새까지)
+  }
+  assert(songs.join(',') === KT.COURSES.map(c => c.song).join(',') && new Set(songs).size === 4, `코스마다 다른 레이스 곡 (${songs.join(', ')})`);
+  assert(ambs.join(',') === 'meadow,beach,snow,candy' && menuQuiet, `코스마다 주변 소리, 메뉴에선 없음 (${ambs.join(', ')})`);
+  KT.pause(); run(0.1);
+  const pausedQuiet = !AU.nat;
+  KT.resume(); run(0.1);
+  assert(pausedQuiet && AU.nat && AU.nat.kind === 'candy', '일시정지면 주변 소리를 끄고, 다시 달리면 켬');
+  KT.toMenu(); run(0.1);
+  assert(!AU.nat && AU.mus && AU.mus.name === 'menu', '메뉴로 나가면 주변 소리 없이 메뉴 곡');
+  const S = AU.SONGS, okSong = k => S[k] && S[k].chords.length === 8 && S[k].melody.length === 8 && S[k].melody.every(bar => bar.every(([at, n, len]) => at >= 0 && at + len <= 16 && n >= 60 && n <= 96));
+  assert(['beach', 'snow', 'candy'].every(okSong), '새 곡 악보: 8마디 · 음 위치·높이가 정상');
+  G.forceCPU = null; KT.settings.course = 0;
+}
+
+// ---------- 18. 그 밖 ----------
+console.log('\n[18] 그 밖');
 KT.toMenu(); KT.setDemoPaused(true); KT.render();
 assert(karts.every(k => k.mesh.group.position.distanceTo(new sandbox.THREE.Vector3(k.x, k.y, k.z)) < 0.01) && !G3.podiumBase.visible && G3.showroom.every(m => !m.group.visible),
   '시범 레이스를 멈춰 둬도 카트가 제자리에 그려지고 시상대·선택 화면 카트는 숨김');

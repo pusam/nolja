@@ -83,15 +83,17 @@ const game = {
 const sfx = (name, ...args) => { if (!game.demo && typeof A[name] === 'function') A[name](...args); };
 const sfxInit = () => A.init();
 // 화면에 맞춰 음악: 메뉴·캐릭터 선택·결과는 밝은 곡, 출발 신호부터 결승까지는 레이스 곡. 사람 카트는 엔진 소리
-const snd = { music: undefined, holdUntil: 0, tempo: 1 };   // tempo: 마지막 바퀴 빠르기 (일시정지 뒤 곡을 다시 틀어도 유지)
+const snd = { music: undefined, amb: null, holdUntil: 0, tempo: 1 };   // tempo: 마지막 바퀴 빠르기 (일시정지 뒤 곡을 다시 틀어도 유지)
 const VOL = [['volMusic', 'music'], ['volSfx', 'sfx'], ['volCrowd', 'crowd']];
 const racingNow = () => !game.demo && ['countdown', 'race', 'finish'].includes(game.state);
 function syncSound() {
   if (!A.ctx) return;   // 아직 클릭·키 입력 전이라 소리를 못 냄
   let m = null;
   if (menuOpen() || selectOpen() || (resultOpen() && T() > snd.holdUntil)) m = 'menu';
-  else if (racingNow() && !game.paused) m = 'race';
-  if (m !== snd.music) { snd.music = m; if (m) { A.music(true, m); A.tempo(m === 'race' ? snd.tempo : 1); } else A.music(false); }
+  else if (racingNow() && !game.paused) m = COURSE.song || 'race';
+  if (m !== snd.music) { snd.music = m; if (m) { A.music(true, m); A.tempo(m !== 'menu' ? snd.tempo : 1); } else A.music(false); }
+  const amb = (racingNow() && !game.paused) || resultOpen() ? COURSE.theme : null;   // 파도·바람·새… (메뉴·선택·일시정지는 조용히)
+  if (amb !== snd.amb) { snd.amb = amb; A.nature(amb); }
   for (const p of [0, 1]) {
     const k = humanKart(p);
     if (!k || !racingNow() || game.paused) { A.engine('p' + p, null); continue; }
@@ -122,24 +124,24 @@ function setDemoPaused(on) {
 // ============================================================
 const TRACK = { halfW: 8, wall: 15 };
 // 코스 목록. 모든 코스는 출발선 부근이 z = 0을 따라 +x로 가는 직선 (선택 화면·시상대·관중석이 그 자리에 있음)
-//  ramp: 점프대 · panels: 대시 판 s · boxRows: 아이템 상자 줄 s
+//  theme: 분위기(하늘·나무·장식, 주변 소리) · song: 레이스 곡 · ramp: 점프대 · panels: 대시 판 s · boxRows: 아이템 상자 줄 s
 //  zones: 길 위 구역 { s, len, d0, d1, type } — water 개울·mud 초콜릿 늪 (첨벙, 느려짐) · ice 얼음판 (핸들이 덜 먹고 미끄러짐)
 const COURSES = [
-  { name: '몬스터 서킷', en: 'MONSTER CIRCUIT', fact: '드리프트 · 아이템 · 점프', lapSec: 30, theme: 'meadow',
+  { name: '몬스터 서킷', en: 'MONSTER CIRCUIT', fact: '드리프트 · 아이템 · 점프', lapSec: 30, theme: 'meadow', song: 'race',
     cps: [[-20, 0], [40, 0], [88, 4], [122, 26], [132, 64], [112, 96], [74, 104], [44, 88], [18, 70], [-10, 72],
       [-40, 86], [-72, 102], [-104, 114], [-130, 98], [-140, 64], [-114, 16], [-74, 2]],
     ramp: { s: 394, len: 11, h: 1.7 }, panels: [176, 364, 612], boxRows: [84, 330, 548], zones: [] },
-  { name: '노을 바닷가', en: 'SUNSET BEACH', fact: '개울 점프 · 머리핀 · 모래 언덕', lapSec: 30, theme: 'beach',
+  { name: '노을 바닷가', en: 'SUNSET BEACH', fact: '개울 점프 · 머리핀 · 모래 언덕', lapSec: 30, theme: 'beach', song: 'beach',
     cps: [[-40, 0], [30, 0], [100, 0], [150, 4], [180, 22], [184, 52], [162, 72], [124, 72], [88, 84], [50, 72], [12, 84],
       [-26, 72], [-66, 80], [-100, 62], [-108, 30], [-86, 6]],
     ramp: { s: 92, len: 12, h: 2.0 }, panels: [72, 300, 452, 650], boxRows: [56, 334, 584],
     zones: [{ s: 108, len: 11, d0: -43, d1: 43, type: 'water' }] },
-  { name: '눈꽃 마을', en: 'SNOWFLAKE VILLAGE', fact: '스키 점프 · 미끄러운 얼음판 · 눈사람', lapSec: 35, theme: 'snow',
+  { name: '눈꽃 마을', en: 'SNOWFLAKE VILLAGE', fact: '스키 점프 · 미끄러운 얼음판 · 눈사람', lapSec: 35, theme: 'snow', song: 'snow',
     cps: [[-40, 0], [30, 0], [90, 0], [130, 18], [146, 52], [130, 86], [98, 100], [74, 126], [58, 158], [24, 178], [-14, 168],
       [-32, 138], [-38, 108], [-62, 84], [-98, 76], [-132, 56], [-134, 22], [-102, 3]],
     ramp: { s: 458, len: 13, h: 2.3 }, panels: [196, 335, 640], boxRows: [62, 300, 560],
     zones: [{ s: 372, len: 46, d0: -8.6, d1: 8.6, type: 'ice' }, { s: 600, len: 30, d0: -8.6, d1: 0, type: 'ice' }] },
-  { name: '하트 사탕 공원', en: 'SWEETHEART PARK', fact: '왼쪽으로 도는 하트 · 초콜릿 늪', lapSec: 30, theme: 'candy',
+  { name: '하트 사탕 공원', en: 'SWEETHEART PARK', fact: '왼쪽으로 도는 하트 · 초콜릿 늪', lapSec: 30, theme: 'candy', song: 'candy',
     cps: [[-40, 0], [20, 0], [41, 0], [63, -4], [81, -16], [94, -35], [98, -56], [94, -78], [82, -96], [64, -108], [43, -113],
       [31, -116], [22, -122], [16, -131], [13, -143], [8, -164], [-4, -182], [-22, -194], [-44, -198], [-65, -194], [-84, -181],
       [-96, -163], [-100, -141], [-100, -106], [-100, -70], [-100, -34], [-97, -21], [-90, -10], [-79, -3], [-66, 0]],
