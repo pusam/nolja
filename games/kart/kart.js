@@ -39,7 +39,8 @@ const settings = {
   mode: S.get('kart.mode', '2p'),            // '2p' 둘이 함께 | '1p' 혼자 (CPU랑)
   cpuLevel: S.get('kart.cpuLevel', 1),       // 0 쉬움 · 1 보통 · 2 어려움
   laps: S.get('kart.laps', 3),               // 바퀴 수
-  course: S.get('kart.course', 0),           // 0 몬스터 서킷 · 1 노을 바닷가
+  course: S.get('kart.course', 0),           // 0 몬스터 서킷 · 1 노을 바닷가 · 2 눈꽃 마을 · 3 하트 사탕 공원
+  gp: S.get('kart.gp', false),               // 그랑프리: 코스 넷을 차례로 달리고 점수 합산 (켜져 있으면 course 대신)
   autoGas: S.get('kart.autoGas', true),      // 자동 가속: 브레이크만 안 누르면 계속 달림 (아이들과 할 때)
   assist: S.get('kart.assist', true),        // 핸들 보조: 길 밖으로 나가려 하면 살짝 돌려줌
   steerAngle: S.get('kart.steerAngle', 28),  // 조이콘을 이만큼(도) 기울이면 핸들 끝까지
@@ -47,12 +48,13 @@ const settings = {
   quality: P0.quality,                       // 이하 공용 (테니스와 같이 씀)
   chars: P0.chars,
 };
-const KEYS = { mode: 'kart.mode', cpuLevel: 'kart.cpuLevel', laps: 'kart.laps', course: 'kart.course', autoGas: 'kart.autoGas', assist: 'kart.assist',
+const KEYS = { mode: 'kart.mode', cpuLevel: 'kart.cpuLevel', laps: 'kart.laps', course: 'kart.course', gp: 'kart.gp', autoGas: 'kart.autoGas', assist: 'kart.assist',
   steerAngle: 'kart.steerAngle', flip: 'kart.flip', quality: 'quality', chars: 'chars' };
 if (!['2p', '1p'].includes(settings.mode)) settings.mode = '2p';
 if (![0, 1, 2].includes(settings.cpuLevel)) settings.cpuLevel = 1;
 if (![2, 3, 5].includes(settings.laps)) settings.laps = 3;
 if (![0, 1, 2, 3].includes(settings.course)) settings.course = 0;
+settings.gp = settings.gp === true;
 if (!(settings.steerAngle >= 15 && settings.steerAngle <= 45)) settings.steerAngle = 28;
 settings.flip = Array.isArray(settings.flip) && settings.flip.length === 2 ? settings.flip.map(v => !!v) : [false, false];
 if (!Array.isArray(settings.chars) || settings.chars.length !== 2 || settings.chars.some(k => !Number.isInteger(k) || k < 0 || k >= CHARS.length)) settings.chars = [0, 1];
@@ -144,6 +146,8 @@ const COURSES = [
     ramp: { s: 500, len: 11, h: 1.8 }, panels: [120, 300, 570], boxRows: [60, 330, 450],
     zones: [{ s: 150, len: 34, d0: -8.6, d1: -3.5, type: 'mud' }, { s: 380, len: 34, d0: -8.6, d1: -3.5, type: 'mud' }, { s: 516, len: 10, d0: -43, d1: 43, type: 'mud' }] },
 ];
+const GP_COURSES = [0, 1, 2, 3];   // 그랑프리(몬스터 컵)에서 달리는 순서
+const lobbyCourse = () => settings.gp ? GP_COURSES[0] : settings.course;   // 메뉴 뒤 시범 레이스 코스
 let COURSE = COURSES[0], TR = null, L = 0, RAMP = null, ZONES = [], PANELS = [], BOX_ROWS = [], MAP = null;
 function loadCourse(i) {
   COURSE = COURSES[i] || COURSES[0];
@@ -239,7 +243,7 @@ function mapBox() {   // 미니맵: 트랙 모양을 0~1 상자에 맞춤
   for (let i = 0; i < TR.n; i++) { x0 = Math.min(x0, TR.px[i]); x1 = Math.max(x1, TR.px[i]); z0 = Math.min(z0, TR.pz[i]); z1 = Math.max(z1, TR.pz[i]); }
   return { x0, z0, w: x1 - x0, h: z1 - z0 };
 }
-loadCourse(settings.course);
+loadCourse(lobbyCourse());
 
 // ============================================================
 // 카트 — 앞뒤 속도 v + 옆으로 밀리는 속도 vl, 방향 a (앞 = (sin a, cos a)).
@@ -277,10 +281,14 @@ const tagOf = k => k.human === 0 ? 'P1' : k.human === 1 ? 'P2' : 'CPU';
 function setupRace(demo) {
   karts.length = 0; shots.length = 0; traps.length = 0;
   const humans = demo ? 0 : (settings.mode === '2p' ? 2 : 1);
-  const chars = [];
-  for (let p = 0; p < humans; p++) chars.push(settings.chars[p]);
-  const pool = shuffle(CHARS.map((_, k) => k).filter(k => !chars.includes(k)));
-  while (chars.length < 6) chars.push(pool.pop());
+  let chars = !demo && gp.on && gp.roster ? gp.roster.slice() : null;   // 그랑프리는 네 코스 내내 같은 6명 (자리 번호도 같게)
+  if (!chars) {
+    chars = [];
+    for (let p = 0; p < humans; p++) chars.push(settings.chars[p]);
+    const pool = shuffle(CHARS.map((_, k) => k).filter(k => !chars.includes(k)));
+    while (chars.length < 6) chars.push(pool.pop());
+    if (!demo && gp.on) gp.roster = chars.slice();
+  }
   // 출발 칸: 2열 3줄. 사람은 가운데 줄 (앞질러 가는 재미 + 너무 뒤처지지 않게)
   const grid = humans === 2 ? [2, 3, 0, 1, 4, 5] : humans === 1 ? [3, 0, 1, 2, 4, 5] : [0, 1, 2, 3, 4, 5];
   chars.forEach((ch, i) => {
@@ -741,7 +749,7 @@ function update() {
   readInputs(t);
   syncSound();
   if (game.paused || demoPauseAt !== null) return;
-  if (game.state === 'select') { if (selStartAt && t >= selStartAt) startRace(); updateParticles(dt); return; }
+  if (game.state === 'select') { if (selStartAt && t >= selStartAt) (settings.gp ? startGP : startRace)(); updateParticles(dt); return; }
   if (game.state === 'result') { updateParticles(dt); return; }
   if (game.state === 'countdown') countdown(t);
   acc += dt;
@@ -949,12 +957,33 @@ function hideOverlays(...ids) { for (const id of ids) $(id).classList.add('hidde
 const menuOpen = () => !$('menu').classList.contains('hidden');
 const resultOpen = () => !$('result').classList.contains('hidden');
 const selectOpen = () => !$('select').classList.contains('hidden');
+// ---------- 그랑프리 (몬스터 컵): 코스 넷을 차례로 달리고 등수 점수를 더해 종합 순위 ----------
+const GP_POINTS = [10, 8, 6, 4, 2, 1];   // 1~6등 점수 (꼴찌도 1점)
+const gp = { on: false, race: 0, roster: null, pts: [], places: [], scored: -1 };
+const gpLast = () => gp.on && gp.race >= GP_COURSES.length - 1;
+function startGP() {
+  Object.assign(gp, { on: true, race: 0, roster: null, pts: [0, 0, 0, 0, 0, 0], places: [[], [], [], [], [], []], scored: -1 });
+  startRace();
+}
+function gpScore(order) {   // 레이스가 끝나면 등수대로 점수 (같은 레이스를 두 번 세지 않게)
+  if (!gp.on || gp.scored === gp.race) return;
+  gp.scored = gp.race;
+  order.forEach((k, i) => { gp.pts[k.slot] += GP_POINTS[i] || 0; gp.places[k.slot][gp.race] = i + 1; });
+}
+function gpStandings() {   // 종합 순위: 점수가 높은 순, 같으면 방금 레이스에서 앞선 순
+  return karts.slice().sort((a, b) => gp.pts[b.slot] - gp.pts[a.slot] || gp.places[a.slot][gp.race] - gp.places[b.slot][gp.race]);
+}
+function resultNext() {   // 결과 화면 첫 버튼 · Enter · 조이콘 버튼: 그랑프리 다음 코스 / 그랑프리 다시 / 한 판 더
+  if (gp.on && !gpLast()) { gp.race++; startRace(); }
+  else if (gp.on) startGP();
+  else startRace();
+}
 function startRace() {
   setDemoPaused(false);
   sfxInit(); saveSettings();
   game.demo = false; game.paused = false; selStartAt = 0;
   hideOverlays('menu', 'result', 'pause', 'select');
-  switchCourse(settings.course);
+  switchCourse(gp.on ? GP_COURSES[gp.race] : settings.course);
   assignJoyCons();
   setupRace(false);
   game.state = 'countdown'; game.stateT = T(); game.goT = T() + 3.6; game.cd = 4;
@@ -963,9 +992,10 @@ function startRace() {
 }
 function toMenu() {
   setDemoPaused(false);
-  game.demo = true; game.paused = false; selStartAt = 0;
+  game.demo = true; game.paused = false; selStartAt = 0; gp.on = false;   // 그랑프리 중이었으면 여기서 끝
   hideOverlays('pause', 'result', 'select');
   $('menu').classList.remove('hidden');
+  switchCourse(lobbyCourse());   // 그랑프리 마지막 코스에 머물러 있지 않게 메뉴에서 고른 코스로
   setupRace(true);
   game.state = 'race'; game.goT = T();
   snd.tempo = 1; A.tempo(1); A.enginesOff();
@@ -974,6 +1004,8 @@ function toMenu() {
 function pause() {
   if (game.paused || !racingNow()) return;
   pausedAt = realNow(); game.paused = true; $('pause').classList.remove('hidden');
+  $('pauseSub').textContent = gp.on ? `그랑프리 ${gp.race + 1}번째 코스예요. 나가면 그랑프리가 끝나요.` : '카트는 그대로 기다리고 있어요.';
+  $('btnQuit').textContent = gp.on ? '그랑프리 그만두기' : '레이스 설정으로';
   A.enginesOff();
   $('pauseInfo').textContent = gfxInfoText();
 }
@@ -983,7 +1015,7 @@ function resume() {
 }
 function onConfirm() {
   // 결과가 뜬 직후 1.5초는 무시: 경주 중에 버튼을 연타하던 아이가 순위를 보기도 전에 다시 출발하지 않게
-  if (resultOpen()) { if (T() - game.stateT > 1.5) startRace(); return; }
+  if (resultOpen()) { if (T() - game.stateT > 1.5) resultNext(); return; }
   if (game.paused) { resume(); return; }
   if (menuOpen()) openSelect();
 }
@@ -994,17 +1026,51 @@ function showResult() {
   game.state = 'result'; game.stateT = T();
   const order = finalOrder();
   order.forEach((k, i) => { k.place = i + 1; });
-  const hum = order.filter(k => k.human >= 0);
-  const best = hum[0];
-  let title;
-  if (settings.mode === '2p' && hum.length === 2) title = best.place === 1 ? `${tagOf(best)} ${nameOf(best)} 우승!` : `${tagOf(best)} ${nameOf(best)} 승리! · ${best.place}등`;   // 둘 중 앞선 사람
-  else title = best && best.place === 1 ? '1등! 우승이에요!' : best ? `${best.place}등으로 골인!` : '레이스 끝!';
+  gpScore(order);
+  const hum = order.filter(k => k.human >= 0), two = settings.mode === '2p' && hum.length === 2;
+  const best = hum[0], who = k => two ? `${tagOf(k)} ${nameOf(k)} ` : '';
+  let title, body, eyebrow = 'ACROSS THE FINISH LINE', podium = order.slice(0, 3);
+  if (gp.on) {
+    const st = gpStandings(), bestG = st.find(k => k.human >= 0), rank = st.indexOf(bestG) + 1;
+    if (gpLast()) {   // 마지막 코스: 종합 순위로 시상대
+      eyebrow = 'MONSTER CUP · FINAL'; podium = st.slice(0, 3);
+      title = who(bestG) + (rank === 1 ? '그랑프리 우승!' : `종합 ${rank}위!`);
+      for (let i = 0; i < 3; i++) confetti(6, 4.5 + i * 0.6, (i - 1) * 2.4);
+    } else {
+      eyebrow = `MONSTER CUP · RACE ${gp.race + 1} / ${GP_COURSES.length}`;
+      title = `${who(best)}${best.place}등${best.finished ? ' 골인' : ''}! +${GP_POINTS[best.place - 1]}점`;
+    }
+    body = gpTable(st);
+  } else {
+    if (two) title = best.place === 1 ? `${tagOf(best)} ${nameOf(best)} 우승!` : `${tagOf(best)} ${nameOf(best)} 승리! · ${best.place}등`;   // 둘 중 앞선 사람
+    else title = best && best.place === 1 ? '1등! 우승이에요!' : best ? `${best.place}등으로 골인!` : '레이스 끝!';
+    body = '<ol class="result-list">' + order.map(k => `<li class="${k.human >= 0 ? 'me p' + (k.human + 1) : ''}"><b>${k.place}등</b><span class="who">${nameOf(k)}</span><span class="tag">${tagOf(k)}</span><span class="time">${k.finished ? fmtTime(k.finishT) : '—'}</span></li>`).join('') + '</ol>';
+  }
+  $('resEyebrow').textContent = eyebrow;
   $('resTitle').textContent = title;
-  $('resBody').innerHTML = '<ol class="result-list">' + order.map(k => `<li class="${k.human >= 0 ? 'me p' + (k.human + 1) : ''}"><b>${k.place}등</b><span class="who">${nameOf(k)}</span><span class="tag">${tagOf(k)}</span><span class="time">${k.finished ? fmtTime(k.finishT) : '—'}</span></li>`).join('') + '</ol>';
+  $('resBody').innerHTML = body;
+  // 첫 버튼: 그랑프리 중이면 다음 코스, 끝났으면 그랑프리 다시, 아니면 한 판 더. 그랑프리 중엔 레이서를 못 바꿈
+  const mid = gp.on && !gpLast(), next = mid ? COURSES[GP_COURSES[gp.race + 1]] : null;
+  $('btnAgain').innerHTML = mid ? `다음 코스 · ${next.name} <span aria-hidden="true">→</span>` : `${gp.on ? '그랑프리 다시!' : '한 판 더!'} <span aria-hidden="true">↗</span>`;
+  $('btnReselect').classList.toggle('hidden', mid);
+  $('btnMenu').textContent = mid ? '그랑프리 그만두기' : '레이스 설정';
+  $('resHint').textContent = `조이콘 버튼 / Enter = ${mid ? '다음 코스' : gp.on ? '그랑프리 다시' : '다시 달리기'}`;
+  $('result').classList.toggle('gp-result', gp.on);
   $('result').classList.remove('hidden');
   A.enginesOff(); A.tempo(1);
   snd.holdUntil = Math.max(snd.holdUntil, T() + 2);
-  buildPodium(order.slice(0, 3));
+  buildPodium(podium);
+  G3.trophyOn = gpLast();
+}
+// 그랑프리 순위표: 종합 순위 · 이름 · 코스마다 등수 칸(금·은·동) · 점수 (+방금 얻은 점수)
+function gpTable(st) {
+  return '<ol class="result-list gp-list">' + st.map((k, i) => {
+    const pl = gp.places[k.slot], got = GP_POINTS[pl[gp.race] - 1] || 0;
+    const chips = GP_COURSES.map((_, r) => `<i class="${pl[r] ? 'm' + Math.min(pl[r], 4) : 'todo'}">${pl[r] || ''}</i>`).join('');
+    const said = GP_COURSES.map((c, r) => pl[r] ? `${COURSES[c].name} ${pl[r]}등` : '').filter(Boolean).join(', ');
+    return `<li class="${k.human >= 0 ? 'me p' + (k.human + 1) : ''}"><b>${i + 1}위</b><span class="who">${nameOf(k)}</span><span class="tag">${tagOf(k)}</span>`
+      + `<span class="races" role="img" aria-label="${said}">${chips}</span><span class="pts">${gp.pts[k.slot]}점<small>+${got}</small></span></li>`;
+  }).join('') + '</ol>';
 }
 
 // ============================================================
@@ -1016,7 +1082,7 @@ const selCPU = i => settings.mode === '1p' && i === 1;
 function openSelect() {
   setDemoPaused(false);
   sfxInit(); saveSettings(); buildRoster();
-  game.demo = false; game.paused = false; game.state = 'select'; game.stateT = T(); selStartAt = 0;
+  game.demo = false; game.paused = false; game.state = 'select'; game.stateT = T(); selStartAt = 0; gp.on = false;
   hideOverlays('menu', 'result', 'pause');
   $('select').classList.remove('hidden');
   assignJoyCons();
@@ -1133,12 +1199,18 @@ function syncMenu() {
   document.querySelectorAll('#modeRow button').forEach(b => b.classList.toggle('on', b.dataset.mode === settings.mode));
   document.querySelectorAll('#lvRow button').forEach(b => b.classList.toggle('on', +b.dataset.lv === settings.cpuLevel));
   document.querySelectorAll('#lapRow button').forEach(b => b.classList.toggle('on', +b.dataset.laps === settings.laps));
-  document.querySelectorAll('#courseRow button').forEach(b => b.classList.toggle('on', +b.dataset.course === settings.course));
+  document.querySelectorAll('#courseRow button').forEach(b => b.classList.toggle('on', b.dataset.gp ? settings.gp : !settings.gp && +b.dataset.course === settings.course));
   document.querySelectorAll('#qRow button').forEach(b => b.classList.toggle('on', b.dataset.q === settings.quality));
   // 시범 레이스 아래 코스 띠: 번호 · 이름 · 특징
   const c = COURSES[settings.course], setText = (id, v) => { const el = $(id); if (el && el.textContent !== v) el.textContent = v; };
-  setText('courseNo', String(settings.course + 1).padStart(2, '0')); setText('courseName', c.name); setText('courseEn', c.en); setText('courseFact', c.fact);
-  setText('lapHint', `코스: ${c.name} · 한 바퀴 약 ${c.lapSec}초`);
+  if (settings.gp) {   // 그랑프리: 코스 넷을 바퀴 수만큼씩 → 다 합친 시간
+    const min = Math.round(GP_COURSES.reduce((a, i) => a + COURSES[i].lapSec, 0) * settings.laps / 60);
+    setText('courseNo', 'GP'); setText('courseName', '몬스터 컵'); setText('courseEn', 'MONSTER CUP'); setText('courseFact', '코스 4개 연달아 · 등수 점수 합산');
+    setText('lapHint', `그랑프리: 코스 4개 × ${settings.laps}바퀴 · 모두 약 ${min}분`);
+  } else {
+    setText('courseNo', String(settings.course + 1).padStart(2, '0')); setText('courseName', c.name); setText('courseEn', c.en); setText('courseFact', c.fact);
+    setText('lapHint', `코스: ${c.name} · 한 바퀴 약 ${c.lapSec}초`);
+  }
   $('steer').value = settings.steerAngle; $('steerV').textContent = settings.steerAngle + '°';
   $('autoGas').checked = !!settings.autoGas; $('assist').checked = !!settings.assist;
   for (const i of [0, 1]) $('flip' + i).checked = settings.flip[i];
@@ -1446,6 +1518,20 @@ function buildPodium(top3) {
   });
 }
 
+// 그랑프리 우승 트로피: 금색 컵 + 양쪽 손잡이 + 나무 받침 (결과 화면에서 1등 머리 위)
+function buildTrophy() {
+  const gold = new THREE.Color('#f5c542'), wood = new THREE.Color('#7a5230'), P = [];
+  const cyl = new THREE.CylinderGeometry(1, 1, 1, 20), cup = new THREE.CylinderGeometry(0.42, 0.17, 0.5, 24), ring = new THREE.TorusGeometry(0.17, 0.045, 8, 16), sph = new THREE.SphereGeometry(1, 12, 8);
+  P.push({ geo: cyl, matrix: partM(0, 0.06, 0, 0, 0, 0, 0.3, 0.12, 0.3), color: wood });
+  P.push({ geo: cyl, matrix: partM(0, 0.21, 0, 0, 0, 0, 0.07, 0.2, 0.07), color: gold });
+  P.push({ geo: sph, matrix: partM(0, 0.33, 0, 0, 0, 0, 0.14, 0.06, 0.14), color: gold });
+  P.push({ geo: cup, matrix: partM(0, 0.6, 0, 0, 0, 0, 1, 1, 1), color: gold });
+  for (const sx of [-1, 1]) P.push({ geo: ring, matrix: partM(sx * 0.42, 0.66, 0, 0, 0, 0, 1, 1.2, 1), color: gold });
+  const m = new THREE.Mesh(mergeGeoms(P), new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x4a3200 }));
+  cyl.dispose(); cup.dispose(); ring.dispose(); sph.dispose();
+  const g = new THREE.Group(); g.add(m); g.scale.setScalar(1.3); g.visible = false;
+  return g;
+}
 // 코스 분위기: 하늘·안개·땅·벽·나무·언덕 색과 바다·야자수 같은 장식
 const THEMES = {
   meadow: { sky: ['#68bdeb', '#c4e7ed', '#f4efd7'], fog: [0xd5e8df, 170, 620], hemi: [0xe5f4ff, 0x648b62], ground: '#83bd76', dots: 'rgba(40,90,40,0.07)',
@@ -1485,6 +1571,7 @@ function ensureScene3D() {
   G3.hemi = new THREE.HemisphereLight(0xe5f4ff, 0x648b62, 0.75); Sc.add(G3.hemi);
   const sun = new THREE.DirectionalLight(0xfff0d0, 0.65); sun.position.set(-60, 100, 40); Sc.add(sun);
   buildItemsFx(Sc);
+  G3.trophy = buildTrophy(); Sc.add(G3.trophy);
   buildCourse3D();
 }
 // 코스마다 바뀌는 것(하늘·땅·길·벽·점프대·나무·관중석…)은 한 그룹에: 코스를 바꾸면 통째로 버리고 다시 만듦
@@ -2308,8 +2395,9 @@ function selectCam(cs) {   // 캐릭터 선택: 출발선 앞 카트를 정면�
 // 결과: 시상대(높이 약 3.8m, 너비 7.4m)를 결과 창 위 빈 곳 가운데에 오게
 function podiumCam(cs) {
   const fr = G3.resultFraming || { height: 0.5, center: 0.27 }, tan = Math.tan(20 * Math.PI / 180), aspect = G3.cssW / G3.cssH;
-  const dist = Math.max(8, 3.9 / (2 * tan * fr.height), 7.6 / (2 * tan * aspect));   // 1등이 뛰어오르는 높이까지
-  const lookY = 1.9 + (fr.center - 0.5) * 2 * dist * tan;
+  const H = G3.trophyOn ? 5.3 : 3.9;   // 1등이 뛰어오르는 높이까지 (그랑프리 우승이면 머리 위 트로피까지)
+  const dist = Math.max(8, H / (2 * tan * fr.height), 7.6 / (2 * tan * aspect));
+  const lookY = H * 0.487 + (fr.center - 0.5) * 2 * dist * tan;
   cs.pos.set(6 - dist, lookY + 0.5, 0); cs.look.set(6, lookY, 0); cs.fov = 40;
 }
 
@@ -2371,6 +2459,10 @@ function sync3D(dt) {
     r.rig.torso.rotation.set(pose.lean || 0, pose.twist, 0); r.rig.head.rotation.x = pose.nod || 0;
     NC.placeLimb(r.rig.armR, SH.R, pose.dR); NC.placeLimb(r.rig.armL, SH.L, pose.dL);
   });
+  // 그랑프리 우승 트로피: 1등 머리 위에서 빙글빙글
+  const win = G3.podium.find(r => r.place === 1), tw = G3.trophy;
+  tw.visible = game.state === 'result' && !!G3.trophyOn && !!win;
+  if (tw.visible) { tw.position.set(6, win.root.position.y + 2.05 * win.ch.h + 0.3 + Math.sin(t * 2.2) * 0.08, 0); tw.rotation.y = t * 1.6; }
   // 아이템 상자 (빙글빙글 · 무지개빛)
   const K = K3, bm = G3.boxes;
   boxes.forEach((b, i) => {
@@ -2546,6 +2638,16 @@ function startLights(g, cx, y, u, t) {
   }
   g.restore();
 }
+// 그랑프리: 출발 신호등 아래에 몇 번째 코스인지와 코스 이름
+function gpBanner(g, cx, y, u, t) {
+  const left = game.goT - t, w = 330 * u, h = 64 * u;
+  g.save(); g.globalAlpha = left < 0 ? clamp(1 + left, 0, 1) : 1;
+  hudPanel(g, cx - w / 2, y, w, h, u);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `800 ${17 * u}px ${FONT}`; g.fillStyle = HUD.orange; g.fillText(`MONSTER CUP · RACE ${gp.race + 1} / ${GP_COURSES.length}`, cx, y + 20 * u);
+  g.font = `900 ${26 * u}px ${FONT}`; g.fillStyle = HUD.cream; g.fillText(COURSE.name, cx, y + 45 * u);
+  g.restore();
+}
 function drawView(g, r, p, cs, two, t) {
   const k = humanKart(p); if (!k) return;
   const u = Math.min(r.w / 1920, r.h / (two ? 620 : 1080)), pad = 28 * u;
@@ -2616,7 +2718,10 @@ function drawView(g, r, p, cs, two, t) {
       rr(g, bx + (104 + i * 40) * u, dy + 17 * u, 31 * u, 12 * u, 4 * u); g.fill();
     }
   }
-  if (game.state === 'countdown' || t - game.goT < 1) startLights(g, r.x + r.w / 2, by + 46 * u, u, t);   // 위쪽 가운데 일시정지 버튼 아래
+  if (game.state === 'countdown' || t - game.goT < 1) {   // 위쪽 가운데 일시정지 버튼 아래
+    startLights(g, r.x + r.w / 2, by + 46 * u, u, t);
+    if (gp.on) gpBanner(g, r.x + r.w / 2, by + 128 * u, u, t);
+  }
   if (game.cutoffAt && !k.finished && game.state === 'race') {   // 시간 제한 마지막 10초
     const left = Math.ceil(game.cutoffAt - t);
     if (left <= 10) { g.textAlign = 'center'; g.font = `900 ${40 * u}px ${FONT}`; outlined(g, `${left}초 남았어요!`, r.x + r.w / 2, by + ih + 40 * u, '#ffcf6b', 8 * u); g.textAlign = 'left'; }
@@ -2664,7 +2769,14 @@ function drawMinimap(g, W, Hh, two) {   // 둘이 달릴 때는 구분선을 덮
   const x0 = px + 22 * u, y0 = py + 43 * u;
   g.save(); g.textAlign = 'left'; g.textBaseline = 'middle';
   hudPanel(g, px, py, pw, ph, u);
-  g.font = `800 ${(two ? 17 : 19) * u}px ${FONT}`; g.fillStyle = HUD.muted; g.fillText(COURSE.en, x0, py + 21 * u);
+  g.font = `800 ${(two ? 17 : 19) * u}px ${FONT}`;
+  let titleW = mw;
+  if (gp.on) {   // 그랑프리: 오른쪽 끝에 몇 번째 코스인지 (코스 이름은 남은 너비에 맞춤)
+    const tag = `GP ${gp.race + 1}/${GP_COURSES.length}`, tw = g.measureText(tag).width;
+    g.fillStyle = HUD.orange; g.textAlign = 'right'; g.fillText(tag, x0 + mw, py + 21 * u); g.textAlign = 'left';
+    titleW = mw - tw - 12 * u;
+  }
+  g.fillStyle = HUD.muted; g.fillText(COURSE.en, x0, py + 21 * u, titleW);
   const X = x => x0 + (x - MAP.x0) / MAP.w * mw, Y = z => y0 + (z - MAP.z0) / MAP.h * mh;
   g.lineJoin = 'round'; g.lineCap = 'round';
   g.beginPath();
@@ -2730,9 +2842,11 @@ function bindMenu() {
   document.querySelectorAll('#lvRow button').forEach(b => { b.onclick = () => { settings.cpuLevel = +b.dataset.lv; syncMenu(); saveSettings(); }; });
   document.querySelectorAll('#lapRow button').forEach(b => { b.onclick = () => { settings.laps = +b.dataset.laps; syncMenu(); saveSettings(); }; });
   document.querySelectorAll('#courseRow button').forEach(b => {
-    b.onclick = () => {   // 코스를 바꾸면 메뉴 뒤 시범 레이스도 그 코스로
-      settings.course = +b.dataset.course; saveSettings();
-      if (switchCourse(settings.course) && game.demo) { setupRace(true); game.goT = T(); }
+    b.onclick = () => {   // 코스를 바꾸면 메뉴 뒤 시범 레이스도 그 코스로 (그랑프리는 첫 코스)
+      settings.gp = !!b.dataset.gp;
+      if (!settings.gp) settings.course = +b.dataset.course;
+      saveSettings();
+      if (switchCourse(lobbyCourse()) && game.demo) { setupRace(true); game.goT = T(); }
       syncMenu();
     };
   });
@@ -2758,7 +2872,7 @@ function bindMenu() {
   $('btnHome').onclick = () => { location.href = '../../index.html'; };
   $('btnFull').onclick = toggleFull;
   $('btnResume').onclick = resume; $('btnQuit').onclick = toMenu;
-  $('btnAgain').onclick = startRace; $('btnReselect').onclick = openSelect; $('btnMenu').onclick = toMenu;
+  $('btnAgain').onclick = resultNext; $('btnReselect').onclick = openSelect; $('btnMenu').onclick = toMenu;
   $('btnSelBack').onclick = toMenu;
   document.querySelectorAll('#select [data-p]').forEach(b => {
     b.onclick = () => {
@@ -2806,7 +2920,7 @@ requestAnimationFrame(frame);
 window.__KT = { game, karts, settings, T, update, render: renderFrame, startRace, toMenu, openSelect, selMove, selReady, selSet, sel, pause, resume,
   TRACK, boxes, shots, traps, KART, trackPoint, locate, groundAt, sdiff, useItem, spinOut, joySteer, tilt, readInputs, keys, inCreek,
   gfx, G3, Q, applyQuality, autoStep, parts, CHARS, joycon: JC, setDemoPaused, showResult, mergeGeoms, views, humanKart, levelFor,
-  COURSES, switchCourse, DRIFT, ITEM_KEYS,
+  COURSES, switchCourse, DRIFT, ITEM_KEYS, gp, GP_COURSES, GP_POINTS, resultNext,
   get TR() { return TR; }, get L() { return L; }, get RAMP() { return RAMP; }, get PANELS() { return PANELS; }, get ZONES() { return ZONES; },
   get COURSE() { return COURSE; }, get BOX_ROWS() { return BOX_ROWS; },
   setClock: f => { realNow = f; } };

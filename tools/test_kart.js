@@ -572,8 +572,58 @@ function jumpOver(label) {
 KT.settings.course = 0; KT.toMenu(); KT.switchCourse(0); KT.toMenu();
 assert(KT.COURSE.name === '몬스터 서킷' && !G3.snowfall, '다시 몬스터 서킷으로 (내리는 눈도 사라짐)');
 
-// ---------- 15. 그 밖 ----------
-console.log('\n[15] 그 밖');
+// ---------- 15. 그랑프리 ----------
+console.log('\n[15] 그랑프리 (몬스터 컵)');
+{
+  const GP = KT.gp, txt = id => els[id] ? els[id].textContent : '', html = id => els[id] ? els[id].innerHTML : '';
+  KT.settings.gp = true; KT.settings.laps = 1; KT.settings.cpuLevel = 1;
+  KT.toMenu();
+  assert(KT.COURSE === KT.COURSES[KT.GP_COURSES[0]] && !GP.on, '그랑프리를 고르면 메뉴 뒤 시범 레이스는 첫 코스');
+  startRace('1p', true);   // 사람 카트도 CPU처럼 달리게
+  assert(GP.on && GP.race === 0 && KT.COURSE === KT.COURSES[KT.GP_COURSES[0]], '레이서를 고르면 첫 코스부터 그랑프리 시작');
+  const roster = karts.map(k => k.ch).join(','), me = KT.humanKart(0).ch;
+  let sameRoster = true, coursesOk = true, pointsOk = true, midUi = true;
+  for (let r = 0; r < 4; r++) {
+    if (r > 0) { run(1.6); press('Enter'); release('Enter'); }   // 결과가 뜨고 1.5초 뒤 Enter = 다음 코스
+    coursesOk = coursesOk && GP.race === r && KT.COURSE === KT.COURSES[KT.GP_COURSES[r]];
+    sameRoster = sameRoster && karts.map(k => k.ch).join(',') === roster;
+    skipCountdown();
+    run(240, () => { if (G.state === 'result') return false; });
+    const sum = GP.pts.reduce((a, b) => a + b, 0), perRace = KT.GP_POINTS.reduce((a, b) => a + b, 0);
+    pointsOk = pointsOk && G.state === 'result' && GP.scored === r && sum === perRace * (r + 1) && GP.places.every(pl => pl.length === r + 1);
+    if (r < 3) midUi = midUi && html('btnAgain').includes('다음 코스') && els.btnReselect.classList.contains('hidden') && txt('resEyebrow') === `MONSTER CUP · RACE ${r + 1} / 4` && txt('btnMenu') === '그랑프리 그만두기';
+  }
+  assert(coursesOk, '코스 네 개를 차례로 (1 → 2 → 3 → 4)');
+  assert(sameRoster && KT.humanKart(0).ch === me, '네 코스 내내 같은 레이서 6명');
+  assert(pointsOk, `레이스마다 등수대로 점수 (10·8·6·4·2·1, 모두 합 ${GP.pts.reduce((a, b) => a + b, 0)}점)`);
+  assert(midUi, '중간 결과: 다음 코스 버튼 · 레이서 바꾸기 숨김 · 몇 번째 레이스인지');
+  // 마지막: 종합 순위표 · 종합 시상대 · 트로피
+  const st = karts.slice().sort((a, b) => GP.pts[b.slot] - GP.pts[a.slot] || GP.places[a.slot][3] - GP.places[b.slot][3]);
+  KT.render();
+  const podium = G3.podium.slice().sort((a, b) => a.place - b.place).map(r => r.ch.name).join(','), want = st.slice(0, 3).map(k => KT.CHARS[k.ch].name).join(',');
+  assert(txt('resEyebrow') === 'MONSTER CUP · FINAL' && /그랑프리 우승!|종합 \d위!/.test(txt('resTitle')), `마지막 결과는 종합 (${txt('resTitle')})`);
+  assert(podium === want, `종합 시상대는 점수 1·2·3위 (${podium})`);
+  assert(G3.trophy.visible && G3.trophy.position.y > 3, '1위 머리 위에 트로피');
+  const rows = (html('resBody').match(/<li/g) || []).length, chips = (html('resBody').match(/<i class="m/g) || []).length;
+  assert(rows === 6 && chips === 24 && html('resBody').includes('점<small>+'), '순위표: 6명 × 코스 4개 등수 칸 · 점수');
+  assert(html('btnAgain').includes('그랑프리 다시') && !els.btnReselect.classList.contains('hidden'), '끝나면 그랑프리 다시 · 레이서 바꾸기');
+  run(1.6); press('Enter'); release('Enter');
+  assert(GP.on && GP.race === 0 && GP.pts.every(v => v === 0) && KT.COURSE === KT.COURSES[KT.GP_COURSES[0]] && KT.humanKart(0).ch === me, '그랑프리 다시: 점수 0점에서 첫 코스부터');
+  skipCountdown(); run(2);
+  KT.pause();
+  assert(txt('btnQuit') === '그랑프리 그만두기' && txt('pauseSub').includes('그랑프리'), '그랑프리 중 일시정지: 나가면 끝난다고 알려 줌');
+  KT.toMenu();
+  assert(!GP.on && !G3.trophy.visible, '메뉴로 나가면 그랑프리 끝');
+  // 그랑프리를 끄면 예전처럼 한 판
+  KT.settings.gp = false; KT.settings.course = 1; KT.toMenu();
+  startRace('1p', true); skipCountdown();
+  run(240, () => { if (G.state === 'result') return false; });
+  assert(!GP.on && KT.COURSE === KT.COURSES[1] && txt('resEyebrow') === 'ACROSS THE FINISH LINE' && html('btnAgain').includes('한 판 더') && !G3.trophyOn, '그랑프리를 끄면 고른 코스 한 판 · 한 판 더');
+  KT.settings.laps = 3; KT.settings.course = 0; G.forceCPU = null; KT.toMenu();
+}
+
+// ---------- 16. 그 밖 ----------
+console.log('\n[16] 그 밖');
 KT.toMenu(); KT.setDemoPaused(true); KT.render();
 assert(karts.every(k => k.mesh.group.position.distanceTo(new sandbox.THREE.Vector3(k.x, k.y, k.z)) < 0.01) && !G3.podiumBase.visible && G3.showroom.every(m => !m.group.visible),
   '시범 레이스를 멈춰 둬도 카트가 제자리에 그려지고 시상대·선택 화면 카트는 숨김');

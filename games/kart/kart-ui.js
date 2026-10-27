@@ -20,7 +20,7 @@
     const mode = document.querySelector('#modeRow button.on');
     const laps = document.querySelector('#lapRow button.on');
     const level = document.querySelector('#lvRow button.on');
-    const course = game.COURSES[game.settings.course];
+    const course = game.settings.gp ? { en: 'MONSTER CUP · 4 COURSES' } : game.COURSES[game.settings.course];
     if (!mode || !laps || !level) return;
     const summary = `${mode.dataset.mode === '2p' ? '2 PLAYERS' : '1 PLAYER'} + CPU  /  ${course ? course.en + '  /  ' : ''}${laps.dataset.laps} LAPS  /  ${['EASY', 'NORMAL', 'HARD'][Number(level.dataset.lv)]}`;
     if ($('setupSummary').textContent !== summary) $('setupSummary').textContent = summary;
