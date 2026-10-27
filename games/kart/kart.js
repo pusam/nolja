@@ -208,7 +208,10 @@ function groundAt(s, d) {
 const KART = { R: 1.05, VMAX: 23, ACC: 17, COAST: 4.5, BRAKE: 22, REV: 6, TURN: 1.75, G: 17, BOOST: 1.36 };
 const H = 1 / 120;
 const ITEMS = { boost: { name: '불꽃 대시' }, zap: { name: '번개 구슬' }, trap: { name: '물방울 함정' } };
-const CPU_SPEED = [0.84, 0.93, 0.99];   // 쉬움 · 보통 · 어려움 (최고 속도 비율)
+// 쉬움 · 보통 · 어려움 (최고 속도 비율). 부스트·대시 판 덕에 실제 차이는 더 작아져서 간격을 넓게
+//  아이처럼 흔들리며 달리는 운전(tools 시뮬레이션)이 쉬움에선 대부분 이기고, 보통은 해볼 만하게 맞춤
+const CPU_SPEED = [0.78, 0.92, 0.98];
+const CPU_CATCHUP = [0.04, 0.08, 0.1];   // 사람보다 많이 뒤처진 CPU가 빨라지는 최대 비율
 const karts = [];
 const boxes = [], shots = [], traps = [];
 function makeKart(slot, ch, human) {
@@ -256,10 +259,12 @@ function placeKart(k, s, d) {
   k.prog = (k.lap - 1) * L + k.s;   // 출발 전 등수도 줄 순서대로
 }
 
+// CPU 카트 급: 부스트도 실력만큼만 빨라짐 (쉬움 CPU가 부스트로 사람을 따라잡지 않게). 사람은 1
+const kartClass = k => k.human >= 0 ? 1 : k.ai.base;
 const turnRate = v => KART.TURN * clamp(Math.abs(v) / 5, 0, 1) * (1 - 0.22 * clamp(Math.abs(v) / KART.VMAX, 0, 1.4)) * (v < -0.2 ? -1 : 1);
 function giveBoost(k, dur, kick = 1.08) {
   k.boostT = Math.max(k.boostT, dur); k.boostFx = T(); game.stats.boosts++;
-  k.v = Math.max(k.v, KART.VMAX * kick);
+  k.v = Math.max(k.v, KART.VMAX * kick * kartClass(k));
   if (k.human >= 0) { sfx('boost'); rumble(k.human, 0.35, 120); }
 }
 function endDrift(k, released) {
@@ -305,7 +310,7 @@ function driveKart(k, c, h) {
   // 앞뒤 속도
   let vmax = KART.VMAX * k.speedMul;
   if (k.offroad && k.boostT <= 0) vmax *= 0.5;
-  if (k.boostT > 0) vmax = KART.VMAX * KART.BOOST;
+  if (k.boostT > 0) vmax = KART.VMAX * KART.BOOST * kartClass(k);
   if (k.spinT > 0) k.v *= Math.exp(-h * 2.2);
   else if (k.air) { /* 공중에선 속도 그대로 */ }
   else if (brake && !(k.boostT > 0)) {
@@ -459,6 +464,7 @@ function push(k, dvx, dvz) { const fx = Math.sin(k.a), fz = Math.cos(k.a); k.v +
 function rollItem(k) {
   const f = karts.length > 1 ? (k.place - 1) / (karts.length - 1) : 0.5;   // 0 = 1등 · 1 = 꼴등
   const w = { boost: 0.1 + 0.6 * f, zap: 0.3 + 0.1 * Math.sin(f * Math.PI), trap: 0.6 - 0.5 * f };
+  if (k.human < 0 && !game.demo && settings.cpuLevel === 0) w.zap = 0;   // 쉬움: CPU는 번개 구슬을 안 씀 (아이가 덜 맞게)
   let r = Math.random() * (w.boost + w.zap + w.trap);
   for (const key of ['boost', 'zap', 'trap']) { r -= w[key]; if (r <= 0) return key; }
   return 'boost';
@@ -591,7 +597,7 @@ function rubberBand() {
     if (k.human >= 0) continue;
     let rb = 1;
     if (k.prog > best + 50) rb = 1 - Math.min(0.12, (k.prog - best - 50) / 500);
-    else if (k.prog < worst - 50) rb = 1 + Math.min(0.1, (worst - 50 - k.prog) / 400);
+    else if (k.prog < worst - 50) rb = 1 + Math.min(CPU_CATCHUP[settings.cpuLevel], (worst - 50 - k.prog) / 400);
     k.speedMul = k.ai.base * rb;
   }
 }
@@ -1054,6 +1060,12 @@ function resize() {
       const a = top.getBoundingClientRect().bottom + 12, b = bottom.getBoundingClientRect().top - 14;
       if (b - a > 90) G3.selectFraming = { height: (b - a) / cssH, center: (a + b) / (2 * cssH) };
     }
+  }
+  G3.resultFraming = null;   // 결과 창 위쪽 빈 곳 (시상대 자리)
+  const resultScreen = $('result'), panel = resultScreen && resultScreen.querySelector && resultScreen.querySelector('.result-panel');
+  if (panel && !resultScreen.classList.contains('hidden') && panel.getBoundingClientRect) {
+    const top = panel.getBoundingClientRect().top - 8;
+    if (top > 100) G3.resultFraming = { height: top / cssH, center: top / (2 * cssH) };
   }
   const dpr = window.devicePixelRatio || 1;
   const pr = Math.max(0.25, Math.min(dpr, lv.maxW / cssW));   // 4K 화면이어도 렌더 해상도는 상한까지만
@@ -1665,7 +1677,13 @@ function selectCam(cs) {   // 캐릭터 선택: 출발선 앞 카트를 정면�
   const lookY = 0.95 + (fr ? (fr.center - 0.5) * 2 * dist * tan : 0);
   cs.pos.set(-dist, lookY + 0.9, 0); cs.look.set(0, lookY, 0); cs.fov = 42;
 }
-function podiumCam(cs) { cs.pos.set(-5.2, 2.4, 0); cs.look.set(6, 0.7, 0); cs.fov = 40; }   // 결과 창이 아래를 가리므로 시상대를 화면 위쪽에
+// 결과: 시상대(높이 약 3.8m, 너비 7.4m)를 결과 창 위 빈 곳 가운데에 오게
+function podiumCam(cs) {
+  const fr = G3.resultFraming || { height: 0.5, center: 0.27 }, tan = Math.tan(20 * Math.PI / 180), aspect = G3.cssW / G3.cssH;
+  const dist = Math.max(8, 3.9 / (2 * tan * fr.height), 7.6 / (2 * tan * aspect));   // 1등이 뛰어오르는 높이까지
+  const lookY = 1.9 + (fr.center - 0.5) * 2 * dist * tan;
+  cs.pos.set(6 - dist, lookY + 0.5, 0); cs.look.set(6, lookY, 0); cs.fov = 40;
+}
 
 // ---------- 매 프레임 3D 갱신 ----------
 function syncKart3D(m, k, t) {

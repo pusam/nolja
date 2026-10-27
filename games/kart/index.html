@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#8176db">
 <title>몬스터 카트 · 놀자</title>
-<link rel="stylesheet" href="../../shared/nolja.css?v=20261027">
-<link rel="stylesheet" href="../../shared/lobby.css?v=20261027">
-<link rel="stylesheet" href="kart.css?v=20261027">
+<link rel="stylesheet" href="../../shared/nolja.css?v=20261027b">
+<link rel="stylesheet" href="../../shared/lobby.css?v=20261027b">
+<link rel="stylesheet" href="kart.css?v=20261027b">
 </head>
 <body>
 <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -41,7 +41,7 @@
       </section>
       <section class="match-setup" aria-labelledby="setupTitle">
         <div class="setup-heading"><div><p class="eyebrow">READY TO RACE?</p><h2 id="setupTitle">오늘의 레이스</h2></div><span class="setup-ball-wrap"><svg class="setup-ball" aria-hidden="true"><use href="#i-wheel"/></svg></span></div>
-        <fieldset class="setup-group"><legend><span class="step-number">01</span> 누구와 달릴까요?</legend><div id="modeRow" class="mode-options" aria-label="레이스 모드"><button data-mode="2p"><svg aria-hidden="true" class="icon"><use href="#i-users"/></svg><strong>함께 레이스</strong><span>화면을 나눠서, 2인 + CPU</span><i class="choice-dot"></i></button><button data-mode="1p"><svg aria-hidden="true" class="icon"><use href="#i-cpu"/></svg><strong>혼자 레이스</strong><span>CPU 친구 5명과 함께</span><i class="choice-dot"></i></button></div><div id="lvRow" class="level-options"><span>CPU 실력</span><div class="row"><button data-lv="0">쉬움</button><button data-lv="1">보통</button><button data-lv="2">어려움</button></div></div></fieldset>
+        <fieldset class="setup-group"><legend><span class="step-number">01</span> 누구와 달릴까요?</legend><div id="modeRow" class="mode-options" aria-label="레이스 모드"><button data-mode="2p"><svg aria-hidden="true" class="icon"><use href="#i-users"/></svg><strong>함께 레이스</strong><span>화면을 나눠서, 2인 + CPU</span><i class="choice-dot"></i></button><button data-mode="1p"><svg aria-hidden="true" class="icon"><use href="#i-cpu"/></svg><strong>혼자 레이스</strong><span>CPU 친구 5명과 함께</span><i class="choice-dot"></i></button></div><div id="lvRow" class="level-options"><span>CPU 실력</span><div class="row"><button data-lv="0">쉬움</button><button data-lv="1">보통</button><button data-lv="2">어려움</button></div></div><p class="field-hint">쉬움은 아이들도 1등을 노려볼 만하고, 어려움은 드리프트를 써야 이겨요.</p></fieldset>
         <fieldset class="setup-group win-group"><legend><span class="step-number">02</span> 몇 바퀴 달릴까요?</legend><div id="lapRow" class="win-options" aria-label="바퀴 수"><button data-laps="2">2<span>바퀴</span></button><button data-laps="3">3<span>바퀴</span></button><button data-laps="5">5<span>바퀴</span></button></div><p class="field-hint">코스: 몬스터 서킷 · 한 바퀴 약 30초</p></fieldset>
         <div class="start-area"><button id="btnStart" class="primary start-button">캐릭터 선택하기 <svg aria-hidden="true" class="icon"><use href="#i-arrow"/></svg></button><span class="start-hint"><kbd>Enter</kbd> 키로도 시작할 수 있어요</span></div>
       </section>
@@ -61,11 +61,11 @@
 <div id="pause" class="overlay hidden"><div class="panel center pause-panel"><p class="eyebrow">PIT STOP</p><div class="big">잠깐, 쉬어갈까요?</div><p class="sub">카트는 그대로 기다리고 있어요.</p><div class="row modal-actions"><button id="btnResume" class="primary">계속 달리기</button><button id="btnQuit">레이스 설정으로</button></div><div id="pauseInfo" class="small"></div></div></div>
 <div id="result" class="overlay bottom hidden"><div class="panel center result-panel"><p class="eyebrow">WHAT A RACE!</p><div id="resTitle" class="big"></div><div id="resBody" class="sub"></div><div class="row modal-actions"><button id="btnAgain" class="primary">한 판 더!</button><button id="btnReselect">캐릭터 바꾸기</button><button id="btnMenu">레이스 설정</button></div><div class="small result-hint">조이콘 버튼 / Enter = 다시 달리기</div></div></div>
 <script src="../../shared/vendor/three.min.js"></script>
-<script src="../../shared/store.js?v=20261027"></script>
-<script src="../../shared/audio.js?v=20261027"></script>
-<script src="../../shared/joycon.js?v=20261027"></script>
-<script src="../../shared/characters.js?v=20261027"></script>
-<script src="kart.js?v=20261027"></script>
-<script src="kart-ui.js?v=20261027"></script>
+<script src="../../shared/store.js?v=20261027b"></script>
+<script src="../../shared/audio.js?v=20261027b"></script>
+<script src="../../shared/joycon.js?v=20261027b"></script>
+<script src="../../shared/characters.js?v=20261027b"></script>
+<script src="kart.js?v=20261027b"></script>
+<script src="kart-ui.js?v=20261027b"></script>
 </body>
 </html>

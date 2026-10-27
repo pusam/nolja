@@ -390,8 +390,51 @@ run(0.1);
 assert(KT.humanKart(1).ctl.steer > 0.9 && Math.abs(KT.humanKart(0).ctl.steer) < 0.1, '조이콘 P1 + 게임패드면 패드는 P2를 조종');
 pads = []; JC.list.length = 0;
 
-// ---------- 12. 그 밖 ----------
-console.log('\n[12] 그 밖');
+// ---------- 12. 난이도 (아이 운전 흉내) ----------
+console.log('\n[12] 난이도');
+// 조이콘 기울기로 운전하는 아이: 0.3초 늦게 보고, 손이 흔들리고, 길 가운데 ±3m를 왔다갔다, 가끔 0.6초 딴짓
+function kidRace(level, seed) {
+  randomSeed = seed >>> 0;
+  KT.settings.cpuLevel = level; KT.settings.laps = 3; JC.list.length = 0;
+  const jc = { ok: true, player: 0, kind: 'R', accel: { x: 0, y: 0, z: 1 }, hold: 0, stick: { x: 2048, y: 2048 } };
+  startRace('1p'); JC.list.push(jc);
+  const me = KT.humanKart(0), hist = [], st = { wander: 0, wanderAt: 0, idle: 0, noise: 0 };
+  let zaps = 0;
+  run(300, () => {
+    if (G.state === 'result') return false;
+    if (G.state !== 'race' || me.finished) return;
+    for (const k of karts) if (k.human < 0 && k.item === 'zap') zaps++;
+    hist.push({ x: me.x, z: me.z, a: me.a, s: me.s, v: me.v }); if (hist.length > 18) hist.shift();
+    const seen = hist[0], t = KT.T();
+    if (t > st.wanderAt) { st.wander = (Math.random() - 0.5) * 6; st.wanderAt = t + 2 + Math.random() * 3; }
+    if (t > st.idle && Math.random() < 1 / 480) st.idle = t + 0.6;
+    if (t < st.idle) return;
+    const q = KT.trackPoint(seen.s + 9 + seen.v * 0.3, st.wander);
+    const err = wrapA(Math.atan2(q.x - seen.x, q.z - seen.z) - seen.a);
+    st.noise += ((Math.random() - 0.5) * 0.9 - st.noise) * 0.08;
+    const steer = Math.max(-1, Math.min(1, -err * 1.6 + st.noise)), ang = (3 + Math.abs(steer) * 25) * Math.sign(steer) * Math.PI / 180;
+    jc.accel = { x: -Math.sin(ang), y: 0, z: Math.cos(ang) };
+    jc.hold = me.item && Math.random() < 0.02 ? B.B : 0;
+  });
+  JC.list.length = 0;
+  return { place: me.place, zaps };
+}
+const easy = [kidRace(0, 1000), kidRace(0, 1077), kidRace(0, 1154)], hard = [kidRace(2, 1026), kidRace(2, 1103), kidRace(2, 1180)];
+const avgPlace = rs => rs.reduce((a, r) => a + r.place, 0) / rs.length;
+assert(avgPlace(easy) <= 2, `쉬움: 아이처럼 흔들리며 달려도 평균 ${avgPlace(easy).toFixed(1)}등 (2등 안)`);
+assert(easy.every(r => r.zaps === 0), '쉬움 CPU는 번개 구슬을 안 씀');
+assert(avgPlace(hard) >= 3, `어려움: 같은 운전이면 평균 ${avgPlace(hard).toFixed(1)}등 (쉽게 못 이김)`);
+{
+  startRace('1p'); KT.settings.cpuLevel = 0; skipCountdown();
+  const cpuK = karts.find(k => k.human < 0), meK = KT.humanKart(0);
+  G.only = [cpuK, meK]; cpuK.ai.base = cpuK.speedMul = 0.78;
+  placeK(cpuK, 20, -4, 15); placeK(meK, 20, 4, 15); cpuK.boostT = meK.boostT = 2; run(1.2);
+  assert(cpuK.v < meK.v - 3, `CPU 부스트도 실력만큼만 빨라짐 (쉬움 CPU ${cpuK.v.toFixed(1)} · 사람 ${meK.v.toFixed(1)}m/s)`);
+  G.only = null; KT.settings.cpuLevel = 1;
+}
+
+// ---------- 13. 그 밖 ----------
+console.log('\n[13] 그 밖');
 KT.toMenu(); KT.setDemoPaused(true); KT.render();
 assert(karts.every(k => k.mesh.group.position.distanceTo(new sandbox.THREE.Vector3(k.x, k.y, k.z)) < 0.01) && !G3.podiumBase.visible && G3.showroom.every(m => !m.group.visible),
   '시범 레이스를 멈춰 둬도 카트가 제자리에 그려지고 시상대·선택 화면 카트는 숨김');
