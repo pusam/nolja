@@ -269,6 +269,7 @@ function makeKart(slot, ch, human) {
     x: 0, y: 0, z: 0, a: 0, v: 0, vl: 0, vy: 0, vyG: 0, air: false, hop: false, rampAir: false, trick: false, trickT: -9,
     steer: 0, drift: null, driftArm: false, prevDrift: false, prevItem: false, boostT: 0, boostFx: 0, spinT: 0, spinAt: -9, immuneT: 0, panelT: 0,
     item: null, itemN: 0, roulT: 0, roulTick: 0, lap: 0, s: 0, d: 0, seg: -1, prog: 0, place: 1, finished: false, finishT: 0,
+    lapMax: 0, lapT0: 0, bestLap: 0, newLap: false, newRace: false,
     offroad: false, wrongT: 0, stuckT: 0, gasSince: null, speedMul: 1, bumpAt: -9, starT: 0, draft: 0, landT: -9,
     ai: { lane: rand(-3, 3), laneAt: 0, d: 0, itemAt: 0, drifting: false, driftSkill: 0 },
     ctl: { steer: 0, gas: false, brake: false, drift: false, item: false, gasBtn: false }, mesh: null };
@@ -483,18 +484,41 @@ function rescue(k) {
 }
 function lapUp(k) {
   k.lap++;
+  let lapT = 0, rec = false;
+  if (k.lap > k.lapMax) {   // 처음 넘는 줄에서만 바퀴 시간을 잼 (거꾸로 넘었다가 다시 넘은 건 안 셈)
+    const now = T() - game.goT;
+    if (k.lapMax >= 1) { lapT = now - k.lapT0; k.bestLap = k.bestLap ? Math.min(k.bestLap, lapT) : lapT; }
+    k.lapMax = k.lap; k.lapT0 = now;
+    if (lapT > 0 && recordable(k) && newRecord('lap', lapT)) rec = k.newLap = true;
+  }
   if (k.lap > game.laps) { finishKart(k); return; }
   if (k.human < 0 || k.lap < 2) return;
-  if (k.lap === game.laps) { showMsg(k.human, '마지막 바퀴!', '#f472b6'); sfx('finalLap'); if (karts.every(o => o.human < 0 || o.lap >= game.laps)) { snd.tempo = 1.12; A.tempo(snd.tempo); } }
-  else showMsg(k.human, `${k.lap}바퀴째!`, '#ffffff');
+  const sub = lapT > 0 ? `${rec ? '새 기록! ' : ''}이번 바퀴 ${fmtTime(lapT)}` : '';
+  if (rec) sfx('itemGet');
+  if (k.lap === game.laps) { showMsg(k.human, '마지막 바퀴!', '#f472b6', sub); sfx('finalLap'); if (karts.every(o => o.human < 0 || o.lap >= game.laps)) { snd.tempo = 1.12; A.tempo(snd.tempo); } }
+  else showMsg(k.human, `${k.lap}바퀴째!`, '#ffffff', sub);
+}
+// ---------- 기록: 코스마다 가장 빠른 바퀴 · 바퀴 수마다 가장 빠른 완주, 그랑프리 최고 점수 (이 브라우저에 저장, 사람이 직접 달린 것만) ----------
+const REC = (r => r && typeof r === 'object' && !Array.isArray(r) ? r : {})(S.get('kart.records', {}));
+const courseRec = (c = COURSES.indexOf(COURSE)) => { const r = REC[c]; return r && typeof r === 'object' ? r : (REC[c] = { lap: 0, race: {} }); };
+const recordable = k => k.human >= 0 && !game.demo && !game.forceCPU;
+function newRecord(kind, t) {   // kind: 'lap' 바퀴 · 'race' 완주(지금 바퀴 수) · 'gp' 그랑프리 점수(클수록 좋음). 더 좋으면 저장하고 true
+  const r = courseRec();
+  if (!r.race || typeof r.race !== 'object') r.race = {};
+  if (kind === 'gp') { if (REC.gp && REC.gp >= t) return false; REC.gp = t; }
+  else if (kind === 'lap') { if (r.lap && r.lap <= t) return false; r.lap = t; }
+  else { if (r.race[game.laps] && r.race[game.laps] <= t) return false; r.race[game.laps] = t; }
+  S.set('kart.records', REC);
+  return true;
 }
 function finishKart(k) {
   if (k.finished) return;
   k.finished = true; k.finishT = T() - game.goT; k.lap = game.laps + 1;
   game.finishOrder.push(k.slot);
   k.place = game.finishOrder.length;
+  if (recordable(k) && newRecord('race', k.finishT)) k.newRace = true;
   if (k.human >= 0) {
-    showMsg(k.human, k.place === 1 ? '1등! 골인!' : `${k.place}등 골인!`, k.place === 1 ? '#facc15' : '#ffffff', fmtTime(k.finishT));
+    showMsg(k.human, k.place === 1 ? '1등! 골인!' : `${k.place}등 골인!`, k.place === 1 ? '#facc15' : '#ffffff', `${k.newRace ? '새 기록! ' : ''}${fmtTime(k.finishT)}`);
     if (k.place <= 3) { sfx('jingle', k.place === 1); sfx('cheer', k.place === 1 ? 2.4 : 1.4); } else sfx('applause', 0.4);
     rumble(k.human, 0.6, 200);
     confetti(k.x, k.y + 2.5, k.z);
@@ -1046,6 +1070,17 @@ function showResult() {
     else title = best && best.place === 1 ? '1등! 우승이에요!' : best ? `${best.place}등으로 골인!` : '레이스 끝!';
     body = '<ol class="result-list">' + order.map(k => `<li class="${k.human >= 0 ? 'me p' + (k.human + 1) : ''}"><b>${k.place}등</b><span class="who">${nameOf(k)}</span><span class="tag">${tagOf(k)}</span><span class="time">${k.finished ? fmtTime(k.finishT) : '—'}</span></li>`).join('') + '</ol>';
   }
+  // 기록: 새 기록이면 축하하고, 아니면 이 코스 최고 기록을 다음 목표로 보여 줌
+  const recs = [];
+  for (const k of hum) {
+    if (k.newLap) recs.push(`${who(k)}가장 빠른 바퀴 ${fmtTime(k.bestLap)}`);
+    if (k.newRace) recs.push(`${who(k)}${game.laps}바퀴 ${fmtTime(k.finishT)}`);
+  }
+  if (gpLast() && hum.some(recordable)) { const top = Math.max(...hum.map(k => gp.pts[k.slot])); if (newRecord('gp', top)) recs.push(`그랑프리 ${top}점`); }
+  const rc = courseRec(), mark = [rc.lap ? `바퀴 ${fmtTime(rc.lap)}` : '', rc.race && rc.race[game.laps] ? `${game.laps}바퀴 ${fmtTime(rc.race[game.laps])}` : ''].filter(Boolean);
+  const recLine = recs.length ? `★ 새 기록! ${recs.join(' · ')}` : mark.length ? `${COURSE.name} 최고 기록 · ${mark.join(' · ')}` : '';
+  $('resRecord').textContent = recLine;
+  $('resRecord').classList.toggle('hidden', !recLine); $('resRecord').classList.toggle('new', recs.length > 0);
   $('resEyebrow').textContent = eyebrow;
   $('resTitle').textContent = title;
   $('resBody').innerHTML = body;
@@ -1195,6 +1230,20 @@ function updateSlotMeters() {
   }
 }
 function showWarn(text) { const w = $('hidWarn'); w.textContent = text; w.classList.toggle('hidden', !text); }
+// 로비 코스 버튼에 코스 모양 (게임 속 작은 지도와 같은 방향: 오른쪽 x · 아래 z, 주황 점 = 출발선) — 글을 못 읽어도 모양으로 고르게
+function courseThumbs() {
+  document.querySelectorAll('#courseRow button[data-course]').forEach(b => {
+    if (!b.insertAdjacentHTML || b.querySelector('.course-thumb')) return;
+    const tr = buildTrack(COURSES[+b.dataset.course].cps), W = 46, H = 32, pad = 3;
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (let i = 0; i < tr.n; i++) { x0 = Math.min(x0, tr.px[i]); x1 = Math.max(x1, tr.px[i]); z0 = Math.min(z0, tr.pz[i]); z1 = Math.max(z1, tr.pz[i]); }
+    const sc = Math.min((W - 2 * pad) / (x1 - x0), (H - 2 * pad) / (z1 - z0)), ox = (W - (x1 - x0) * sc) / 2, oz = (H - (z1 - z0) * sc) / 2;
+    const X = i => (ox + (tr.px[i] - x0) * sc).toFixed(1), Z = i => (oz + (tr.pz[i] - z0) * sc).toFixed(1);
+    let d = '';
+    for (let i = 0; i < tr.n; i += 5) d += `${i ? 'L' : 'M'}${X(i)} ${Z(i)}`;
+    b.insertAdjacentHTML('afterbegin', `<svg class="course-thumb" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path d="${d}Z"/><circle cx="${X(0)}" cy="${Z(0)}" r="2.8"/></svg>`);
+  });
+}
 function syncMenu() {
   document.querySelectorAll('#modeRow button').forEach(b => b.classList.toggle('on', b.dataset.mode === settings.mode));
   document.querySelectorAll('#lvRow button').forEach(b => b.classList.toggle('on', +b.dataset.lv === settings.cpuLevel));
@@ -1206,10 +1255,11 @@ function syncMenu() {
   if (settings.gp) {   // 그랑프리: 코스 넷을 바퀴 수만큼씩 → 다 합친 시간
     const min = Math.round(GP_COURSES.reduce((a, i) => a + COURSES[i].lapSec, 0) * settings.laps / 60);
     setText('courseNo', 'GP'); setText('courseName', '몬스터 컵'); setText('courseEn', 'MONSTER CUP'); setText('courseFact', '코스 4개 연달아 · 등수 점수 합산');
-    setText('lapHint', `그랑프리: 코스 4개 × ${settings.laps}바퀴 · 모두 약 ${min}분`);
+    setText('lapHint', `그랑프리: 코스 4개 × ${settings.laps}바퀴 · 모두 약 ${min}분${REC.gp ? ` · 최고 ${REC.gp}점` : ''}`);
   } else {
     setText('courseNo', String(settings.course + 1).padStart(2, '0')); setText('courseName', c.name); setText('courseEn', c.en); setText('courseFact', c.fact);
-    setText('lapHint', `코스: ${c.name} · 한 바퀴 약 ${c.lapSec}초`);
+    const r = REC[settings.course];
+    setText('lapHint', `코스: ${c.name} · 한 바퀴 약 ${c.lapSec}초${r && r.lap ? ` · 최고 바퀴 ${fmtTime(r.lap)}` : ''}`);
   }
   $('steer').value = settings.steerAngle; $('steerV').textContent = settings.steerAngle + '°';
   $('autoGas').checked = !!settings.autoGas; $('assist').checked = !!settings.assist;
@@ -1476,11 +1526,10 @@ function buildRider(chIdx, tint, standing = false) {
   root.position.set(0, 0.36, -0.48);
   return { root, hi: lod.hi, lo: lod.lo, dispose() { for (const g of geos) g.dispose(); } };
 }
-function lodFor(cam) {
-  for (const m of G3.karts.concat(G3.showroom)) {
-    const near = cam.position.distanceToSquared(m.group.position) < 10.5 * 10.5;   // 내 카트(6~8m 뒤에서 봄)와 바로 옆 카트만 매끈하게
-    m.rider.hi.visible = near; m.rider.lo.visible = !near;
-  }
+function lodFor(cam) {   // 내 카트(6~8m 뒤에서 봄)와 바로 옆 카트만 매끈하게. 출발선처럼 몰려 있으면 가까운 3대까지만
+  const ms = G3.karts.concat(G3.showroom).map(m => ({ m, d2: m.group.visible ? cam.position.distanceToSquared(m.group.position) : Infinity }));
+  ms.sort((a, b) => a.d2 - b.d2);
+  ms.forEach(({ m, d2 }, i) => { const near = d2 < 10.5 * 10.5 && i < 3; m.rider.hi.visible = near; m.rider.lo.visible = !near; });
 }
 function buildKart3D(chIdx, tint) {
   const group = new THREE.Group(), body = new THREE.Group();
@@ -2872,6 +2921,7 @@ function bindMenu() {
   $('btnHome').onclick = () => { location.href = '../../index.html'; };
   $('btnFull').onclick = toggleFull;
   $('btnResume').onclick = resume; $('btnQuit').onclick = toMenu;
+  $('btnRestart').onclick = () => { resume(); startRace(); };   // 이 코스를 처음부터 (그랑프리면 같은 코스, 점수는 그대로)
   $('btnAgain').onclick = resultNext; $('btnReselect').onclick = openSelect; $('btnMenu').onclick = toMenu;
   $('btnSelBack').onclick = toMenu;
   document.querySelectorAll('#select [data-p]').forEach(b => {
@@ -2905,6 +2955,7 @@ function frame() {
 }
 
 bindMenu();
+courseThumbs();
 if (settings.quality !== 'auto' && !Q[settings.quality]) gfx.note = '테니스의 2D 설정이라 카트는 가장 가벼운 3D로 달려요';
 applyQuality(levelFor(settings.quality));
 drawKartArt();
@@ -2920,7 +2971,7 @@ requestAnimationFrame(frame);
 window.__KT = { game, karts, settings, T, update, render: renderFrame, startRace, toMenu, openSelect, selMove, selReady, selSet, sel, pause, resume,
   TRACK, boxes, shots, traps, KART, trackPoint, locate, groundAt, sdiff, useItem, spinOut, joySteer, tilt, readInputs, keys, inCreek,
   gfx, G3, Q, applyQuality, autoStep, parts, CHARS, joycon: JC, setDemoPaused, showResult, mergeGeoms, views, humanKart, levelFor,
-  COURSES, switchCourse, DRIFT, ITEM_KEYS, gp, GP_COURSES, GP_POINTS, resultNext,
+  COURSES, switchCourse, DRIFT, ITEM_KEYS, gp, GP_COURSES, GP_POINTS, resultNext, REC, lodFor,
   get TR() { return TR; }, get L() { return L; }, get RAMP() { return RAMP; }, get PANELS() { return PANELS; }, get ZONES() { return ZONES; },
   get COURSE() { return COURSE; }, get BOX_ROWS() { return BOX_ROWS; },
   setClock: f => { realNow = f; } };

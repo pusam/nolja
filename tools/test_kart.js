@@ -622,8 +622,46 @@ console.log('\n[15] 그랑프리 (몬스터 컵)');
   KT.settings.laps = 3; KT.settings.course = 0; G.forceCPU = null; KT.toMenu();
 }
 
-// ---------- 16. 그 밖 ----------
-console.log('\n[16] 그 밖');
+// ---------- 16. 바퀴 시간 · 기록 · 처음부터 다시 ----------
+console.log('\n[16] 바퀴 시간 · 기록 · 처음부터 다시');
+{
+  const txt = id => els[id] ? els[id].textContent : '';
+  KT.settings.gp = false; KT.settings.course = 0; KT.settings.laps = 3; KT.toMenu();
+  startRace('1p'); skipCountdown();
+  KT.lodFor(G3.camState[0].cam);   // (WebGL 없이 도는 테스트라 직접 고름)
+  const hi = G3.karts.filter(m => m.rider.hi.visible).length;
+  assert(hi <= 3 && hi >= 1, `출발선에 몰려 있어도 매끈한 모델은 가까운 3대까지만 (${hi}대)`);
+  const me = KT.humanKart(0), L0 = KT.L;
+  G.only = [me];
+  const cross = () => { placeK(me, L0 - 3, 0, 20); run(0.4); };   // 출발선 바로 앞에서 넘기
+  cross();
+  assert(me.lap === 1 && me.lapMax === 1 && !me.bestLap, '출발선을 처음 넘으면 1바퀴째 (바퀴 시간은 아직)');
+  run(0.6); cross();
+  const m = G.msg[0], lap1 = me.bestLap;
+  assert(me.lap === 2 && lap1 > 0.5 && lap1 < 2 && me.newLap && /새 기록! 이번 바퀴 0:01/.test(m.sub) && KT.REC[0].lap === lap1, `한 바퀴 돌면 바퀴 시간 · 처음이면 새 기록 (${m.sub})`);
+  placeK(me, 2, 0, 15, true); run(0.4);   // 거꾸로 출발선을 넘었다가
+  assert(me.lap === 1, '거꾸로 넘으면 바퀴 하나 뺌');
+  cross();
+  assert(me.lap === 2 && me.bestLap === lap1 && me.lapMax === 2, '다시 넘어도 이미 센 바퀴는 바퀴 시간으로 안 셈');
+  run(0.4); cross(); run(0.4); cross();
+  assert(me.finished && me.newRace && KT.REC[0].race[3] === me.finishT, `3바퀴를 다 돌면 완주 기록 (${me.finishT.toFixed(1)}초)`);
+  run(5, () => { if (G.state === 'result') return false; });
+  assert(G.state === 'result' && txt('resRecord').startsWith('★ 새 기록!') && !els.resRecord.classList.contains('hidden') && els.resRecord.classList.contains('new'), `결과 화면에 새 기록 (${txt('resRecord')})`);
+  KT.toMenu();
+  assert(txt('lapHint').endsWith(`최고 바퀴 0:0${KT.REC[0].lap.toFixed(1)}`), `메뉴에 이 코스 최고 바퀴 (${txt('lapHint')})`);
+  // 일시정지 → 처음부터 다시: 같은 코스를 새로 출발 (그랑프리면 같은 코스·같은 레이서, 점수는 그대로)
+  KT.settings.gp = true; KT.toMenu(); startRace('1p', true); skipCountdown();
+  run(240, () => { if (G.state === 'result') return false; });
+  KT.resultNext(); skipCountdown(); run(3);
+  const pts = KT.gp.pts.join(','), roster = karts.map(k => k.ch).join(','), course = KT.COURSE;
+  KT.pause(); els.btnRestart.onclick();
+  assert(!G.paused && G.state === 'countdown' && KT.gp.on && KT.gp.race === 1 && KT.COURSE === course && karts.map(k => k.ch).join(',') === roster && KT.gp.pts.join(',') === pts && karts.every(k => k.lap === 0),
+    '일시정지에서 처음부터 다시: 그랑프리 같은 코스 · 같은 레이서 · 점수 그대로');
+  KT.settings.gp = false; G.only = null; G.forceCPU = null; KT.toMenu();
+}
+
+// ---------- 17. 그 밖 ----------
+console.log('\n[17] 그 밖');
 KT.toMenu(); KT.setDemoPaused(true); KT.render();
 assert(karts.every(k => k.mesh.group.position.distanceTo(new sandbox.THREE.Vector3(k.x, k.y, k.z)) < 0.01) && !G3.podiumBase.visible && G3.showroom.every(m => !m.group.visible),
   '시범 레이스를 멈춰 둬도 카트가 제자리에 그려지고 시상대·선택 화면 카트는 숨김');

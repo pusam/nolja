@@ -97,9 +97,12 @@ input[type=range], input[type=checkbox] { accent-color: var(--kart-orange-dark);
 .win-options button span { font-size: 11px; color: #737969; }
 .win-options button.on { background: var(--kart-ink); border-color: var(--kart-ink); color: #fffef8; }
 .win-options button.on span { color: #ecebdb; }
-/* Course choice: a 2×2 grid of cards, course name over a short description. */
+/* Course choice: a 2×2 grid of cards, the track shape beside the course name and a short description. */
 .course-options { grid-template-columns: 1fr 1fr; }
-.course-options button { flex-direction: column; gap: 3px; min-height: 58px; padding: 8px 10px; font: 800 14px/1.25 "Pretendard", "Malgun Gothic", sans-serif; letter-spacing: -.3px; }
+.course-options button { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; row-gap: 2px; align-items: center; justify-items: start; text-align: left; min-height: 58px; padding: 8px 12px; font: 800 14px/1.25 "Pretendard", "Malgun Gothic", sans-serif; letter-spacing: -.3px; }
+.course-options .course-thumb { grid-row: 1 / 3; width: 46px; height: 32px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linejoin: round; opacity: .8; }
+.course-options .course-thumb circle { fill: var(--kart-orange); stroke: none; }
+.course-options button.on .course-thumb { opacity: 1; }
 .course-options button strong { font-weight: 800; }
 .course-options button span { font-size: 10px; font-weight: 600; letter-spacing: 0; }
 /* Grand Prix runs all four courses, so it gets a full-width card with a trophy under the course grid. */
@@ -205,6 +208,8 @@ input[type=range], input[type=checkbox] { accent-color: var(--kart-orange-dark);
 .result-list .tag { font: 700 9px Arial, sans-serif; letter-spacing: .5px; color: #737b65; }
 .result-list .time { text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; color: #69745a; }
 .result-hint { margin-top: 17px; color: #717a62; font-size: 10px; }
+.result-record { margin: -10px 0 16px; color: #6f7a5f; font-size: 12px; font-weight: 800; }
+.result-record.new { color: var(--kart-orange-dark); }
 /* Grand Prix standings: overall rank, racer, one medal chip per course, points with the latest gain. */
 .gp-list li { grid-template-columns: 44px minmax(0, 1fr) auto auto 74px; }
 .gp-list .races { display: flex; gap: 4px; }
@@ -367,6 +372,8 @@ input[type=range], input[type=checkbox] { accent-color: var(--kart-orange-dark);
   .selcard .st { grid-column: 1/-1; line-height: 1.35; }
   .selcard .row > button { min-width: 44px; }
   .selcard .small { font-size: 9px; line-height: 1.5; margin-top: 7px; }
+  .course-options button { column-gap: 7px; padding: 8px 9px; }
+  .course-options .course-thumb { width: 34px; height: 24px; }
 }
 @media (max-width: 380px) {
   .page-heading h1 { font-size: 21px; max-width: 210px; }
