@@ -268,7 +268,7 @@ placeK(me, row - 12, 0, 15); placeK(cpu, 200, 0, 0);
 run(1.2);
 assert(!box.alive && (me.roulT > 0 || me.item), '상자를 지나가면 룰렛');
 run(1.2);
-assert(['boost', 'zap', 'trap'].includes(me.item), `룰렛이 멈추면 아이템: ${me.item}`);
+assert(KT.ITEM_KEYS.includes(me.item), `룰렛이 멈추면 아이템: ${me.item}`);
 const useKey = () => { press('KeyE'); run(0.05); release('KeyE'); run(0.05); };   // 아이템은 누르는 순간 한 번
 me.item = 'boost'; placeK(me, 40, 0, 15); me.item = 'boost';
 useKey();
@@ -433,8 +433,147 @@ assert(avgPlace(hard) >= 3, `어려움: 같은 운전이면 평균 ${avgPlace(ha
   G.only = null; KT.settings.cpuLevel = 1;
 }
 
-// ---------- 13. 그 밖 ----------
-console.log('\n[13] 그 밖');
+// ---------- 13. 새 손맛: 드리프트 3단계 · 슬립스트림 · 새 아이템 · 시간 제한 · 바퀴 ----------
+console.log('\n[13] 드리프트 3단계 · 슬립스트림 · 새 아이템 · 시간 제한');
+KT.settings.cpuLevel = 1; startRace('1p'); skipCountdown();
+{
+  const me = KT.humanKart(0), cpu = karts.find(k => k.human < 0);
+  G.only = [me];
+  placeK(me, 20, -5, 20);
+  press('Space'); run(0.05); press('KeyD'); run(0.03); release('KeyD'); press('KeyA');
+  run(0.4); me.drift.charge = KT.DRIFT[3].charge - 0.2;   // 길이 짧아 3초를 다 버틸 수 없으니 거의 다 모은 것으로
+  run(0.4); release('KeyA');
+  assert(me.drift && me.drift.level === 3, `오래 버티면 분홍 불꽃 3단계 (단계 ${me.drift && me.drift.level})`);
+  release('Space'); run(0.05);
+  assert(me.boostT > 1.6, `3단계에서 떼면 울트라 부스트 ${me.boostT.toFixed(2)}초`);
+  // 슬립스트림: 앞 카트 바로 뒤에 붙어 달리면 부스트
+  G.only = [me, cpu]; placeK(cpu, 60, 0, 21); placeK(me, 52, 0, 21); cpu.speedMul = cpu.ai.base = 1; me.draft = 0;
+  const b0 = G.stats.boosts; let drafted = false;
+  run(2.5, () => { if (me.boostT > 0 && G.stats.boosts > b0) { drafted = true; return false; } });
+  assert(drafted, '앞 카트 바로 뒤에 1.3초 붙어 있으면 슬립스트림 부스트');
+  // 불꽃 대시 ×3: 세 번 나눠 씀
+  G.only = [me]; placeK(me, 40, 0, 15); me.item = 'triple'; me.itemN = 3;
+  const useE = () => { press('KeyE'); run(0.05); release('KeyE'); run(0.05); };
+  useE(); assert(me.item === 'triple' && me.itemN === 2 && me.boostT > 1, '불꽃 대시 ×3: 한 번 쓰면 ×2 남음');
+  useE(); useE();
+  assert(me.item === null && me.itemN === 0, '세 번 다 쓰면 끝');
+  // 반짝 별: 무적 + 부딪힌 카트는 빙글
+  G.only = [me, cpu]; placeK(me, 40, 0, 15); placeK(cpu, 47, 0, 5); me.item = 'star';
+  const s0 = G.stats.spins; useE();
+  assert(me.starT > 5, '반짝 별: 6초 동안');
+  run(1.2);
+  assert(G.stats.spins > s0 && cpu.spinAt > 0 && me.spinT === 0, '반짝 별로 부딪히면 상대만 빙글');
+  assert(!KT.spinOut(me, 'zap'), '반짝 별이면 번개 구슬도 함정도 안 통함');
+  G.only = null;
+}
+{
+  // 시간 제한: 2인에서 한 명이 멈춰 있어도 먼저 들어온 사람 뒤 45초면 결과
+  startRace('2p', true); skipCountdown();
+  const p2 = KT.humanKart(1);
+  G.only = karts.filter(k => k !== p2);
+  let shown = -1;
+  run(330, i => { if (G.state === 'result') { shown = i; return false; } });
+  assert(shown > 0 && !p2.finished && KT.humanKart(0).finished, `안 움직이는 사람이 있어도 시간 제한으로 결과 (${(shown / 60).toFixed(0)}초)`);
+  assert(karts.filter(k => k.human >= 0).every(k => k.place >= 1), '안 들어온 사람도 지금 자리로 등수');
+  G.only = null; G.forceCPU = null;
+}
+{
+  // 바퀴: 보이는 카트마다 4개, 굴러감
+  startRace('1p'); skipCountdown(); run(1);
+  const vis = G3.karts.filter(m => m.group.visible).length;
+  assert(G3.wheels.count === vis * 4, `바퀴 ${G3.wheels.count}개 = 보이는 카트 ${vis}대 × 4`);
+  const m0 = KT.humanKart(0).mesh, sp0 = m0.spin; run(0.2);
+  assert(m0.spin !== sp0, '달리면 바퀴가 굴러감');
+}
+
+// ---------- 14. 코스 넷: 바닷가 · 눈꽃 마을 · 사탕 공원 ----------
+console.log('\n[14] 코스 넷');
+assert(KT.COURSES.length === 4 && KT.COURSES.every(c => c.cps[0][1] === 0 && c.cps[1][1] === 0), '코스 4개 · 모두 출발선이 z=0 직선');
+// (s, d)가 든 바닥 구역 (kart.js zoneAt과 같은 규칙)
+const zoneOf = (s, d) => KT.ZONES.find(z => { const u = KT.sdiff(s, z.s); return u >= 0 && u <= z.len && d >= z.d0 && d <= z.d1; }) || null;
+const halfRoad = z => z.d1 - z.d0 < 2 * KT.TRACK.halfW;
+function checkCourse(i) {
+  KT.settings.course = i; KT.toMenu(); KT.switchCourse(i); KT.toMenu();
+  const C = KT.COURSES[i], T2 = KT.TR, nm = C.name;
+  assert(KT.COURSE === C && G3.courseFor === C, `${nm}: 코스를 바꾸면 길과 장면을 새로 만듦`);
+  assert(T2.len > 600 && T2.len < 800, `${nm}: 한 바퀴 ${T2.len.toFixed(0)}m`);
+  let r2 = Infinity; for (let j = 0; j < T2.n; j++) r2 = Math.min(r2, 1 / Math.max(1e-6, Math.abs(T2.curv[j])));
+  assert(r2 > 17, `${nm}: 가장 급한 커브 반지름 ${r2.toFixed(1)}m`);
+  let g2 = Infinity;
+  for (let a = 0; a < T2.n; a += 2) for (let b = a + 2; b < T2.n; b += 2) { const ds = Math.min(b - a, T2.n - (b - a)); if (ds > 90) g2 = Math.min(g2, Math.hypot(T2.px[a] - T2.px[b], T2.pz[a] - T2.pz[b])); }
+  assert(g2 > 2 * KT.TRACK.wall + 4, `${nm}: 구간끼리 벽이 안 겹침 (${g2.toFixed(0)}m)`);
+  const p20 = { ...KT.trackPoint(20, 0) }, p40 = { ...KT.trackPoint(40, 0) };   // trackPoint는 같은 객체를 돌려줌
+  assert(Math.abs(p20.z) < 1 && Math.abs(p40.z) < 1 && p40.x > p20.x, `${nm}: 출발선 부근은 +x 직선 (선택 화면·시상대 자리)`);
+  const onZone = s => KT.ZONES.some(z => { const u = KT.sdiff(s, z.s); return u > -2 && u < z.len + 2; });
+  assert(!KT.PANELS.some(p => onZone(p.s)) && !KT.BOX_ROWS.some(onZone) && !onZone(KT.RAMP.s) && KT.boxes.length === 15, `${nm}: 대시 판·상자·점프대는 물·늪·얼음과 안 겹침 · 상자 15개`);
+  const lapB = karts.map(k => k.lap), r0 = G.stats.rescues;
+  let bad = -1, puddleT = 0;
+  run(75, j => {
+    if (bad < 0 && !karts.every(finite)) bad = j;
+    for (const k of karts) { const z = zoneOf(k.s, k.d); if (z && halfRoad(z) && z.type !== 'ice') puddleT += 1 / 60; }
+  });
+  assert(bad < 0 && karts.every(k => k.lap - lapB[k.slot] >= 2), `${nm} 시범 레이스: 75초에 모두 2바퀴 이상 (${karts.map(k => k.lap).join(',')})`);
+  assert(G.stats.rescues - r0 <= 2, `${nm}: 끼여서 다시 세운 횟수 ${G.stats.rescues - r0}`);
+  return puddleT;
+}
+// 점프대를 빠르게 타면 바로 뒤 물길(개울·초콜릿 강)을 뛰어넘음, 천천히 들어가면 첨벙
+function jumpOver(label) {
+  const me = KT.humanKart(0), river = KT.ZONES.find(z => !halfRoad(z));
+  placeK(me, river.s - 6, 0, 8);   // 점프대 옆이 아니라 물길 바로 앞에서 천천히
+  let wet = false, minV = 99;
+  run(1.6, () => { if (me.wet) { wet = true; minV = Math.min(minV, me.v); } });
+  assert(wet && minV < KT.KART.VMAX * 0.65, `천천히 ${label}에 들어가면 첨벙 (느려짐 ${minV.toFixed(1)}m/s)`);
+  placeK(me, KT.RAMP.s - 30, 0, 23); wet = false; let flew = false;
+  run(3, () => { if (me.rampAir) flew = true; if (me.wet) wet = true; });
+  assert(flew && !wet, `빠르게 점프대를 타면 ${label}을 뛰어넘음`);
+}
+{
+  checkCourse(1);
+  const creek = KT.ZONES.find(z => z.type === 'water');
+  assert(creek && KT.inCreek(creek.s + 3, 0) && !KT.inCreek(creek.s - 3, 0) && KT.sdiff(creek.s, KT.RAMP.s) > 0, '바닷가: 개울은 점프대 바로 뒤');
+  startRace('1p'); skipCountdown(); G.only = [KT.humanKart(0)];
+  assert(KT.COURSE.name === '노을 바닷가', '레이스도 고른 코스에서');
+  jumpOver('개울');
+  G.only = null;
+}
+{
+  checkCourse(2);
+  const ice = KT.ZONES.find(z => z.type === 'ice' && !halfRoad(z));
+  assert(ice && !KT.inCreek(ice.s + 3, 0) && G3.snowfall, '눈꽃 마을: 길 전체 얼음판 (물 아님) · 내리는 눈');
+  startRace('1p'); skipCountdown();
+  const me = KT.humanKart(0); G.only = [me];
+  const steerTest = s => {   // 같은 속도로 0.6초 동안 오른쪽 끝까지 꺾기
+    placeK(me, s, 0, 18); press('KeyD'); const a0 = me.a; let vl = 0;
+    run(0.6, () => { vl = Math.max(vl, Math.abs(me.vl)); });
+    release('KeyD'); run(0.05);
+    return { turn: Math.abs(wrapA(me.a - a0)), vl, zone: me.zone, v: me.v };
+  };
+  const road = steerTest(ice.s - 60), slick = steerTest(ice.s + 4);
+  assert(slick.zone === 'ice' && slick.turn < road.turn * 0.8, `얼음판에선 핸들이 덜 먹음 (${slick.turn.toFixed(2)} < ${road.turn.toFixed(2)} rad)`);
+  assert(slick.vl > road.vl * 1.5, `얼음판에선 옆으로 미끄러짐 (${slick.vl.toFixed(1)} > ${road.vl.toFixed(1)} m/s)`);
+  assert(slick.v > KT.KART.VMAX * 0.7, '얼음판은 느려지진 않음');
+  G.only = null;
+}
+{
+  const puddleT = checkCourse(3);
+  assert(puddleT < 8, `사탕 공원: CPU는 길 한쪽 초콜릿 늪을 피해 감 (모두 합쳐 ${puddleT.toFixed(1)}초)`);
+  startRace('1p'); skipCountdown();
+  const me = KT.humanKart(0); G.only = [me];
+  const mud = KT.ZONES.find(z => z.type === 'mud' && halfRoad(z));
+  placeK(me, mud.s + 2, (mud.d0 + mud.d1) / 2, 20); let wet = false, slowV = 99;
+  run(1.2, () => { if (me.wet) { wet = true; slowV = Math.min(slowV, me.v); } });
+  assert(wet && slowV < KT.KART.VMAX * 0.7, `초콜릿 늪에 빠지면 느려짐 (${slowV.toFixed(1)}m/s)`);
+  placeK(me, mud.s + 2, mud.d1 + 2.5, 20); wet = false;
+  run(1.2, () => { if (me.wet) wet = true; });
+  assert(!wet, '늪 옆 길로 비켜 가면 괜찮음');
+  jumpOver('초콜릿 강');
+  G.only = null;
+}
+KT.settings.course = 0; KT.toMenu(); KT.switchCourse(0); KT.toMenu();
+assert(KT.COURSE.name === '몬스터 서킷' && !G3.snowfall, '다시 몬스터 서킷으로 (내리는 눈도 사라짐)');
+
+// ---------- 15. 그 밖 ----------
+console.log('\n[15] 그 밖');
 KT.toMenu(); KT.setDemoPaused(true); KT.render();
 assert(karts.every(k => k.mesh.group.position.distanceTo(new sandbox.THREE.Vector3(k.x, k.y, k.z)) < 0.01) && !G3.podiumBase.visible && G3.showroom.every(m => !m.group.visible),
   '시범 레이스를 멈춰 둬도 카트가 제자리에 그려지고 시상대·선택 화면 카트는 숨김');

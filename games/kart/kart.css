@@ -97,6 +97,11 @@ input[type=range], input[type=checkbox] { accent-color: var(--kart-orange-dark);
 .win-options button span { font-size: 11px; color: #737969; }
 .win-options button.on { background: var(--kart-ink); border-color: var(--kart-ink); color: #fffef8; }
 .win-options button.on span { color: #ecebdb; }
+/* Course choice: a 2×2 grid of cards, course name over a short description. */
+.course-options { grid-template-columns: 1fr 1fr; }
+.course-options button { flex-direction: column; gap: 3px; min-height: 58px; padding: 8px 10px; font: 800 14px/1.25 "Pretendard", "Malgun Gothic", sans-serif; letter-spacing: -.3px; }
+.course-options button strong { font-weight: 800; }
+.course-options button span { font-size: 10px; font-weight: 600; letter-spacing: 0; }
 .start-area { padding-top: 18px; }
 .setup-summary { min-height: 14px; margin: 0 0 11px; color: #717765; font: 700 9px/1.5 Arial, "Malgun Gothic", sans-serif; letter-spacing: 1px; }
 .start-button.primary { background: var(--kart-orange); color: #282c24; border-radius: 10px; box-shadow: inset 0 -3px 0 #bd4f262e; min-height: 56px; padding: 14px 20px; font-size: 15px; gap: 16px; margin: 0; }

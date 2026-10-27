@@ -20,8 +20,9 @@
     const mode = document.querySelector('#modeRow button.on');
     const laps = document.querySelector('#lapRow button.on');
     const level = document.querySelector('#lvRow button.on');
+    const course = game.COURSES[game.settings.course];
     if (!mode || !laps || !level) return;
-    const summary = `${mode.dataset.mode === '2p' ? '2 PLAYERS' : '1 PLAYER'} + CPU  /  ${laps.dataset.laps} LAPS  /  ${['EASY', 'NORMAL', 'HARD'][Number(level.dataset.lv)]}`;
+    const summary = `${mode.dataset.mode === '2p' ? '2 PLAYERS' : '1 PLAYER'} + CPU  /  ${course ? course.en + '  /  ' : ''}${laps.dataset.laps} LAPS  /  ${['EASY', 'NORMAL', 'HARD'][Number(level.dataset.lv)]}`;
     if ($('setupSummary').textContent !== summary) $('setupSummary').textContent = summary;
   }
   function syncLayout() {
@@ -31,7 +32,7 @@
     if (stage.parentElement !== parent) parent.prepend(stage);
     game.setDemoPaused(inMenu && previewPaused);
     toolbar.hidden = inMenu || game.game.demo || !$('select').classList.contains('hidden') || !$('pause').classList.contains('hidden') || !$('result').classList.contains('hidden');
-    document.querySelectorAll('#modeRow button, #lvRow button, #lapRow button, #qRow button').forEach(button => {
+    document.querySelectorAll('#modeRow button, #lvRow button, #lapRow button, #courseRow button, #qRow button').forEach(button => {
       button.setAttribute('aria-pressed', String(button.classList.contains('on')));
     });
     updateRaceSummary();
@@ -72,7 +73,7 @@
   new MutationObserver(() => {
     $('select').classList.toggle('solo', $('selc1').classList.contains('hidden'));
   }).observe($('selc1'), { attributes: true, attributeFilter: ['class'] });
-  document.querySelectorAll('#modeRow button, #lvRow button, #lapRow button, #qRow button').forEach(button => button.addEventListener('click', syncLayout));
+  document.querySelectorAll('#modeRow button, #lvRow button, #lapRow button, #courseRow button, #qRow button').forEach(button => button.addEventListener('click', syncLayout));
   new ResizeObserver(() => window.dispatchEvent(new Event('resize'))).observe(preview);
   const joycon = window.Nolja.joycon;
   const updateSlots = joycon.handlers.change;
