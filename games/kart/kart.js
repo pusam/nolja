@@ -160,43 +160,47 @@ const COURSES = [
     ramp: { s: 500, len: 11, h: 1.8 }, panels: [120, 300, 570], boxRows: [60, 330, 450],
     zones: [{ s: 150, len: 34, d0: -8.6, d1: -3.5, type: 'mud' }, { s: 380, len: 34, d0: -8.6, d1: -3.5, type: 'mud' }, { s: 516, len: 10, d0: -43, d1: 43, type: 'mud' }] },
   // 도전 코스: 한 바퀴 1.4km 8자. 대각선 다리(2층)가 아래 길 위를 지나감 · 지그재그 머리핀 둘(안쪽엔 용암 웅덩이) · 불기둥 · 용암 강 점프
-  { name: '용암 성', en: 'LAVA CASTLE', fact: '길고 어려운 도전 코스 · 2층 다리 · 머리핀 · 불기둥 · 용암 강 점프', lapSec: 65, theme: 'lava', song: 'lava', hard: true,
+  { name: '용암 성', en: 'LAVA CASTLE', fact: '길고 어려운 도전 코스 · 2층 다리 · 쿵쿵 돌 · 불기둥 · 용암 강 점프', lapSec: 65, theme: 'lava', song: 'lava', hard: true,
     cps: pathCps([-40, 0], [['L', 50, 0], ['A', 50, 45, 45, -90, 45], ['L', -60, 218.6], ['A', -38.8, 239.8, 30, -135, -270], ['L', 30, 269.8],
       ['A', 30, 295.8, 26, -90, 90], ['L', -40, 321.8], ['A', -40, 347.8, 26, -90, -270], ['L', 80, 373.8], ['A', 80, 338.8, 35, 90, 0], ['L', 115, 308.1],
       ['A', 80, 308.1, 35, 0, -45], ['L', -101.8, 76.8], ['A', -70, 45, 45, 135, 270], ['L', -40, 0]]),
     bumps: [{ s: 326, flat: 34, ramp: 60, h: 7 }],   // 다리: s 326에서 s 1164 길 위를 7m 높이로 지나감 (앞뒤 34m 평평 + 60m 오르막·내리막)
     ramp: { s: 820, len: 12, h: 2.0 }, panels: [630, 805, 1030], boxRows: [60, 785, 1060],
     zones: [{ s: 556, len: 40, d0: 5.4, d1: 8.6, type: 'lava' }, { s: 707, len: 40, d0: -8.6, d1: -5.4, type: 'lava' }, { s: 836, len: 10, d0: -36, d1: 36, type: 'lava' }],
-    jets: [{ s: 495, d: -3.6, phase: 0 }, { s: 515, d: 3.6, phase: 1.7 }, { s: 655, d: 0, phase: 0.9 }, { s: 1085, d: -4, phase: 2.4 }, { s: 1105, d: 4, phase: 0.6 }] },
+    jets: [{ s: 495, d: -3.6, phase: 0 }, { s: 515, d: 3.6, phase: 1.7 }, { s: 655, d: 0, phase: 0.9 }, { s: 1085, d: -4, phase: 2.4 }, { s: 1105, d: 4, phase: 0.6 }],
+    hazards: [{ type: 'stomp', s: 1212, d: -4, phase: 0 }, { type: 'stomp', s: 1234, d: 0, phase: 1.13 }, { type: 'stomp', s: 1256, d: 4, phase: 2.27 }] },   // 성 앞 쿵쿵 돌 셋
   // 도전 코스: 숲 속 꼬임 길. 빙글 도는 고리(왼쪽·오른쪽)를 돌아 오르며 방금 지나온 길 위를 다리로 두 번 건넘 · 고리 안쪽 진흙 웅덩이 · 큰 U턴 · 개울 점프
-  { name: '구름다리 숲', en: 'CLOUD BRIDGE FOREST', fact: '길고 어려운 도전 코스 · 빙글 고리 둘 · 다리 둘 · 개울 점프', lapSec: 65, theme: 'forest', song: 'forest', hard: true,
+  { name: '구름다리 숲', en: 'CLOUD BRIDGE FOREST', fact: '길고 어려운 도전 코스 · 빙글 고리 둘 · 흔들 통나무 · 개울 점프', lapSec: 65, theme: 'forest', song: 'forest', hard: true,
     cps: pathCps([-40, 0], [['L', 70, 0], ['A', 70, 40, 40, -90, 0], ['L', 110, 80], ['A', 145, 80, 35, 180, -90], ['L', 55, 45], ['A', 55, 75, 30, -90, -180],
       ['L', 25, 135], ['A', -5, 135, 30, 0, 90], ['L', -65, 165], ['A', -65, 130, 35, 90, 360], ['L', -30, 210], ['A', -90, 210, 60, 0, 180],
       ['L', -150, 50], ['A', -100, 50, 50, 180, 270], ['L', -40, 0]]),
     bumps: [{ s: 410, flat: 22, ramp: 60, h: 7 }, { s: 880, flat: 22, ramp: 60, h: 7 }],   // 다리 둘: 고리를 돌아 오르며 s 178·647 길 위를 7m 높이로
     ramp: { s: 1185, len: 12, h: 2.0 }, panels: [410, 650, 1140], boxRows: [60, 540, 1235],
-    zones: [{ s: 255, len: 40, d0: -8.6, d1: -4.6, type: 'mud' }, { s: 725, len: 40, d0: 4.6, d1: 8.6, type: 'mud' }, { s: 1201, len: 11, d0: -43, d1: 43, type: 'water' }] },
+    zones: [{ s: 255, len: 40, d0: -8.6, d1: -4.6, type: 'mud' }, { s: 725, len: 40, d0: 4.6, d1: 8.6, type: 'mud' }, { s: 1201, len: 11, d0: -43, d1: 43, type: 'water' }],
+    hazards: [{ type: 'swing', s: 556, phase: 0 }, { type: 'swing', s: 666, phase: 1.0 }, { type: 'swing', s: 1385, phase: 2.0 }] },   // 흔들 통나무 셋
   // 도전 코스: 소라 껍데기처럼 안쪽으로 빙글 감겨 드는 바닷가 길. 머리핀 혀 · 꼬불꼬불 물결 길 · 감긴 길을 빠져나가며 바깥 길 위를 건너는 긴 다리 · 개울 점프 · 물웅덩이
-  { name: '소라 해안', en: 'SEASHELL COAST', fact: '길고 어려운 도전 코스 · 소라처럼 빙글 · 머리핀 · 긴 다리', lapSec: 70, theme: 'coast', song: 'coast', hard: true,
+  { name: '소라 해안', en: 'SEASHELL COAST', fact: '길고 어려운 도전 코스 · 소라처럼 빙글 · 꽃게 · 긴 다리', lapSec: 70, theme: 'coast', song: 'coast', hard: true,
     cps: pathCps([-40, 0], [['L', 80, 0], ['A', 80, 40, 40, -90, 0], ['L', 120, 160], ['A', 80, 160, 40, 0, 90], ['A', 80, 230, 30, -90, -180], ['L', 50, 260],
       ['A', 25, 260, 25, 0, 180], ['L', 0, 230], ['A', -30, 230, 30, 0, -90], ['L', -90, 200], ['A', -90, 160, 40, 90, 180], ['L', -130, 100],
       ['A', -90, 100, 40, 180, 305], ['A', -44.11, 34.47, 40, 125, 55], ['A', 1.77, 100, 40, 235, 270], ['L', 11.77, 60], ['A', 11.77, 90, 30, -90, 0],
       ['L', 41.77, 100], ['A', 11.77, 100, 30, 0, 90], ['L', -168.23, 130], ['A', -168.23, 90, 40, 90, 180], ['L', -208.23, 40], ['A', -168.23, 40, 40, 180, 270], ['L', -40, 0]]),
     bumps: [{ s: 1198, flat: 22, ramp: 60, h: 7 }],   // 긴 다리: 감긴 길을 빠져나가며 s 750 바깥 길 위를 7m 높이로
     ramp: { s: 228, len: 12, h: 2.0 }, panels: [625, 890, 1198], boxRows: [60, 735, 1095],
-    zones: [{ s: 244, len: 11, d0: -43, d1: 43, type: 'water' }, { s: 462, len: 40, d0: 4.6, d1: 8.6, type: 'water' }, { s: 958, len: 30, d0: 4.6, d1: 8.6, type: 'water' }] },
+    zones: [{ s: 244, len: 11, d0: -43, d1: 43, type: 'water' }, { s: 462, len: 40, d0: 4.6, d1: 8.6, type: 'water' }, { s: 958, len: 30, d0: 4.6, d1: 8.6, type: 'water' }],
+    hazards: [745, 761, 1310, 1326, 1445, 1461].map((s, i) => ({ type: 'crab', s, phase: (i % 2) * 5 + Math.floor(i / 2) * 1.7 })) },   // 길을 건너는 꽃게 두 마리씩 세 무리 (서로 엇갈려 걸음)
   // 도전 코스: 사탕 롤러코스터. 출발하자마자 높은 다리로 올라가 8자 한가운데를 건너고, 가파른 언덕 셋에선 붕 떠서 트릭 · 머리핀 혀 · 초콜릿 강 점프
-  { name: '사탕 롤러코스터', en: 'CANDY COASTER', fact: '길고 어려운 도전 코스 · 언덕에서 붕! 트릭 · 8자 다리 · 머리핀', lapSec: 68, theme: 'coaster', song: 'coaster', hard: true,
+  { name: '사탕 롤러코스터', en: 'CANDY COASTER', fact: '길고 어려운 도전 코스 · 언덕에서 붕! 트릭 · 사탕 공 · 8자 다리', lapSec: 68, theme: 'coaster', song: 'coaster', hard: true,
     cps: pathCps([-40, 0], [['L', 33.43, 0], ['A', 33.43, 40, 40, -90, -45], ['L', 158.28, 108.28], ['A', 186.57, 80, 40, 135, 90], ['L', 206.57, 120],
       ['A', 206.57, 150, 30, -90, 0], ['L', 236.57, 190], ['A', 261.57, 190, 25, 180, 0], ['L', 286.57, 150], ['A', 316.57, 150, 30, 180, 270], ['L', 326.57, 120],
       ['A', 326.57, 80, 40, 90, 0], ['L', 366.57, 40], ['A', 326.57, 40, 40, 0, -90], ['L', 186.57, 0], ['A', 186.57, 40, 40, -90, -135], ['L', 61.72, 108.28],
       ['A', 33.43, 80, 40, 45, 90], ['L', -130, 120], ['A', -130, 80, 40, 90, 180], ['L', -170, 40], ['A', -130, 40, 40, 180, 270], ['L', -40, 0]]),
     bumps: [{ s: 173, flat: 22, ramp: 60, h: 7 }, { s: 790, flat: 0, ramp: 20, h: 4.5 }, { s: 1105, flat: 0, ramp: 20, h: 4.5 }, { s: 1180, flat: 0, ramp: 20, h: 4.5 }],   // 다리 하나(8자 가운데) + 붕 뜨는 언덕 셋
     ramp: { s: 828, len: 11, h: 1.8 }, panels: [520, 1000, 1142], boxRows: [60, 640, 1310],
-    zones: [{ s: 395, len: 40, d0: -8.6, d1: -4.6, type: 'mud' }, { s: 843, len: 10, d0: -43, d1: 43, type: 'mud' }] },
+    zones: [{ s: 395, len: 40, d0: -8.6, d1: -4.6, type: 'mud' }, { s: 843, len: 10, d0: -43, d1: 43, type: 'mud' }],
+    hazards: [[930, 0], [930, 3.14], [975, 1.6], [975, 4.74], [1430, 0.8], [1430, 3.94]].map(([s, phase]) => ({ type: 'gum', s, phase })) },   // 길을 굴러 건너는 사탕 공 (두 개씩 엇갈려)
   // 아주 큰 도전 코스: 카트라이더처럼 길고 복잡하게. 메사를 빙 도는 길 · ㄹ자 연속 커브 · 나선형 오르막 · 높은 능선길(점프 + 모래 구덩이) · 지그재그 내리막 · 호수를 도는 길
   //  지름길 둘: 메사를 뚫은 광산 굴(모래늪을 이리저리 피하며) · 호수를 가로지르는 점프 (못 넘으면 첨벙)
-  { name: '모래 협곡 광산', en: 'CANYON MINE', fact: '아주 큰 도전 코스 · 지름길 둘 · 나선 오르막 · ㄹ자 커브', lapSec: 105, theme: 'canyon', song: 'canyon', hard: true, big: true,
+  { name: '모래 협곡 광산', en: 'CANYON MINE', fact: '아주 큰 도전 코스 · 지름길 둘 · 나선 오르막 · 광산 수레', lapSec: 105, theme: 'canyon', song: 'canyon', hard: true, big: true,
     cps: pathCps([-40, 0], [['L', 110, 0], ['A', 110, 45, 45, -90, 0], ['L', 155, 65], ['A', 185, 65, 30, 180, 90], ['A', 185, 140, 45, -90, 90], ['A', 185, 215, 30, -90, -180],
       ['L', 155, 245], ['A', 130, 245, 25, 0, 90], ['L', 90, 270], ['A', 90, 295, 25, -90, -180], ['L', 65, 320], ['A', 90, 320, 25, 180, 90], ['L', 130, 345],
       ['A', 130, 370, 25, -90, 0], ['L', 155, 410], ['A', 115, 410, 40, 0, 90], ['L', 75, 450], ['A', 75, 490, 40, -90, -540], ['L', 35, 520], ['A', -5, 520, 40, 0, 90],
@@ -206,6 +210,7 @@ const COURSES = [
     bumps: [{ s: 1340, flat: 180, ramp: 180, h: 9 }],   // 나선을 돌며 9m로 올라 능선을 달리다 지그재그로 내려옴
     ramp: { s: 1360, len: 12, h: 2.0 }, panels: [705, 1180, 2120], boxRows: [60, 566, 1410],
     zones: [{ s: 1376, len: 12, d0: -8.6, d1: 8.6, type: 'sand' }, { s: 1610, len: 30, d0: -8.6, d1: -4.6, type: 'sand' }, { s: 1752, len: 30, d0: 4.6, d1: 8.6, type: 'sand' }],
+    hazards: [{ type: 'cart', s: 2140, phase: 0 }, { type: 'cart', s: 2270, phase: 2.5 }, { type: 'cart', cut: 0, cs: 93, phase: 1.2 }],   // 선로로 길을 건너는 광산 수레 (하나는 광산 굴 안)
     cuts: [
       { name: '광산 굴', from: 226, to: 488, via: [[149, 110], [146, 140], [149, 172]], half: 5, wall: 8.5, style: 'tunnel', boxes: [135], panels: [150],
         zones: [{ s: 70, len: 16, d0: 0.6, d1: 5, type: 'sand' }, { s: 100, len: 16, d0: -5, d1: -0.6, type: 'sand' }] },
@@ -213,7 +218,7 @@ const COURSES = [
         ramp: { s: 88, len: 10, h: 1.8 }, zones: [{ s: 102, len: 12, d0: -8.5, d1: 8.5, type: 'water' }] },
     ] },
   // 아주 큰 도전 코스: 빌딩 사이 직각 커브 · 거리 둘을 건너는 8m 고가도로 · ㄷ자 블록을 도는 길 (그 가운데를 꿰뚫는 골목 지름길: 기름 웅덩이 슬라롬) · 물바다 점프
-  { name: '빌딩 고가도로', en: 'SKYWAY CITY', fact: '아주 큰 도전 코스 · 고가도로 · 골목 지름길 · 직각 커브', lapSec: 92, theme: 'city', song: 'city', hard: true, big: true,
+  { name: '빌딩 고가도로', en: 'SKYWAY CITY', fact: '아주 큰 도전 코스 · 고가도로 · 골목 지름길 · 자동차', lapSec: 92, theme: 'city', song: 'city', hard: true, big: true,
     cps: pathCps([-40, 0], [['L', 60, 0], ['A', 60, 30, 30, -90, 0], ['L', 90, 270], ['A', 120, 270, 30, 180, 90], ['L', 170, 300], ['A', 170, 330, 30, -90, 0],
       ['A', 230, 330, 30, 180, 90], ['L', 270, 360], ['A', 270, 330, 30, 90, 0], ['A', 330, 330, 30, 180, 270], ['L', 360, 300], ['A', 360, 270, 30, 90, 0],
       ['L', 390, 210], ['A', 360, 210, 30, 0, -90], ['L', -160, 180], ['A', -160, 210, 30, -90, -180], ['L', -190, 270], ['A', -160, 270, 30, 180, 90],
@@ -221,12 +226,55 @@ const COURSES = [
     bumps: [{ s: 1175, flat: 205, ramp: 70, h: 8 }],   // 고가도로: 거리 둘(s 295 · 1735) 위를 8m 높이로
     ramp: { s: 1680, len: 12, h: 2.0 }, panels: [250, 1050, 1850], boxRows: [60, 300, 1200],
     zones: [{ s: 1696, len: 12, d0: -8.6, d1: 8.6, type: 'water' }, { s: 395, len: 30, d0: -8.6, d1: -4.6, type: 'oil' }, { s: 1893, len: 30, d0: 4.6, d1: 8.6, type: 'oil' }],
+    hazards: [-4.5, 4.5, 0, 4.5, -4.5, 0].map((d, i) => ({ type: 'car', d, a: 160, b: 1880, phase: i * 1720 / 12 / 6, color: ['#f6c945', '#e5484d', '#5ec8ff', '#7ae0b0', '#ff9ad5', '#ffffff'][i] })),   // 같은 쪽으로 느리게 달리는 자동차 여섯
     cuts: [
       { name: '골목길', from: 444, to: 732, via: [[190, 300], [255, 302], [320, 300]], half: 4.5, wall: 7.5, style: 'alley', boxes: [145], panels: [165],
         zones: [{ s: 92, len: 14, d0: 0.4, d1: 4.5, type: 'oil' }, { s: 118, len: 14, d0: -4.5, d1: -0.4, type: 'oil' }] },
     ] },
 ];
 const JET = { period: 3.6, warn: 0.7, on: 1.2, r: 2.3 };   // 불기둥: 3.6초마다 0.7초 빨갛게 달아올랐다가 1.2초 동안 솟음
+// 코스 장애물 (도전 코스 · 아주 큰 맵): 자리가 시간만으로 정해짐 (기억해 둘 상태가 없어서 CPU가 지나갈 무렵의 자리를 미리 알고 피함). 닿으면 빙글
+//  stomp 쿵쿵 돌 (용암 성: 6m 위에서 내려찍고 잠깐 머물렀다 올라감) · swing 흔들 통나무 (구름다리 숲: 7m 줄에 매달려 길을 가로질러 흔들림)
+//  crab 꽃게 (소라 해안: 옆으로 걸어 길을 건넘, 점프로 넘을 수 있음) · gum 사탕 공 (사탕 롤러코스터: 길을 굴러 건넘)
+//  cart 광산 수레 (모래 협곡: 선로로 길을 건너고 양 끝에서 잠깐 쉼) · car 자동차 (빌딩 고가도로: 옆길에서 들어와 같은 쪽으로 느리게 달리다 다시 옆길로)
+//  ls · ld: 길을 따라 · 길을 가로질러 반 크기 (닿는 범위)
+const HAZ_KIND = {
+  stomp: { ls: 2.1, ld: 2.1, period: 3.4 },
+  swing: { ls: 1.6, ld: 0.6, period: 3.0 },
+  crab: { ls: 0.6, ld: 0.75, speed: 3, span: 7.5, wait: 0, low: true },
+  gum: { ls: 1.35, ld: 1.35, speed: 7, span: 11, wait: 0 },
+  cart: { ls: 0.75, ld: 1.15, speed: 9, span: 13, wait: 0.9 },
+  car: { ls: 2.0, ld: 1.0, speed: 12 },
+};
+let HAZ = [];
+const HZ = { s: 0, d: 0, y: 0, hot: false, vd: 0, th: 0 };   // hazAt 결과 (돌려 씀)
+function hazAt(z, t, out = HZ) {   // 시각 t의 장애물 자리: s(지름길이면 cs) · d · 높이 y · 닿으면 빙글인지(hot) · 옆으로 움직이는 빠르기 vd
+  const K = HAZ_KIND[z.type], u = t + (z.phase || 0);
+  out.s = z.cut >= 0 ? z.cs : z.s; out.d = z.d || 0; out.y = 0; out.hot = true; out.vd = 0; out.th = 0;
+  if (z.type === 'stomp') {   // 0~1초 올라감 · 2초까지 위에서 덜덜 · 0.15초 만에 쾅 · 3.4초까지 바닥에
+    const q = ((u % K.period) + K.period) % K.period;
+    out.y = q < 1.0 ? 6 * smooth(q) : q < 2.0 ? 6 : q < 2.15 ? 6 * (1 - (q - 2.0) / 0.15) : 0;
+    out.hot = out.y < 1.4;
+  } else if (z.type === 'swing') {   // 아래쪽(가운데)을 지날 때만 카트 높이
+    const w = Math.PI * 2 / K.period, th = 1.15 * Math.sin(u * w);
+    out.th = th; out.d = 7 * Math.sin(th); out.y = 8 - 7 * Math.cos(th); out.hot = out.y < 2.3;
+    out.vd = 7 * Math.cos(th) * 1.15 * Math.cos(u * w) * w;
+  } else if (z.type === 'car') {
+    const len = wrapS(z.b - z.a), q = ((u * K.speed) % len + len) % len, e = Math.min(q, len - q), side = z.d >= 0 ? 1 : -1;
+    out.s = wrapS(z.a + q);
+    out.d = e < 14 ? z.d + (side * 13 - z.d) * (1 - e / 14) : z.d;   // 처음·끝 14m: 옆길로 들어오고 나감
+  } else {   // crab · gum · cart: 길을 가로질러 왔다 갔다
+    const T1 = 2 * K.span / K.speed, P = 2 * (T1 + K.wait), q = ((u % P) + P) % P;
+    if (q < T1) { out.d = -K.span + K.speed * q; out.vd = K.speed; }
+    else if (q < T1 + K.wait) out.d = K.span;
+    else if (q < 2 * T1 + K.wait) { out.d = K.span - K.speed * (q - T1 - K.wait); out.vd = -K.speed; }
+    else out.d = -K.span;
+  }
+  return out;
+}
+// 쉬운 CPU는 장애물을 가끔 못 보고 들이받음 (카트 · 장애물 · 바퀴마다 정해짐)
+const hazSkill = () => game.demo ? 0.85 : [0.5, 0.82, 0.97][settings.cpuLevel];
+const seesHaz = (k, i) => (((k.slot + 1) * 7919 + (i + 1) * 104729 + (k.lap + 3) * 1299709) % 997) / 997 < hazSkill();
 // 그랑프리 컵: 코스 넷을 차례로 달리고 등수 점수를 더함. 몬스터 컵 = 기본 코스 넷, 도전 컵 = 길고 어려운 도전 코스 넷 (rec: 최고 점수 기록 이름)
 const CUPS = [
   { name: '몬스터 컵', en: 'MONSTER CUP', courses: [0, 1, 2, 3], rec: 'gp' },
@@ -246,6 +294,7 @@ function loadCourse(i) {
   for (const p of PANELS) { const c = curvSpan(p.s - 20, p.s + 30, true); p.d = Math.abs(c) > 0.004 ? Math.sign(c) * 3 : 0; }   // 굽은 곳이면 안쪽 길에
   BOX_ROWS = COURSE.boxRows.slice();
   CUTS = (COURSE.cuts || []).map((c, i) => buildCut(c, i));
+  HAZ = (COURSE.hazards || []).map(z => Object.assign({ cut: -1, last: -1 }, z));
   for (const z of ZONES) z.full = z.d1 - z.d0 >= 2 * TRACK.halfW;   // 길을 다 덮는 구역 (개울·강)
   MAP = mapBox();
 }
@@ -492,9 +541,14 @@ loadCourse(lobbyCourse());
 // ============================================================
 const KART = { R: 1.05, VMAX: 23, ACC: 17, COAST: 4.5, BRAKE: 22, REV: 6, TURN: 1.75, G: 17, BOOST: 1.36 };
 const H = 1 / 120;
-const ITEMS = { boost: { name: '불꽃 대시' }, triple: { name: '불꽃 대시 ×3' }, star: { name: '반짝 별' }, zap: { name: '번개 구슬' }, trap: { name: '물방울 함정' },
+// n: 여러 번 나눠 쓰는 아이템의 개수 · short: 남은 개수와 함께 보일 이름
+const ITEMS = { boost: { name: '불꽃 대시' }, triple: { name: '불꽃 대시 ×3', short: '불꽃 대시', n: 3 }, star: { name: '반짝 별' }, zap: { name: '번개 구슬' }, trap: { name: '물방울 함정' },
   shield: { name: '방울 보호막' }, magnet: { name: '자석' }, bolt: { name: '천둥 번개' }, ball: { name: '통통 공' }, paint: { name: '물감 폭탄' },
-  rocket: { name: '추적 로켓' }, tornado: { name: '회오리 바람' }, snow: { name: '눈덩이' }, bomb: { name: '꽝 폭탄' }, spring: { name: '통통 스프링' } };
+  rocket: { name: '추적 로켓' }, tornado: { name: '회오리 바람' }, snow: { name: '눈덩이' }, bomb: { name: '꽝 폭탄' }, spring: { name: '통통 스프링' },
+  fake: { name: '가짜 상자' }, trap3: { name: '줄줄이 함정 ×3', short: '줄줄이 함정', n: 3 }, horn: { name: '빵빵 나팔' }, ufo: { name: '외계인 UFO' }, ghost: { name: '꼬마 유령' },
+  plane: { name: '꼬마 비행기' }, boomerang: { name: '부메랑 ×3', short: '부메랑', n: 3 }, cloud: { name: '천둥 먹구름' }, shrink: { name: '작아져라 광선' },
+  barricade: { name: '바리케이드' }, pow: { name: '쿵 블록' }, water: { name: '물풍선 폭탄' } };
+const itemLabel = (it, n) => ITEMS[it].n ? `${ITEMS[it].short} ×${n}` : ITEMS[it].name;
 const DRIFT = [   // 드리프트 불꽃 단계: 모은 양 · 부스트 시간 · 처음 속도 · 이름 · 색
   null,
   { charge: 1.0, dur: 0.7, kick: 1.06, name: '부스트!', color: '#5ec8ff', hex: 0x5ec8ff },
@@ -506,8 +560,9 @@ const DRIFT = [   // 드리프트 불꽃 단계: 모은 양 · 부스트 시간 
 const CPU_SPEED = [0.78, 0.9, 0.98];
 const CPU_CATCHUP = [0.04, 0.08, 0.1];   // 사람보다 많이 뒤처진 CPU가 빨라지는 최대 비율
 const karts = [];
-const boxes = [], shots = [], traps = [], balls = [], rockets = [], tornados = [], snowballs = [], bombs = [];
-const clearItems = () => { for (const a of [shots, traps, balls, rockets, tornados, snowballs, bombs]) a.length = 0; };
+// traps: 물방울 함정 · 가짜 상자 · 바리케이드 (kind). pows: 떨어지기를 기다리는 쿵 블록 · horns: 나팔 고리 (그리기용)
+const boxes = [], shots = [], traps = [], balls = [], rockets = [], tornados = [], snowballs = [], bombs = [], ufos = [], boomerangs = [], waters = [], pows = [], horns = [];
+const clearItems = () => { for (const a of [shots, traps, balls, rockets, tornados, snowballs, bombs, ufos, boomerangs, waters, pows, horns]) a.length = 0; };
 function makeKart(slot, ch, human) {
   return { slot, ch, human, color: human >= 0 ? COLORS[human] : CHARS[ch].body,
     x: 0, y: 0, z: 0, a: 0, v: 0, vl: 0, vy: 0, vyG: 0, air: false, hop: false, rampAir: false, hillAir: false, trick: false, trickT: -9,
@@ -516,6 +571,7 @@ function makeKart(slot, ch, human) {
     cut: -1, cs: 0, cd: 0, cseg: 0,   // 지름길 위면 그 번호와 지름길 위 자리
     lapMax: 0, lapT0: 0, bestLap: 0, newLap: false, newRace: false,
     shieldT: 0, magnetT: 0, magnetTarget: null, paintT: 0, paintAt: -9, boltFx: -9, frozenT: 0,
+    ghostT: 0, planeT: 0, cloudT: 0, cloudAt: -9, cloudBy: null, cloudFrom: null, tinyT: 0, flatT: 0, ufoT: 0, bubbleT: 0, hopAt: -9,   // 유령 · 비행기 · 먹구름 · 작아짐 · 납작 · UFO 빛 · 물방울
     offroad: false, wrongT: 0, stuckT: 0, gasSince: null, speedMul: 1, bumpAt: -9, starT: 0, draft: 0, landT: -9,
     ai: { lane: rand(-3, 3), laneAt: 0, d: 0, itemAt: 0, drifting: false, driftSkill: 0, cutGo: {}, cutLap: {}, path: -1 },
     ctl: { steer: 0, gas: false, brake: false, drift: false, item: false, swap: false, gasBtn: false }, mesh: null };
@@ -574,10 +630,13 @@ function endDrift(k, released) {
   k.drift = null;
   if (released && D && !k.offroad) { game.stats.drifts++; giveBoost(k, D.dur, D.kick); if (k.human >= 0) showMsg(k.human, D.name, D.color); }
 }
-const HIT_MSG = { trap: '미끄덩!', zap: '찌릿!', ball: '통!', bolt: '번쩍!', star: '빙글!', lava: '앗 뜨거!', fire: '앗 뜨거!', rocket: '쾅!', tornado: '휘이잉!', snow: '꽁꽁!', bomb: '꽝!' };
+const HIT_MSG = { trap: '미끄덩!', zap: '찌릿!', ball: '통!', bolt: '번쩍!', star: '빙글!', lava: '앗 뜨거!', fire: '앗 뜨거!', rocket: '쾅!', tornado: '휘이잉!', snow: '꽁꽁!', bomb: '꽝!',
+  fake: '가짜였어!', horn: '빵빵!', ufo: '끌려가요!', plane: '부웅 쾅!', boomerang: '휙 퍽!', cloud: '번쩍 우르릉!', shrink: '쪼그매졌어!', barricade: '쿵!', pow: '쿵!', water: '뽀글뽀글!', squash: '납작!',
+  stomp: '쿵쿵!', swing: '꽝!', crab: '꼬집!', gum: '통!', cart: '덜컹!', car: '빵!' };
+const immune = k => k.starT > 0 || k.ghostT > 0 || k.planeT > 0;   // 반짝 별 · 꼬마 유령 · 꼬마 비행기: 아무것도 안 통함
 // 맞으면 빙글: true. 별·무적이면 그냥 false, 보호막이 대신 터지면 'block'
 function spinOut(k, why) {
-  if (k.spinT > 0 || k.immuneT > 0 || k.starT > 0) return false;   // 반짝 별이면 아무것도 안 통함
+  if (k.spinT > 0 || k.immuneT > 0 || immune(k)) return false;   // 반짝 별이면 아무것도 안 통함
   if (k.shieldT > 0) { popShield(k); return 'block'; }
   k.spinT = 1.25; k.spinAt = T(); k.immuneT = 2.6; k.v *= 0.35; k.vl = 0; k.drift = null; k.boostT = 0; k.trick = false; k.magnetT = 0; game.stats.spins++;   // 공중에서 맞으면 트릭 부스트도 없음
   burst(k.x, k.y + 1.2, k.z, 14, why === 'trap' ? [0x7dd3fc, 0xffffff] : why === 'ball' ? [0x6ee7a0, 0xffffff] : why === 'lava' || why === 'fire' ? [0xff6a2a, 0xffd166] : [0xfde047, 0xffffff], 6, 0.6);
@@ -586,7 +645,7 @@ function spinOut(k, why) {
 }
 // 눈덩이: 얼음에 갇혀 1.4초 멈춤. 별·무적이면 그냥 false, 보호막이 대신 터지면 'block'
 function freezeOut(k) {
-  if (k.spinT > 0 || k.frozenT > 0 || k.immuneT > 0 || k.starT > 0) return false;
+  if (k.spinT > 0 || k.frozenT > 0 || k.bubbleT > 0 || k.immuneT > 0 || immune(k)) return false;
   if (k.shieldT > 0) { popShield(k); return 'block'; }
   k.frozenT = 1.4; k.immuneT = 2.8; k.v *= 0.25; k.vl = 0; k.drift = null; k.boostT = 0; k.trick = false; k.magnetT = 0; game.stats.spins++;
   burst(k.x, k.y + 1.2, k.z, 18, [0xffffff, 0xbfe7ff, 0x9fd6ff], 5, 0.6);
@@ -621,7 +680,173 @@ function popShield(k) {   // 보호막이 대신 맞고 "퐁" 터짐
   if (k.human >= 0) { sfx('pop'); showMsg(k.human, '보호막이 막았어요!', '#9be7ff'); rumble(k.human, 0.3, 80); }
 }
 // 물감 폭탄·천둥 번개처럼 멀리서 오는 것: 별이면 안 통하고 보호막은 대신 터짐
-function shrug(k) { if (k.starT > 0) return true; if (k.shieldT > 0) { popShield(k); return true; } return false; }
+function shrug(k) { if (immune(k)) return true; if (k.shieldT > 0) { popShield(k); return true; } return false; }
+// 물풍선: 물방울 안에 갇혀 1.5초 동안 동동 뜸. 별·유령·비행기·무적이면 false, 보호막이 대신 터지면 'block'
+function bubbleOut(k) {
+  if (k.spinT > 0 || k.frozenT > 0 || k.bubbleT > 0 || k.immuneT > 0 || immune(k)) return false;
+  if (k.shieldT > 0) { popShield(k); return 'block'; }
+  k.bubbleT = 1.5; k.immuneT = 2.9; k.v *= 0.3; k.vl = 0; k.drift = null; k.boostT = 0; k.trick = false; k.magnetT = 0; game.stats.spins++;
+  burst(k.x, k.y + 1.2, k.z, 18, [0x8fd8f2, 0xffffff, 0x5cc8f0], 5, 0.6);
+  if (k.human >= 0) { sfx('bubble'); rumble(k.human, 0.6, 180); showMsg(k.human, '물방울에 갇혔어요!', '#8fd8f2', '곧 퐁 하고 터져요'); game.shake[k.human] = 0.35; }
+  return true;
+}
+function popBubble(k) { burst(k.x, k.y + 1.6, k.z, 16, [0x8fd8f2, 0xffffff], 5, 0.4); if (k.human >= 0) sfx('pop'); }
+// 작아짐: dur초 동안 반만 해지고 느려짐 (큰 카트에 밟히면 납작). 별·유령·비행기는 안 통하고 보호막은 대신 터짐
+function shrinkKart(k, dur) {
+  if (k.finished || immune(k)) return false;
+  if (k.shieldT > 0) { popShield(k); return 'block'; }
+  k.tinyT = Math.max(k.tinyT, dur); k.drift = null; k.boostT = 0; k.v *= 0.8;
+  for (let i = 0; i < 10; i++) spark(k.x + rand(-1, 1), k.y + rand(0.5, 2.5), k.z + rand(-1, 1), Math.random() < 0.5 ? 0xc4b5fd : 0xffffff, 0.45, 0, -2, 0, 0.5);
+  if (k.human >= 0) { sfx('shrink'); showMsg(k.human, '작아졌어요!', '#c4b5fd', '큰 카트에 밟히지 않게 조심!'); rumble(k.human, 0.4, 120); }
+  return true;
+}
+// 천둥 먹구름이 터짐: 들고 있던 카트에 번개 → 작아지며 빙글 (보호막은 대신 터지고, 별·유령·비행기면 그냥 사라짐)
+function cloudStrike(k) {
+  const by = k.cloudBy;
+  k.cloudT = 0; k.cloudBy = null; k.boltFx = T();
+  for (let y = 1; y < 9; y += 1.1) spark(k.x + rand(-0.3, 0.3), k.y + y, k.z + rand(-0.3, 0.3), 0xfff27a, 0.9, 0, -2, 0, 0.3);
+  if (karts.some(o => o.human >= 0 && (o.x - k.x) ** 2 + (o.z - k.z) ** 2 < 3600)) sfx('thunder');
+  if (immune(k)) return;
+  if (k.shieldT > 0) { popShield(k); return; }
+  const hit = spinOut(k, 'cloud') === true;
+  k.tinyT = Math.max(k.tinyT, 3);
+  if (hit && by && by !== k) hitBy(by, k, 'cloud');
+}
+// 천둥 먹구름 넘기기: 들고 있는 카트가 다른 카트에 닿으면 넘어감 (막 받은 건 0.7초 동안 못 넘김)
+function passCloud(a, b, t) {
+  const from = a.cloudT > 0 && b.cloudT <= 0 ? a : b.cloudT > 0 && a.cloudT <= 0 ? b : null;
+  if (!from || t - from.cloudAt < 0.7) return;
+  const to = from === a ? b : a;
+  if (to.finished || (to === from.cloudFrom && t - from.cloudAt < 2.5)) return;   // 방금 준 카트에게 바로 되돌려 주진 못함
+  to.cloudT = from.cloudT; to.cloudAt = t; to.cloudBy = from.cloudBy; to.cloudFrom = from; from.cloudT = 0; from.cloudBy = null;
+  if (from.human >= 0) { sfx('itemGet'); showMsg(from.human, '먹구름을 넘겼다!', '#cbd5e1', `${nameOf(to)}에게`); }
+  if (to.human >= 0) { sfx('cloud'); showMsg(to.human, '먹구름이 왔어요!', '#94a3b8', `${Math.ceil(to.cloudT)}초 안에 다른 카트에 부딪혀 넘겨요`); }
+}
+// 빵빵 나팔: 둘레 9m 카트는 빙글 돌며 밀려나고, 날아오던 아이템·함정·UFO는 모두 부서짐 (내 것은 그대로)
+function hornBlast(k) {
+  const R2 = 81, near = o => (o.x - k.x) ** 2 + (o.z - k.z) ** 2 < R2 && Math.abs(o.y - k.y) < 7;
+  let first = null, hit = 0, broke = 0;
+  for (const o of karts) {
+    if (o === k || o.finished || !near(o)) continue;
+    if (spinOut(o, 'horn') === true) { hit++; const dx = o.x - k.x, dz = o.z - k.z, l = Math.hypot(dx, dz) || 1; push(o, dx / l * 9, dz / l * 9); if (!first || (o.x - k.x) ** 2 + (o.z - k.z) ** 2 < (first.x - k.x) ** 2 + (first.z - k.z) ** 2) first = o; }
+  }
+  for (const arr of [shots, balls, rockets, tornados, snowballs, bombs, boomerangs, waters, ufos]) for (let i = arr.length - 1; i >= 0; i--) {
+    const o = arr[i];
+    if (o.owner === k || !near(o)) continue;
+    burst(o.x, o.y + 0.5, o.z, 12, [0xfde047, 0xffffff], 5, 0.4); arr.splice(i, 1); broke++;
+  }
+  for (let i = traps.length - 1; i >= 0; i--) { const tr = traps[i]; if (near(tr)) { burst(tr.x, tr.y + 0.6, tr.z, 10, [0xfde047, 0xffffff], 4, 0.4); traps.splice(i, 1); broke++; } }
+  horns.push({ x: k.x, y: k.y + 0.6, z: k.z, t0: T() });
+  if (horns.length > 4) horns.shift();
+  if (first) hitBy(k, first, 'horn');
+  if (karts.some(o => o.human >= 0 && (o.x - k.x) ** 2 + (o.z - k.z) ** 2 < 3600)) sfx('horn');
+  for (const o of karts) if (o.human >= 0 && near(o)) game.shake[o.human] = Math.max(game.shake[o.human], 0.4);
+  if (k.human >= 0) showMsg(k.human, '빵빵!', '#fde047', hit || broke ? [hit ? `친구 ${hit}명 빙글` : '', broke ? `아이템 ${broke}개 부숨` : ''].filter(Boolean).join(' · ') : '');
+}
+// 꼬마 유령: 앞에서 가장 가까운(없으면 뒤에서 가장 가까운) 아이템 든 카트의 첫 칸을 훔쳐 옴 (빈 칸이 있을 때만)
+function stealItem(k) {
+  if ((k.item ? 1 : 0) + (k.item2 ? 1 : 0) + (k.roulT > 0 ? 1 : 0) >= 2) return null;
+  let best = null, bd = Infinity;
+  for (const o of karts) {
+    if (o === k || o.finished || o.ghostT > 0 || !o.item) continue;
+    const ds = sdiff(o.s, k.s), score = ds > 0 ? ds : 1000 - ds;
+    if (score < bd) { bd = score; best = o; }
+  }
+  if (!best) return null;
+  const it = best.item, n = best.itemN;
+  shiftItems(best);
+  if (!k.item) { k.item = it; k.itemN = n; } else { k.item2 = it; k.itemN2 = n; }
+  return { from: best, it };
+}
+// 함정·가짜 상자를 카트 바로 뒤에 놓음 (지름길이면 지름길 위에)
+function dropTrap(k, kind) {
+  const r = kind === 'fake' ? 1.6 : 1.55;
+  if (k.cut >= 0) {
+    const C = CUTS[k.cut], cs = Math.max(0, k.cs - 2.8), p = pathPoint(C.P, cs, k.d);
+    traps.push({ kind, x: p.x, y: cutGround(C, cs, k.d), z: p.z, s: cutMainS(C, cs), d: k.d, cut: k.cut, cs, owner: k, t0: T(), r, a: Math.atan2(p.tx, p.tz) });
+  } else {
+    const s = wrapS(k.s - 2.8), p = trackPoint(s, k.d);
+    traps.push({ kind, x: p.x, y: groundAt(s, k.d), z: p.z, s, d: k.d, cut: -1, owner: k, t0: T(), r, a: Math.atan2(p.tx, p.tz) });
+  }
+  if (traps.length > 18) traps.shift();
+}
+// 바리케이드: 1등 앞 36m에 길을 가로질러 한 줄 (큰길은 셋, 지름길은 둘) — 사이 좁은 틈이나 길 가장자리로 빠져나감. 9초 뒤 사라지고 부딪히면 부서짐
+function placeBarricades(lead, owner) {
+  const C = lead.cut >= 0 ? CUTS[lead.cut] : null, dist = 36, onCut = C && lead.cs + dist < C.P.len - 2;
+  const lanes = onCut ? [-(C.half - 2), C.half - 2] : [-6, 0, 6];
+  for (const d of lanes) {
+    if (onCut) {
+      const cs = lead.cs + dist, p = pathPoint(C.P, cs, d);
+      traps.push({ kind: 'barricade', x: p.x, y: cutGround(C, cs, d), z: p.z, s: cutMainS(C, cs), d, cut: C.idx, cs, owner, t0: T(), life: 9, r: 1.7, a: Math.atan2(p.tx, p.tz) });
+    } else {
+      const s = wrapS(C ? C.to + lead.cs + dist - C.P.len : lead.s + dist), p = trackPoint(s, d);
+      traps.push({ kind: 'barricade', x: p.x, y: groundAt(s, d), z: p.z, s, d, cut: -1, owner, t0: T(), life: 9, r: 1.7, a: Math.atan2(p.tx, p.tz) });
+    }
+  }
+  while (traps.length > 18) traps.shift();
+}
+// 막힌 줄들(blocks: [왼쪽 끝, 오른쪽 끝])을 모두 비켜 가는 줄 중 target에 가장 가까운 줄 (다 막혔으면 그대로)
+function hazDodge(k, target, road, lim) {
+  if (!HAZ.length) return target;
+  const t = T(), blocks = [];
+  let near = -1, nd = 40;
+  for (let i = 0; i < HAZ.length; i++) {
+    const z = HAZ[i];
+    if (z.cut !== road) continue;
+    if (z.type === 'car') {
+      hazAt(z, t); const ds = road >= 0 ? HZ.s - k.cs : sdiff(HZ.s, k.s);
+      if (ds > -3 && ds < 26 && seesHaz(k, i)) blocks.push([HZ.d - 2.9, HZ.d + 2.9]);
+      continue;
+    }
+    const ds = road >= 0 ? z.cs - k.cs : sdiff(z.s, k.s);
+    if (ds > -2 && ds < nd) { nd = ds; near = i; }
+  }
+  if (near >= 0) for (let i = 0; i < HAZ.length; i++) {   // 가장 가까운 장애물과 그 뒤 14m 안의 것: 지나갈 무렵의 자리를 피해서
+    const z = HAZ[i];
+    if (z.cut !== road || z.type === 'car' || !seesHaz(k, i)) continue;
+    const ds = road >= 0 ? z.cs - k.cs : sdiff(z.s, k.s);
+    if (ds < nd - 0.01 || ds > nd + 14) continue;
+    const K = HAZ_KIND[z.type], ta = t + Math.max(0, ds) / Math.max(8, k.v);
+    for (const du of [-0.3, -0.15, 0, 0.15, 0.3]) { hazAt(z, ta + du); if (HZ.hot) blocks.push([HZ.d - K.ld - 1.3, HZ.d + K.ld + 1.3]); }
+  }
+  return blocks.length ? clearLane(target, blocks, lim) : target;
+}
+function clearLane(target, blocks, lim) {
+  const free = (d, m) => blocks.every(([a, b]) => d <= a - m || d >= b + m);
+  if (free(target, 0)) return target;
+  for (const m of [0.6, 0.3, 0]) {   // 좁은 틈이면 가장자리 말고 가운데 쪽으로 (조금 빗나가도 안 부딪히게)
+    let best = null;
+    for (let d = -lim; d <= lim + 1e-6; d += 0.1) if (free(d, m) && (best === null || Math.abs(d - target) < Math.abs(best - target))) best = d;
+    if (best !== null) return best;
+  }
+  return target;
+}
+// 앞에 놓인 함정·가짜 상자(어려움 CPU만 알아챔)·바리케이드: 막는 줄 [d - w, d + w]
+function trapBlocks(k, road) {
+  const out = [];
+  for (const tr of traps) {
+    if (tr.cut !== road || (tr.kind === 'fake' && !game.demo && settings.cpuLevel < 2)) continue;
+    const bar = tr.kind === 'barricade', ds = road >= 0 ? tr.cs - k.cs : sdiff(tr.s, k.s), w = bar ? tr.r + 0.55 : (tr.r || 1.55) + (road >= 0 ? 0.65 : 0.85);
+    if (ds > 0 && ds < (bar ? 32 : road >= 0 ? 20 : 22)) out.push([tr.d - w, tr.d + w]);
+  }
+  return out;
+}
+// 줄줄이 함정을 첫 칸에 들고 있으면 카트 뒤에 줄줄이 달림: (x, z)에 닿은 게 있으면 하나가 대신 막고 true
+const trailAt = (k, j) => { const fx = Math.sin(k.a), fz = Math.cos(k.a), b = 2.3 + j * 1.35; return [k.x - fx * b, k.z - fz * b]; };
+function trailBlock(x, z, y, r, by) {
+  for (const k of karts) {
+    if (k.item !== 'trap3' || k.itemN <= 0 || k === by || k.finished || Math.abs(k.y - y) > 2.5) continue;
+    for (let j = 0; j < k.itemN; j++) {
+      const [tx, tz] = trailAt(k, j);
+      if ((tx - x) ** 2 + (tz - z) ** 2 > (r + 0.8) ** 2) continue;
+      burst(tx, k.y + 0.4, tz, 12, [0x7dd3fc, 0xffffff], 4, 0.4);
+      if (--k.itemN <= 0) shiftItems(k);
+      if (k.human >= 0) { sfx('pop'); showMsg(k.human, '줄줄이 함정이 막았어요!', '#7dd3fc'); }
+      return true;
+    }
+  }
+  return false;
+}
 function doTrick(k) {
   if (!k.rampAir || k.trick || k.spinT > 0) return;   // 맞아서 빙글 도는 중엔 트릭 못 함
   k.trick = true; k.trickT = T(); game.stats.tricks++;
@@ -643,12 +868,15 @@ function assistSteer(k, steer) {
 function driveKart(k, c, h) {
   k.boostT = Math.max(0, k.boostT - h); k.panelT = Math.max(0, k.panelT - h); k.immuneT = Math.max(0, k.immuneT - h); k.starT = Math.max(0, k.starT - h);
   k.shieldT = Math.max(0, k.shieldT - h); k.paintT = Math.max(0, k.paintT - h);
+  k.ghostT = Math.max(0, k.ghostT - h); k.tinyT = Math.max(0, k.tinyT - h); k.flatT = Math.max(0, k.flatT - h); k.ufoT = Math.max(0, k.ufoT - h);
+  if (k.planeT > 0) { k.planeT = Math.max(0, k.planeT - h); if (k.planeT === 0) { giveBoost(k, 0.8, 1.04); if (k.human >= 0) showMsg(k.human, '착륙!', '#7dd3fc'); } }   // 꼬마 비행기: 끝나면 내리며 부스트
+  if (k.cloudT > 0) { k.cloudT = Math.max(0, k.cloudT - h); if (k.cloudT === 0) cloudStrike(k); }   // 천둥 먹구름: 시간이 다 되면 들고 있던 카트에 번개
   if (k.roulT > 0) {
     k.roulT -= h;
     if (k.human >= 0 && T() >= k.roulTick) { k.roulTick = T() + 0.08; sfx('roulette'); }
     if (k.roulT <= 0) {
       k.roulT = 0;
-      const it = rollItem(k), n = it === 'triple' ? 3 : 1;
+      const it = rollItem(k), n = ITEMS[it].n || 1;
       if (!k.item) { k.item = it; k.itemN = n; } else { k.item2 = it; k.itemN2 = n; }   // 굴리는 동안 첫 칸을 썼으면 첫 칸으로
       if (k.human >= 0) sfx('itemGet'); k.ai.itemAt = T() + rand(0.6, 2.2) + (2 - settings.cpuLevel) * 0.8;
     }
@@ -656,30 +884,36 @@ function driveKart(k, c, h) {
   let steer = c.steer, gas = c.gas, brake = c.brake;
   if (k.spinT > 0) { k.spinT = Math.max(0, k.spinT - h); steer = 0; gas = false; brake = false; }
   if (k.frozenT > 0) { k.frozenT = Math.max(0, k.frozenT - h); steer = 0; gas = false; brake = false; }   // 눈덩이: 얼음에 갇혀 꼼짝 못 함
+  if (k.bubbleT > 0) { k.bubbleT = Math.max(0, k.bubbleT - h); steer = 0; gas = false; brake = false; if (k.bubbleT === 0) popBubble(k); }   // 물풍선: 물방울에 갇혀 동동
   if (k.human >= 0 && !k.finished && settings.assist && !game.forceCPU) steer = assistSteer(k, steer);
   k.steer += (steer - k.steer) * (1 - Math.exp(-h * 10));
   // 앞뒤 속도
   let vmax = KART.VMAX * k.speedMul;
-  if ((k.offroad || k.wet) && k.boostT <= 0 && k.starT <= 0) vmax *= k.wet ? 0.6 : 0.5;
+  if ((k.offroad || k.wet) && k.boostT <= 0 && k.starT <= 0 && k.planeT <= 0) vmax *= k.wet ? 0.6 : 0.5;
   if (k.starT > 0) vmax = Math.max(vmax, KART.VMAX * 1.2 * kartClass(k));   // 반짝 별: 풀밭도 그대로, 조금 더 빠르게
   if (k.magnetT > 0) vmax = Math.max(vmax, KART.VMAX * 1.2 * kartClass(k));
   if (k.paintT > 0 && k.human < 0) vmax *= 0.92;
   if (k.boostT > 0) vmax = KART.VMAX * KART.BOOST * kartClass(k);
-  if (k.spinT > 0 || k.frozenT > 0) k.v *= Math.exp(-h * (k.frozenT > 0 ? 4 : 2.2));
+  if (k.tinyT > 0) vmax *= 0.75;   // 작아지면 느리게 · 납작해져도 잠깐 느리게
+  if (k.flatT > 0) vmax *= 0.7;
+  if (k.cloudT > 0) vmax *= 1.06;   // 먹구름을 들고 있으면 조금 빠르게 (넘기러 가라고)
+  if (k.ufoT > 0) vmax = Math.min(vmax, KART.VMAX * 0.55);   // UFO 빛에 끌려 느리게
+  if (k.planeT > 0) vmax = KART.VMAX * 1.5 * kartClass(k);   // 꼬마 비행기: 아주 빠르게 저절로
+  if (k.spinT > 0 || k.frozenT > 0 || k.bubbleT > 0) k.v *= Math.exp(-h * (k.frozenT > 0 || k.bubbleT > 0 ? 4 : 2.2));
   else if (k.air) { /* 공중에선 속도 그대로 */ }
   else if (brake && !(k.boostT > 0)) {
     if (k.v > 0.5) k.v -= KART.BRAKE * h;
     else k.v = Math.max(-KART.REV, k.v - 9 * h);
-  } else if (gas || k.boostT > 0 || k.starT > 0 || k.magnetT > 0) {
-    if (k.v < vmax) k.v = Math.min(vmax, k.v + (k.boostT > 0 || k.starT > 0 || k.magnetT > 0 ? 34 : KART.ACC * Math.max(0.15, 1 - Math.max(0, k.v) / vmax)) * h);
-    else k.v = Math.max(vmax, k.v - (k.offroad ? 26 : 6) * h);
+  } else if (gas || k.boostT > 0 || k.starT > 0 || k.magnetT > 0 || k.planeT > 0) {
+    if (k.v < vmax) k.v = Math.min(vmax, k.v + (k.boostT > 0 || k.starT > 0 || k.magnetT > 0 || k.planeT > 0 ? 34 : KART.ACC * Math.max(0.15, 1 - Math.max(0, k.v) / vmax)) * h);
+    else k.v = Math.max(vmax, k.v - (k.offroad ? 26 : k.ufoT > 0 ? 16 : 6) * h);
   } else {
     const dec = (k.offroad ? 14 : KART.COAST) * h;
     k.v = Math.abs(k.v) <= dec ? 0 : k.v - Math.sign(k.v) * dec;
   }
   // 드리프트: 버튼을 누른 채로 꺾으면 시작 (누르는 순간 살짝 뜀). 꺾는 쪽으로 더 꺾을수록 불꽃이 빨리 커짐
-  const driftBtn = c.drift && k.spinT <= 0 && k.frozenT <= 0;
-  if (driftBtn && !k.prevDrift && !k.air && k.v > 9) { k.vy = 2.0; k.air = true; k.hop = true; k.driftArm = true; }
+  const driftBtn = c.drift && k.spinT <= 0 && k.frozenT <= 0 && k.bubbleT <= 0 && k.planeT <= 0;
+  if (driftBtn && !k.prevDrift && !k.air && k.v > 9) { k.vy = 2.0; k.air = true; k.hop = true; k.driftArm = true; k.hopAt = T(); }
   if (!driftBtn) k.driftArm = false;
   if (driftBtn && !k.drift && k.driftArm && Math.abs(c.steer) > 0.3 && k.v > 9 && !k.offroad) k.drift = { dir: Math.sign(c.steer), charge: 0, level: 0 };
   if (k.drift) {
@@ -698,7 +932,7 @@ function driveKart(k, c, h) {
   if (k.air) yaw *= k.hop ? 0.85 : 0.45;   // 드리프트 시작할 때 살짝 뛰는 동안은 거의 그대로 돎 (점프대에서 날 땐 덜)
   const icy = slick(k.zone) && k.starT <= 0;
   if (icy) yaw *= 0.75;   // 얼음판: 핸들이 덜 먹고
-  if (k.spinT > 0 || k.frozenT > 0) yaw = 0;
+  if (k.spinT > 0 || k.frozenT > 0 || k.bubbleT > 0) yaw = 0;
   const turn = -yaw * h;
   k.a = wrapA(k.a + turn);
   if (icy) k.vl += k.v * Math.sin(turn) * 0.45;   // 차는 돌아도 가던 쪽으로 계속 미끄러짐 (커브 바깥으로 밀림)
@@ -742,8 +976,8 @@ function driveKart(k, c, h) {
     if (hill) { k.vy = (gy - k.y) / h; k.y = gy; }   // 언덕: 지금 땅을 따라 오르내리던 빠르기 그대로 떠야 바로 다시 붙지 않음 (오르막 끝에선 6m/s 넘게 오르던 중)
   } else { k.vyG = clamp((gy - k.y) / h, -6, 6); k.y = gy; }   // 점프대 기울기로 올라가는 빠르기 (최고 속도에서도 6m/s 안)
   // 길 밖 · 개울 · 벽
-  k.offroad = !k.air && offRoad(k);
-  const zone = k.air ? null : kartZone(k), wet = !!zone && !slick(zone.type);
+  k.offroad = !k.air && k.planeT <= 0 && offRoad(k);   // 꼬마 비행기는 땅 위를 살짝 떠서 풀밭·물도 그대로
+  const zone = k.air || k.planeT > 0 ? null : kartZone(k), wet = !!zone && !slick(zone.type);
   if (zone && zone.type === 'lava' && !zone.full && k.v > 1 && spinOut(k, 'lava') === true) { k.vy = 3.5; k.air = true; }   // 용암 웅덩이: 앗 뜨거! 빙글 돌며 살짝 튀어 오름
   if (wet && !k.wet && k.human >= 0 && k.v > 4) {   // 물·늪은 첨벙, 길을 가로지르는 용암 강은 앗 뜨거 (느려지기만)
     if (zone.type === 'lava') { sfx('fire'); if (k.spinT <= 0) showMsg(k.human, '앗 뜨거!', '#ff9a5a'); } else if (zone.type === 'sand') sfx('sand'); else sfx('splash');
@@ -759,7 +993,7 @@ function driveKart(k, c, h) {
   // 거꾸로 달림 · 벽에 끼임
   const rel = Math.abs(wrapA(k.a - roadAng(k)));
   k.wrongT = rel > 2.0 && k.v > 2 ? k.wrongT + h : 0;
-  k.stuckT = !k.finished && k.spinT <= 0 && k.frozenT <= 0 && Math.abs(k.v) < 1.5 && (c.gas || isAI(k)) && !c.brake ? k.stuckT + h : 0;
+  k.stuckT = !k.finished && k.spinT <= 0 && k.frozenT <= 0 && k.bubbleT <= 0 && Math.abs(k.v) < 1.5 && (c.gas || isAI(k)) && !c.brake ? k.stuckT + h : 0;
   if (k.stuckT > 2.5 || (isAI(k) && k.wrongT > 1.5)) rescue(k);
 }
 function land(k, gy) {
@@ -856,20 +1090,33 @@ function cutoff() {
 }
 const fmtTime = t => { t = Math.round(Math.max(0, t) * 10) / 10; const m = Math.floor(t / 60), s = t - m * 60; return `${m}:${s < 10 ? '0' : ''}${s.toFixed(1)}`; };   // 먼저 0.1초로 반올림 (9.96초가 '010.0'으로 안 보이게)
 
+const kartR = k => KART.R * (k.tinyT > 0 ? 0.55 : 1);
 function collideKarts() {
-  const R2 = (2 * KART.R) ** 2;
+  const t = T();
   for (let i = 0; i < karts.length; i++) for (let j = i + 1; j < karts.length; j++) {
     const a = karts[i], b = karts[j];
-    if (Math.abs(a.y - b.y) > 1.3) continue;
-    const dx = b.x - a.x, dz = b.z - a.z, d2 = dx * dx + dz * dz;
-    if (d2 >= R2 || d2 < 1e-8) continue;
-    const d = Math.sqrt(d2), nx = dx / d, nz = dz / d, over = 2 * KART.R - d;
-    a.x -= nx * over / 2; a.z -= nz * over / 2; b.x += nx * over / 2; b.z += nz * over / 2;
+    if (Math.abs(a.y - b.y) > 1.3 || a.ghostT > 0 || b.ghostT > 0) continue;   // 꼬마 유령은 그냥 지나감
+    const ra = kartR(a), rb = kartR(b), dx = b.x - a.x, dz = b.z - a.z, d2 = dx * dx + dz * dz;
+    if (d2 >= (ra + rb) ** 2 || d2 < 1e-8) continue;
+    const d = Math.sqrt(d2), nx = dx / d, nz = dz / d, over = ra + rb - d;
+    // 밀리는 몫: 비행기는 안 밀리고, 작은 카트가 더 밀림
+    const wa = a.planeT > 0 ? 0 : b.planeT > 0 ? 1 : a.tinyT > 0 && b.tinyT <= 0 ? 0.85 : b.tinyT > 0 && a.tinyT <= 0 ? 0.15 : 0.5;
+    a.x -= nx * over * wa; a.z -= nz * over * wa; b.x += nx * over * (1 - wa); b.z += nz * over * (1 - wa);
+    passCloud(a, b, t);
+    if ((a.planeT > 0) !== (b.planeT > 0)) {   // 꼬마 비행기에 부딪히면 빙글 돌며 옆으로 튕겨 나감
+      const pl = a.planeT > 0 ? a : b, vic = pl === a ? b : a, sg = vic === b ? 1 : -1;
+      if (spinOut(vic, 'plane') === true) { hitBy(pl, vic, 'plane'); push(vic, nx * sg * 9, nz * sg * 9); }
+      continue;
+    }
     const va = worldVel(a), vax = va.x, vaz = va.z, vb = worldVel(b);
     const rel = (vb.x - vax) * nx + (vb.z - vaz) * nz;
     if (rel >= 0) continue;
-    const imp = -1.4 * rel / 2;
-    push(a, -imp * nx, -imp * nz); push(b, imp * nx, imp * nz);
+    const imp = -1.4 * rel;
+    push(a, -imp * nx * wa, -imp * nz * wa); push(b, imp * nx * (1 - wa), imp * nz * (1 - wa));
+    if ((a.tinyT > 0) !== (b.tinyT > 0) && -rel > 2) {   // 작아진 카트를 큰 카트가 밟으면 납작
+      const tiny = a.tinyT > 0 ? a : b, big = tiny === a ? b : a;
+      if (spinOut(tiny, 'squash') === true) { tiny.flatT = 1.6; hitBy(big, tiny, 'squash'); if (tiny.human >= 0 || big.human >= 0) sfx('squash'); }
+    }
     if ((a.starT > 0) !== (b.starT > 0)) { const st = a.starT > 0 ? a : b, vic = st === a ? b : a; if (spinOut(vic, 'star') === true) hitBy(st, vic, 'star'); }   // 반짝 별에 부딪히면 빙글
     if (-rel > 2.5 && T() - Math.max(a.bumpAt, b.bumpAt) > 0.3) {
       a.bumpAt = b.bumpAt = T();
@@ -887,15 +1134,20 @@ function push(k, dvx, dvz) { const fx = Math.sin(k.a), fz = Math.cos(k.a); k.v +
 //  불꽃 대시 ×3은 세 번 나눠 쓰고, 반짝 별은 6초 동안 무적 + 조금 빠르게 (부딪힌 카트는 빙글)
 //  방울 보호막은 한 번 막아 줌 · 자석은 바로 앞 카트에게 끌려감 · 천둥 번개는 내 앞 카트 모두 빙글
 //  통통 공은 곧장 날아가 벽에 튕김 · 물감 폭탄은 앞 카트들 화면에 물감 (CPU는 휘청)
+//  카트라이더·마리오카트 느낌의 새 아이템 12가지(가짜 상자 · 줄줄이 함정 · 빵빵 나팔 · UFO · 유령 · 비행기 · 부메랑 · 먹구름 · 작아져라 · 바리케이드 · 쿵 블록 · 물풍선)는 useItem 참고
 // ============================================================
-const ITEM_KEYS = ['boost', 'triple', 'star', 'zap', 'trap', 'shield', 'magnet', 'bolt', 'ball', 'paint', 'rocket', 'tornado', 'snow', 'bomb', 'spring'];
-const ATTACK = ['zap', 'star', 'bolt', 'ball', 'paint', 'rocket', 'tornado', 'snow', 'bomb'];   // 남을 맞히는 아이템
+const ITEM_KEYS = ['boost', 'triple', 'star', 'zap', 'trap', 'shield', 'magnet', 'bolt', 'ball', 'paint', 'rocket', 'tornado', 'snow', 'bomb', 'spring',
+  'fake', 'trap3', 'horn', 'ufo', 'ghost', 'plane', 'boomerang', 'cloud', 'shrink', 'barricade', 'pow', 'water'];
+const ATTACK = ['zap', 'star', 'bolt', 'ball', 'paint', 'rocket', 'tornado', 'snow', 'bomb', 'horn', 'ufo', 'ghost', 'plane', 'boomerang', 'cloud', 'shrink', 'barricade', 'pow', 'water'];   // 남을 맞히는(괴롭히는) 아이템
 function rollItem(k) {
   const f = karts.length > 1 ? (k.place - 1) / (karts.length - 1) : 0.5;   // 0 = 1등 · 1 = 꼴등
   const w = { boost: 0.1 + 0.35 * f, triple: 0.5 * Math.max(0, f - 0.35), star: 0.45 * Math.max(0, f - 0.6),
     zap: 0.24 + 0.1 * Math.sin(f * Math.PI), trap: 0.5 - 0.42 * f,
     shield: 0.3 - 0.2 * f, magnet: 0.4 * Math.max(0, f - 0.2), bolt: 0.3 * Math.max(0, f - 0.7), ball: 0.2, paint: 0.25 * Math.max(0, f - 0.3),
-    rocket: 0.4 * Math.max(0, f - 0.5), tornado: 0.05 + 0.22 * Math.sin(f * Math.PI), snow: 0.2, bomb: 0.15 + 0.1 * f, spring: 0.18 };
+    rocket: 0.4 * Math.max(0, f - 0.5), tornado: 0.05 + 0.22 * Math.sin(f * Math.PI), snow: 0.2, bomb: 0.15 + 0.1 * f, spring: 0.18,
+    fake: 0.22 - 0.15 * f, trap3: 0.18 - 0.12 * f, horn: 0.14, ufo: 0.25 * Math.max(0, f - 0.55), ghost: 0.04 + 0.13 * Math.sin(f * Math.PI),
+    plane: 0.45 * Math.max(0, f - 0.7), boomerang: 0.08 + 0.12 * Math.sin(f * Math.PI), cloud: 0.03 + 0.1 * Math.sin(f * Math.PI),
+    shrink: 0.25 * Math.max(0, f - 0.75), barricade: 0.22 * Math.max(0, f - 0.5), pow: 0.15 * Math.max(0, f - 0.4), water: 0.06 + 0.12 * Math.sin(f * Math.PI) };
   if (k.human < 0 && !game.demo && settings.cpuLevel === 0) for (const a of ATTACK) w[a] = 0;   // 쉬움: CPU는 공격 아이템을 안 씀 (아이가 덜 맞게)
   let r = Math.random() * ITEM_KEYS.reduce((a, key) => a + w[key], 0);
   for (const key of ITEM_KEYS) { r -= w[key]; if (r <= 0) return key; }
@@ -915,7 +1167,7 @@ function useItem(k) {
   const it = k.item;
   if (!it || k.spinT > 0 || k.frozenT > 0) return;
   game.stats.items++; game.stats.used = game.stats.used || {}; game.stats.used[it] = (game.stats.used[it] || 0) + 1;
-  if (it === 'triple' && --k.itemN > 0) { /* 아직 남음 */ } else shiftItems(k);
+  if (ITEMS[it].n && --k.itemN > 0) { /* 아직 남음 (불꽃 대시 ×3 · 줄줄이 함정 · 부메랑) */ } else shiftItems(k);
   if (it === 'boost' || it === 'triple') { giveBoost(k, it === 'triple' ? 1.2 : 1.5, 1.12); if (k.human >= 0) showMsg(k.human, it === 'triple' ? `불꽃 대시! ${k.itemN ? '×' + k.itemN + ' 남음' : ''}` : '불꽃 대시!', '#fb923c'); }
   else if (it === 'star') {
     k.starT = 6; k.v = Math.max(k.v, KART.VMAX * 1.1 * kartClass(k)); k.drift = null;
@@ -926,16 +1178,12 @@ function useItem(k) {
     const C = k.cut >= 0 ? CUTS[k.cut] : null, p = C ? pathPoint(C.P, k.cs + 2.6, k.d) : trackPoint(k.s + 2.6, k.d);
     shots.push({ owner: k, s: C ? cutMainS(C, k.cs + 2.6) : wrapS(k.s + 2.6), d: k.d, cut: k.cut, cs: k.cs + 2.6, v: Math.max(0, k.v) + 20, life: 6.5, target, t0: T(), x: p.x, y: k.y + 0.7, z: p.z });
     if (k.human >= 0) sfx('zap');
-  } else if (it === 'trap') {
-    if (k.cut >= 0) {   // 지름길에서 놓으면 지름길 위에
-      const C = CUTS[k.cut], cs = Math.max(0, k.cs - 2.8), p = pathPoint(C.P, cs, k.d);
-      traps.push({ x: p.x, y: cutGround(C, cs, k.d), z: p.z, s: cutMainS(C, cs), d: k.d, cut: k.cut, cs, owner: k, t0: T() });
-    } else {
-      const s = wrapS(k.s - 2.8), p = trackPoint(s, k.d);
-      traps.push({ x: p.x, y: groundAt(s, k.d), z: p.z, s, d: k.d, cut: -1, owner: k, t0: T() });
-    }
-    if (traps.length > 14) traps.shift();
+  } else if (it === 'trap' || it === 'trap3') {   // 물방울 함정 (줄줄이 함정은 누를 때마다 하나씩)
+    dropTrap(k, 'trap');
     if (k.human >= 0) sfx('plop');
+  } else if (it === 'fake') {   // 가짜 상자: 진짜 상자처럼 생겼지만 닿으면 빙글
+    dropTrap(k, 'fake');
+    if (k.human >= 0) { sfx('plop'); showMsg(k.human, '가짜 상자!', '#f9a8d4', '뒤 친구가 속을 거예요'); }
   } else if (it === 'shield') {
     k.shieldT = 10;
     if (k.human >= 0) { sfx('shield'); showMsg(k.human, '방울 보호막!', '#9be7ff', '한 번 막아 줘요'); }
@@ -985,6 +1233,53 @@ function useItem(k) {
     burst(k.x, k.y + 2, k.z, 24, [0xff6fa8, 0xffd166, 0x7ad3ff, 0x86efac, 0xa78bfa], 7, 0.7);
     sfx('splat');
     if (k.human >= 0) showMsg(k.human, '물감 폭탄!', '#ff9ad5', hit ? `앞 친구 ${hit}명 철퍽!` : '');
+  } else if (it === 'horn') {   // 빵빵 나팔: 둘레 카트는 빙글, 날아오는 아이템은 부숨 (로켓·UFO도)
+    hornBlast(k);
+  } else if (it === 'ufo') {   // 외계인 UFO: 하늘 높이 길을 따라 1등에게 날아가 3초 동안 끌어당기는 빛으로 느리게 (보호막도 못 막고 빵빵 나팔로만 쫓아냄)
+    const lead = leader(k), C = k.cut >= 0 ? CUTS[k.cut] : null, p = C ? pathPoint(C.P, k.cs + 3, 0) : trackPoint(k.s + 3, 0);
+    ufos.push({ owner: k, target: lead, s: C ? cutMainS(C, k.cs + 3) : wrapS(k.s + 3), d: 0, cut: k.cut, cs: k.cs + 3, v: Math.max(k.v, 10) + 30, x: p.x, y: k.y + 7, z: p.z, t0: T(), life: 30, free: false, hover: 0, leave: 0 });
+    sfx('ufo');
+    if (k.human >= 0) showMsg(k.human, '외계인 UFO!', '#a7f3d0', lead ? `${nameOf(lead)}에게 날아가요` : '');
+  } else if (it === 'ghost') {   // 꼬마 유령: 4초 동안 아무것도 안 맞고 카트도 그냥 지나감 + 앞 친구 아이템을 훔쳐 옴
+    k.ghostT = 4; k.drift = null; k.spinT = 0;
+    const got = stealItem(k);
+    sfx('ghost'); if (got) sfx('steal');
+    if (k.human >= 0) showMsg(k.human, '꼬마 유령!', '#ece7ff', got ? `${nameOf(got.from)}의 ${ITEMS[got.it].short || ITEMS[got.it].name} 훔쳤다!` : '4초 동안 아무것도 안 맞아요');
+    if (got && got.from.human >= 0) showMsg(got.from.human, '유령이 훔쳐 갔어요!', '#ece7ff', `${nameOf(k)}에게 ${ITEMS[got.it].short || ITEMS[got.it].name}`);
+  } else if (it === 'plane') {   // 꼬마 비행기: 4초 동안 저절로 아주 빠르게 날아감 (부딪힌 카트는 빙글, 아무것도 안 맞음) → 내리며 부스트
+    k.planeT = 4.2; k.drift = null; k.spinT = 0; k.v = Math.max(k.v, KART.VMAX * kartClass(k));
+    sfx('plane');
+    if (k.human >= 0) { showMsg(k.human, '꼬마 비행기!', '#7dd3fc', '알아서 날아가요 · 부딪힌 카트는 빙글'); rumble(k.human, 0.5, 160); }
+  } else if (it === 'boomerang') {   // 부메랑 (세 번): 앞으로 34m 날아갔다가 돌아옴. 가는 길·오는 길에 닿는 카트는 모두 빙글
+    const C = k.cut >= 0 ? CUTS[k.cut] : null, p = C ? pathPoint(C.P, k.cs + 2.5, k.d) : trackPoint(k.s + 2.5, k.d);
+    boomerangs.push({ owner: k, s: C ? cutMainS(C, k.cs + 2.5) : wrapS(k.s + 2.5), d: k.d, d0: k.d, side: k.itemN % 2 ? 1 : -1, cut: k.cut, cs: k.cs + 2.5, v: Math.max(k.v, 8) + 20, dist: 0, back: false, x: p.x, y: k.y + 1, z: p.z, t0: T(), life: 4.5, hit: [] });
+    sfx('boomerang');
+  } else if (it === 'cloud') {   // 천둥 먹구름: 8초 동안 머리 위에 (조금 빨라짐). 다른 카트에 부딪히면 넘어가고, 시간이 다 되면 들고 있는 카트에 번개
+    k.cloudT = 8; k.cloudAt = T(); k.cloudBy = k;
+    sfx('cloud');
+    if (k.human >= 0) showMsg(k.human, '천둥 먹구름!', '#94a3b8', '8초 안에 다른 카트에 부딪혀 넘겨요!');
+  } else if (it === 'shrink') {   // 작아져라 광선: 내 앞 카트 모두 4.5초 동안 작아짐 (보호막·별은 막음)
+    let hit = 0, first = null;
+    for (const o of karts) if (o !== k && !o.finished && o.prog > k.prog && shrinkKart(o, 4.5) === true) { hit++; if (!first || o.prog < first.prog) first = o; }
+    if (first) hitBy(k, first, 'shrink');
+    sfx('shrink');
+    if (k.human >= 0) showMsg(k.human, '작아져라!', '#c4b5fd', hit ? `앞 친구 ${hit}명 쪼그맣게!` : '');
+  } else if (it === 'barricade') {   // 바리케이드: 1등 바로 앞에 셋
+    const lead = leader(k);
+    if (lead) placeBarricades(lead, k);
+    if (karts.some(o => o.human >= 0)) sfx('wood');
+    if (k.human >= 0) showMsg(k.human, '바리케이드!', '#fbbf24', lead ? `${nameOf(lead)} 앞을 막았어요` : '');
+    if (lead && lead.human >= 0) showMsg(lead.human, '바리케이드!', '#fbbf24', '사이 틈으로 빠져나가요');
+  } else if (it === 'pow') {   // 쿵 블록: 1.5초 뒤 쿵! 내 앞 카트 중 땅에 붙어 있는 카트는 빙글 (그때 점프하면 피함)
+    const targets = karts.filter(o => o !== k && !o.finished && o.prog > k.prog);
+    pows.push({ owner: k, at: T() + 1.5, t0: T(), targets, hop: new Map() });
+    if (k.human >= 0 || targets.some(o => o.human >= 0)) sfx('powWarn');
+    for (const o of targets) if (o.human >= 0) showMsg(o.human, '쿵 블록!', '#fca5a5', '떨어질 때 점프! (드리프트 버튼)');
+    if (k.human >= 0) showMsg(k.human, '쿵 블록!', '#fca5a5', targets.length ? `앞 친구 ${targets.length}명 쿵!` : '');
+  } else if (it === 'water') {   // 물풍선 폭탄: 앞으로 던지면 떨어진 자리에 물방울 돔 → 들어온 카트는 물방울에 갇힘
+    const fx = Math.sin(k.a), fz = Math.cos(k.a), sp = Math.max(k.v, 4) + 15;
+    waters.push({ owner: k, x: k.x + fx * 2.2, y: k.y + 1.6, z: k.z + fz * 2.2, vx: fx * sp, vy: 6.5, vz: fz * sp, t0: T(), landed: 0, r: 0, hit: [], seg: k.seg, s: k.s, d: k.d, cut: k.cut, cs: k.cs, cd: k.cd, cseg: k.cseg });
+    sfx('throw');
   }
 }
 function advanceOnRoad(o, dist) {   // 길을 따라 앞으로 (지름길이 끝나면 본 길로 이어서)
@@ -1045,7 +1340,7 @@ function updateNewItems(h, t) {
     advanceOnRoad(sb, sb.v * h);
     sb.r = Math.min(1.5, 0.7 + (t - sb.t0) * 0.35); sb.roll += sb.v * h / sb.r;
     const p = roadPos(sb, sb.d); sb.x = p.x; sb.z = p.z; sb.y = roadGround(sb, sb.d) + sb.r;
-    let gone = sb.life <= 0;
+    let gone = sb.life <= 0 || trailBlock(sb.x, sb.z, sb.y - sb.r + 0.6, sb.r - 0.3, sb.owner);
     for (const k of karts) {
       if (gone || (k === sb.owner && t - sb.t0 < 0.6)) continue;
       if ((k.x - sb.x) ** 2 + (k.z - sb.z) ** 2 < (sb.r + 1.0) ** 2 && Math.abs(k.y + 0.6 - sb.y) < sb.r + 1.4) { gone = true; if (freezeOut(k) === true) hitBy(sb.owner, k, 'snow'); }
@@ -1067,6 +1362,129 @@ function updateNewItems(h, t) {
       for (const o of explodeAt(b.x, b.y, b.z, 7, b.owner, 'bomb')) hitBy(b.owner, o, 'bomb');
       breakTraps(b.x, b.z, b.y, 7);
       bombs.splice(i, 1);
+    }
+  }
+  updateMoreItems(h, t);
+}
+function updateMoreItems(h, t) {
+  for (let i = ufos.length - 1; i >= 0; i--) {   // 외계인 UFO: 길 위로 높이 날아가다 1등 머리 위에 멈춰 3초 동안 끌어당기는 빛 → 위로 날아감
+    const u = ufos[i];
+    u.life -= h;
+    if (u.leave > 0) { u.leave -= h; u.y += 14 * h; if (u.leave <= 0) ufos.splice(i, 1); continue; }
+    if (!u.hover && (!u.target || u.target.finished)) u.target = leader(u.owner);
+    const tg = u.target;
+    if (u.hover > 0) {
+      u.hover -= h;
+      if (tg) {
+        u.x += (tg.x - u.x) * Math.min(1, h * 8); u.z += (tg.z - u.z) * Math.min(1, h * 8); u.y += (tg.y + 5.5 - u.y) * Math.min(1, h * 4);
+        if (!immune(tg) && !tg.finished) tg.ufoT = Math.max(tg.ufoT, 0.15);
+        if (Math.random() < 0.35) spark(tg.x + rand(-1.4, 1.4), tg.y + rand(0, 3), tg.z + rand(-1.4, 1.4), 0xb9f8d3, 0.4, 0, 3, 0, 0.5);
+      }
+      if (u.hover <= 0 || !tg || tg.finished) u.leave = 1.2;
+      continue;
+    }
+    if (tg && (u.free || (tg.x - u.x) ** 2 + (tg.z - u.z) ** 2 < 28 * 28 || (tg.cut !== u.cut && sdiff(tg.s, u.s) > -10 && sdiff(tg.s, u.s) < 45))) {   // 가까워지면 곧장 머리 위로
+      u.free = true;
+      const dx = tg.x - u.x, dz = tg.z - u.z, dy = tg.y + 5.5 - u.y, l = Math.hypot(dx, dz, dy) || 1, st = Math.min(l, u.v * h);
+      u.x += dx / l * st; u.z += dz / l * st; u.y += dy / l * st;
+      if (l < 1.5) {
+        u.hover = 3; hitBy(u.owner, tg, 'ufo');
+        if (tg.human >= 0) { sfx('ufo'); rumble(tg.human, 0.5, 200); showMsg(tg.human, 'UFO가 끌어당겨요!', '#a7f3d0', '빵빵 나팔로 쫓아낼 수 있어요'); }
+      }
+    } else {
+      advanceOnRoad(u, u.v * h);
+      const p = roadPos(u, 0); u.x = p.x; u.z = p.z; u.y += (roadGround(u, 0) + 7 - u.y) * Math.min(1, h * 3);
+    }
+    if (u.life <= 0) u.leave = 1.2;
+  }
+  for (let i = boomerangs.length - 1; i >= 0; i--) {   // 부메랑: 앞으로 34m 날아갔다가 던진 카트에게 돌아옴 (닿는 카트는 모두 빙글)
+    const b = boomerangs[i], o = b.owner;
+    b.life -= h;
+    if (!b.back) {
+      advanceOnRoad(b, b.v * h); b.dist += b.v * h;
+      const half = b.cut >= 0 ? CUTS[b.cut].half : TRACK.halfW;
+      b.d = clamp(b.d0 + Math.sin(Math.min(1, b.dist / 34) * Math.PI) * 1.2 * b.side, -half - 1, half + 1);   // 거의 곧게 (살짝 휘청)
+      const p = roadPos(b, b.d); b.x = p.x; b.z = p.z; b.y = roadGround(b, b.d) + 1;
+      if (b.dist >= 34) b.back = true;
+    } else {
+      const dx = o.x - b.x, dz = o.z - b.z, l = Math.hypot(dx, dz) || 1, sp = Math.max(o.v, 0) + 20;
+      b.x += dx / l * Math.min(l, sp * h); b.z += dz / l * Math.min(l, sp * h); b.y += (o.y + 1 - b.y) * Math.min(1, h * 6);
+      if (l < 2.2) { boomerangs.splice(i, 1); continue; }   // 다시 잡음
+    }
+    for (const k of karts) {
+      if (k === o || b.hit.includes(k)) continue;
+      if ((k.x - b.x) ** 2 + (k.z - b.z) ** 2 < 1.9 * 1.9 && Math.abs(k.y + 0.6 - b.y) < 1.8) { b.hit.push(k); if (spinOut(k, 'boomerang') === true) hitBy(o, k, 'boomerang'); }
+    }
+    breakTraps(b.x, b.z, b.y, 1.6);
+    if (b.life <= 0 || trailBlock(b.x, b.z, b.y, 0.6, o)) { burst(b.x, b.y, b.z, 10, [0xffb347, 0xffffff], 4, 0.3); boomerangs.splice(i, 1); }
+  }
+  for (let i = waters.length - 1; i >= 0; i--) {   // 물풍선 폭탄: 포물선으로 날아가 떨어진 자리에 물방울 돔 1.6초 (들어온 카트는 물방울에 갇힘, 던진 사람은 안 갇힘)
+    const w = waters[i];
+    if (!w.landed) {
+      w.vy -= KART.G * h; w.x += w.vx * h; w.y += w.vy * h; w.z += w.vz * h;
+      trackOnRoad(w);
+      const gy = groundUnder(w);
+      if (w.y <= gy + 0.5 && w.vy < 0) { w.y = gy; w.landed = t; if (karts.some(o => o.human >= 0 && (o.x - w.x) ** 2 + (o.z - w.z) ** 2 < 1600)) sfx('splash'); burst(w.x, w.y + 0.5, w.z, 24, [0x8fd8f2, 0xffffff, 0x5cc8f0], 7, 0.6); }
+      else if (t - w.t0 > 4) { waters.splice(i, 1); continue; }
+    }
+    if (!w.landed) continue;
+    const age = t - w.landed;
+    w.r = Math.min(5.5, age / 0.2 * 5.5);
+    if (age > 1.6) { burst(w.x, w.y + 1, w.z, 16, [0x8fd8f2, 0xffffff], 5, 0.4); waters.splice(i, 1); continue; }
+    for (const k of karts) {
+      if (k === w.owner || k.finished || w.hit.includes(k)) continue;
+      if ((k.x - w.x) ** 2 + (k.z - w.z) ** 2 < w.r * w.r && Math.abs(k.y - w.y) < 3) { w.hit.push(k); if (bubbleOut(k) === true) hitBy(w.owner, k, 'water'); }
+    }
+  }
+  for (let i = pows.length - 1; i >= 0; i--) {   // 쿵 블록: 떨어지는 순간 땅에 붙어 있으면 빙글 (점프 중이거나 방금 뛰었으면 피함)
+    const pw = pows[i];
+    if (t < pw.at) continue;
+    let first = null;
+    for (const o of pw.targets) {
+      if (o.finished) continue;
+      if (o.air || t - o.hopAt < 0.35) { if (o.human >= 0) showMsg(o.human, '피했다!', '#86efac'); continue; }
+      if (spinOut(o, 'pow') === true) { o.vy = 4; o.air = true; o.hop = false; if (!first || o.prog < first.prog) first = o; }
+    }
+    if (first) hitBy(pw.owner, first, 'pow');
+    if (karts.some(o => o.human >= 0)) sfx('thud');
+    for (const o of karts) if (o.human >= 0 && pw.targets.includes(o)) game.shake[o.human] = Math.max(game.shake[o.human], 0.6);
+    pows.splice(i, 1);
+  }
+  for (let i = horns.length - 1; i >= 0; i--) if (t - horns[i].t0 > 0.5) horns.splice(i, 1);
+}
+const HW = { x: 0, y: 0, z: 0, a: 0 };
+function hazWorld(z, out = HW) {   // hazAt 결과(HZ) → 월드 자리 · 길 방향
+  const C = z.cut >= 0 ? CUTS[z.cut] : null, p = C ? pathPoint(C.P, HZ.s, HZ.d) : trackPoint(HZ.s, HZ.d);
+  out.x = p.x; out.z = p.z; out.a = Math.atan2(p.tx, p.tz); out.y = C ? cutGround(C, HZ.s, HZ.d) : groundAt(HZ.s, HZ.d);
+  return out;
+}
+function updateHazards(t) {
+  for (const z of HAZ) {
+    const K = HAZ_KIND[z.type], C = z.cut >= 0 ? CUTS[z.cut] : null;
+    hazAt(z, t);
+    if (z.type === 'stomp') {   // 쾅 내려찍는 순간: 흙먼지 + 가까이 있는 사람에게 쿵
+      const cyc = Math.floor((t + z.phase) / K.period);
+      if (HZ.y === 0 && z.last !== cyc) {
+        z.last = cyc; const w = hazWorld(z);
+        burst(w.x, w.y + 0.3, w.z, 18, [0x8a7f88, 0x5b5560, 0xff8a3d], 6, 0.6);
+        for (const o of karts) if (o.human >= 0 && (o.x - w.x) ** 2 + (o.z - w.z) ** 2 < 45 * 45) { sfx('thud'); game.shake[o.human] = Math.max(game.shake[o.human], (o.x - w.x) ** 2 + (o.z - w.z) ** 2 < 400 ? 0.35 : 0.15); }
+        hazAt(z, t);
+      }
+    }
+    if (!HZ.hot) continue;
+    const gy = C ? cutGround(C, HZ.s, HZ.d) : groundAt(HZ.s, HZ.d);
+    for (const k of karts) {
+      if (k.finished || k.cut !== z.cut) continue;
+      const ds = C ? k.cs - HZ.s : sdiff(k.s, HZ.s), kr = k.tinyT > 0 ? 0.55 : 1;
+      if (Math.abs(ds) > K.ls + kr || Math.abs(k.d - HZ.d) > K.ld + 0.8 * kr || Math.abs(k.y - gy) > 3) continue;
+      if (K.low && k.air && k.y - groundUnder(k) > 0.5) continue;   // 꽃게는 점프로 넘음
+      if (spinOut(k, z.type) !== true) continue;
+      const hs = game.stats.haz || (game.stats.haz = {}); hs[z.type] = (hs[z.type] || 0) + 1;   // 테스트·균형 맞추기용
+      if (z.type === 'stomp') { k.flatT = 1.6; if (k.human >= 0) sfx('squash'); }   // 쿵쿵 돌에 깔리면 납작
+      else if (z.type === 'swing' || z.type === 'car') {   // 통나무가 흔들리는 쪽 · 자동차 옆으로 튕겨 나감
+        const p = C ? pathPoint(C.P, HZ.s, 0) : trackPoint(HZ.s, 0), sg = z.type === 'swing' ? Math.sign(HZ.vd) || 1 : Math.sign(k.d - HZ.d) || 1;
+        push(k, -p.tz * sg * 11, p.tx * sg * 11);
+      }
     }
   }
 }
@@ -1103,7 +1521,7 @@ function updateItems(h) {
       const p = C ? pathPoint(C.P, sh.cs, sh.d) : trackPoint(sh.s, sh.d); sh.x = p.x; sh.z = p.z; sh.y = (C ? cutGround(C, sh.cs, sh.d) : groundAt(sh.s, sh.d)) + 0.75;
     }
     if (Math.random() < 0.5) spark(sh.x, sh.y, sh.z, 0xfde047, 0.5);
-    let gone = sh.life <= 0;
+    let gone = sh.life <= 0 || trailBlock(sh.x, sh.z, sh.y, 0.5, sh.owner);
     for (const k of karts) {
       if (gone || (k === sh.owner && t - sh.t0 < 0.6)) continue;
       if ((k.x - sh.x) ** 2 + (k.z - sh.z) ** 2 < 1.8 * 1.8 && Math.abs(k.y + 0.6 - sh.y) < 1.8) {
@@ -1113,7 +1531,7 @@ function updateItems(h) {
     }
     for (let j = traps.length - 1; j >= 0 && !gone; j--) {
       const tr = traps[j];
-      if ((tr.x - sh.x) ** 2 + (tr.z - sh.z) ** 2 < 1.6 * 1.6 && Math.abs(tr.y - sh.y) < 2.5) { traps.splice(j, 1); gone = true; burst(tr.x, tr.y + 0.4, tr.z, 10, [0x7dd3fc, 0xffffff], 4, 0.4); }
+      if ((tr.x - sh.x) ** 2 + (tr.z - sh.z) ** 2 < (tr.r + 0.05) ** 2 && Math.abs(tr.y - sh.y) < 2.5) { traps.splice(j, 1); gone = true; burst(tr.x, tr.y + 0.4, tr.z, 10, [0x7dd3fc, 0xffffff], 4, 0.4); }
     }
     if (gone) { burst(sh.x, sh.y, sh.z, 10, [0xfde047, 0xffffff], 5, 0.35); shots.splice(i, 1); }
   }
@@ -1128,7 +1546,7 @@ function updateItems(h) {
       if (vn > 0) { b.vx -= 2 * vn * nx * side; b.vz -= 2 * vn * nz * side; b.bounces++; if (karts.some(o => o.human >= 0 && (o.x - b.x) ** 2 + (o.z - b.z) ** 2 < 1600)) sfx('boing'); }
     }
     b.y = groundUnder(b) + 0.55 + Math.abs(Math.sin((t - b.t0) * 9)) * 0.35;
-    let gone = b.life <= 0 || b.bounces > 4;
+    let gone = b.life <= 0 || b.bounces > 4 || trailBlock(b.x, b.z, b.y, 0.5, b.owner);
     for (const k of karts) {
       if (gone || (k === b.owner && t - b.t0 < 0.5)) continue;
       if ((k.x - b.x) ** 2 + (k.z - b.z) ** 2 < 1.7 * 1.7 && Math.abs(k.y + 0.6 - b.y) < 1.8) {
@@ -1138,7 +1556,7 @@ function updateItems(h) {
     }
     for (let j = traps.length - 1; j >= 0 && !gone; j--) {
       const tr = traps[j];
-      if ((tr.x - b.x) ** 2 + (tr.z - b.z) ** 2 < 1.6 * 1.6 && Math.abs(tr.y - b.y) < 2.5) { traps.splice(j, 1); gone = true; burst(tr.x, tr.y + 0.4, tr.z, 10, [0x7dd3fc, 0xffffff], 4, 0.4); }
+      if ((tr.x - b.x) ** 2 + (tr.z - b.z) ** 2 < (tr.r + 0.05) ** 2 && Math.abs(tr.y - b.y) < 2.5) { traps.splice(j, 1); gone = true; burst(tr.x, tr.y + 0.4, tr.z, 10, [0x7dd3fc, 0xffffff], 4, 0.4); }
     }
     if (gone) { burst(b.x, b.y, b.z, 12, [0x6ee7a0, 0xffffff], 5, 0.35); balls.splice(i, 1); }
   }
@@ -1147,16 +1565,19 @@ function updateItems(h) {
     if (jetState(j, t) < 1) continue;
     for (const k of karts) if (!k.air && k.cut < 0 && Math.abs(sdiff(k.s, j.s)) < JET.r && Math.abs(k.d - j.d) < JET.r) spinOut(k, 'fire');
   }
-  for (let i = traps.length - 1; i >= 0; i--) {
+  updateHazards(t);
+  for (let i = traps.length - 1; i >= 0; i--) {   // 물방울 함정 · 가짜 상자 · 바리케이드
     const tr = traps[i];
-    if (t - tr.t0 > 45) { traps.splice(i, 1); continue; }
+    if (t - tr.t0 > (tr.life || 45)) { if (tr.kind === 'barricade') burst(tr.x, tr.y + 0.8, tr.z, 10, [0xc98b4a, 0xffffff], 3, 0.4); traps.splice(i, 1); continue; }
+    const rr2 = (tr.r || 1.55) ** 2, why = tr.kind === 'fake' ? 'fake' : tr.kind === 'barricade' ? 'barricade' : 'trap';
     for (const k of karts) {
-      if (k.air || (k === tr.owner && t - tr.t0 < 1.0)) continue;
-      if ((k.x - tr.x) ** 2 + (k.z - tr.z) ** 2 >= 1.55 * 1.55 || Math.abs(k.y - tr.y) >= 2) continue;
-      const r = spinOut(k, 'trap');
-      if (r || k.starT > 0) {   // 맞은 뒤 무적이면 그냥 지나감, 별이면 함정이 터짐
-        if (r === true) hitBy(tr.owner, k, 'trap');
-        traps.splice(i, 1); burst(tr.x, tr.y + 0.4, tr.z, 14, [0x7dd3fc, 0xffffff], 5, 0.5);
+      if (k.air || k.ghostT > 0 || (k === tr.owner && t - tr.t0 < 1.0)) continue;   // 꼬마 유령은 그냥 지나감
+      if ((k.x - tr.x) ** 2 + (k.z - tr.z) ** 2 >= rr2 || Math.abs(k.y - tr.y) >= 2) continue;
+      const r = spinOut(k, why);
+      if (r || k.starT > 0 || k.planeT > 0) {   // 맞은 뒤 무적이면 그냥 지나감, 별·비행기면 함정이 부서짐
+        if (r === true) { hitBy(tr.owner, k, why); if (why === 'barricade') { k.v *= 0.5; if (k.human >= 0) sfx('wood'); } }
+        traps.splice(i, 1);
+        burst(tr.x, tr.y + 0.4, tr.z, 14, tr.kind === 'barricade' ? [0xc98b4a, 0xffffff, 0xe5484d] : tr.kind === 'fake' ? [0xf472b6, 0xfacc15, 0xffffff] : [0x7dd3fc, 0xffffff], 5, 0.5);
         break;
       }
     }
@@ -1174,6 +1595,13 @@ function aiControl(k, h) {
   if (k.cut >= 0) aiOnCut(k, h, CUTS[k.cut], look); else aiOnMain(k, h, look);
   aiItems(k, t);
   if (k.paintT > 0) c.steer = clamp(c.steer + Math.sin(t * 7 + k.slot * 1.7) * 0.45, -1, 1);   // 물감 맞으면 앞이 안 보여 휘청
+  for (const pw of pows) {   // 쿵 블록이 떨어지기 직전에 (잘하는 CPU일수록 자주) 살짝 점프해서 피함
+    if (!pw.targets.includes(k)) continue;
+    if (!pw.hop.has(k)) pw.hop.set(k, Math.random() < (game.demo ? 0.7 : [0.3, 0.6, 0.9][settings.cpuLevel]));
+    const left = pw.at - t;
+    if (pw.hop.get(k) && left > 0 && left < 0.2 && !k.air) c.drift = !k.prevDrift;
+  }
+  if (k.planeT > 0) { c.item = false; c.drift = false; }   // 꼬마 비행기: 운전만 대신 (아이템은 안 씀)
   c.gasBtn = c.gas;
   return c;
 }
@@ -1192,7 +1620,8 @@ function aiOnMain(k, h, look) {
       }
     }
   }
-  for (const tr of traps) { if (tr.cut >= 0) continue; const ds = sdiff(tr.s, k.s); if (ds > 0 && ds < 22 && Math.abs(tr.d - target) < 2.4) target = tr.d + (target >= tr.d ? 2.6 : -2.6); }
+  { const bl = trapBlocks(k, -1); if (bl.length) target = clearLane(target, bl, TRACK.halfW - 1.2); }   // 함정·바리케이드는 비켜 감 (바리케이드 줄은 사이 틈으로)
+  target = hazDodge(k, target, -1, TRACK.halfW - 1.2);   // 코스 장애물
   let hotSide = 0;   // 앞 커브 안쪽에 웅덩이(용암·늪·물)가 있는 쪽 (+ 오른쪽): 그쪽으로는 드리프트를 시작하지 않음 (드리프트는 안쪽을 파고드니까)
   for (const z of ZONES) {   // 길 한쪽만 덮은 늪·얼음판·용암 웅덩이는 피해서 (길 전체를 덮은 건 어쩔 수 없음). 용암은 더 넉넉히
     const ds = sdiff(z.s, k.s), m = z.type === 'lava' ? 3 : 1.6;
@@ -1214,10 +1643,15 @@ function aiOnMain(k, h, look) {
   }
   const dr = sdiff(RAMP.s, k.s);
   if (dr > -RAMP.len && dr < 35) target = clamp(target, -TRACK.halfW + 3, TRACK.halfW - 3);   // 점프대는 가운데로 타고 넘음 (커브 안쪽으로 붙다 옆면에 걸리지 않게)
-  for (const o of karts) {
+  if (k.planeT <= 0) for (const o of karts) {   // 앞의 느린 카트는 비켜 감 (꼬마 비행기는 그냥 들이받음)
     if (o === k || o.cut >= 0) continue;
     const ds = sdiff(o.s, k.s);
     if (ds > 0 && ds < 8 && Math.abs(o.d - k.d) < 2.2 && k.v > o.v + 0.5) target = o.d + (k.d >= o.d ? 2.8 : -2.8);
+  }
+  if (k.cloudT > 0 && t - k.cloudAt > 0.7) {   // 천둥 먹구름: 가까운 카트에게 붙어서 넘김
+    let best = null, bd = 30;
+    for (const o of karts) { if (o === k || o.cut >= 0 || o.finished || o.ghostT > 0) continue; const ds = sdiff(o.s, k.s); if (ds > -6 && Math.abs(ds) < bd) { bd = Math.abs(ds); best = o; } }
+    if (best && !(best === k.cloudFrom && t - k.cloudAt < 2.5)) target = best.d;
   }
   // 지름길: 갈림길 45~70m 앞에서 이번 바퀴에 탈지 정함. 타기로 했으면 지름길 가운데 선을 따라 들어가고, 안 타면 반대쪽으로 비켜 감
   let fork = null;
@@ -1241,7 +1675,8 @@ function aiOnCut(k, h, C, look) {   // 지름길 위 CPU: 좁은 길에서 커�
     for (const b of boxes) { if (b.cut !== C.idx || !b.alive) continue; const ds = b.cs - k.cs; if (ds > 3 && ds < 40 && Math.abs(b.d - k.cd) < bd) { bd = Math.abs(b.d - k.cd); best = b.d; } }
     if (best !== null) target = best;
   }
-  for (const tr of traps) { if (tr.cut !== C.idx) continue; const ds = tr.cs - k.cs; if (ds > 0 && ds < 20 && Math.abs(tr.d - target) < 2.2) target = tr.d + (target >= tr.d ? 2.4 : -2.4); }
+  { const bl = trapBlocks(k, C.idx); if (bl.length) target = clearLane(target, bl, C.half - 0.8); }
+  target = hazDodge(k, target, C.idx, C.half - 0.8);
   let hotSide = 0;
   for (const z of C.zones) {   // 길 한쪽 웅덩이는 피해서
     if (z.full) continue;
@@ -1250,7 +1685,7 @@ function aiOnCut(k, h, C, look) {   // 지름길 위 CPU: 좁은 길에서 커�
     if (ds > -z.len && ds < 36) hotSide = Math.sign(z.d0 + z.d1);
   }
   if (C.ramp) { const dr = C.ramp.s - k.cs; if (dr > -C.ramp.len && dr < 30) target = clamp(target, -C.half + 2.2, C.half - 2.2); }   // 점프대는 가운데로
-  for (const o of karts) { if (o === k || o.cut !== C.idx) continue; const ds = o.cs - k.cs; if (ds > 0 && ds < 8 && Math.abs(o.cd - k.cd) < 2.2 && k.v > o.v + 0.5) target = o.cd + (k.cd >= o.cd ? 2.4 : -2.4); }
+  if (k.planeT <= 0) for (const o of karts) { if (o === k || o.cut !== C.idx) continue; const ds = o.cs - k.cs; if (ds > 0 && ds < 8 && Math.abs(o.cd - k.cd) < 2.2 && k.v > o.v + 0.5) target = o.cd + (k.cd >= o.cd ? 2.4 : -2.4); }
   target = clamp(target, -C.half + 1.2, C.half - 1.2);
   ai.d += (target - ai.d) * (1 - Math.exp(-h * 2.5));
   const fwd = k.cs + look, v = Math.max(0, k.v), p = fwd <= C.P.len ? pathPoint(C.P, fwd, ai.d) : trackPoint(C.to + fwd - C.P.len, 0);
@@ -1269,6 +1704,9 @@ function aiDrive(k, h, p, kMax, ahead, hotSide) {
   else if (need > 0.55 && k.v > 15 && !k.air && !k.offroad && Math.sign(ahead) !== hotSide && Math.random() < ai.driftSkill * h * 6) { ai.drifting = true; c.steer = Math.sign(ahead); }
   c.drift = ai.drifting;
 }
+// 나를 노리고 날아오는 것 (빵빵 나팔로 부수려고)
+const threatened = k => rockets.some(r => r.target === k && (r.x - k.x) ** 2 + (r.z - k.z) ** 2 < 900) || ufos.some(u => u.target === k && (u.hover > 0 || (u.x - k.x) ** 2 + (u.z - k.z) ** 2 < 900))
+  || shots.some(s => s.target === k && (s.x - k.x) ** 2 + (s.z - k.z) ** 2 < 400);
 const curvAhead = (k, a, b) => k.cut >= 0 ? pathCurvSpan(CUTS[k.cut], k.cs + a, k.cs + b) : curvSpan(k.s + a, k.s + b);   // 제 길 앞쪽 곡률
 function aiItems(k, t) {
   const c = k.ctl, ai = k.ai;
@@ -1287,7 +1725,17 @@ function aiItems(k, t) {
     else if (it === 'snow') want = karts.some(o => o !== k && o.cut === k.cut && sdiff(o.s, k.s) > 4 && sdiff(o.s, k.s) < 55 && Math.abs(o.d - k.d) < 3) || t > ai.itemAt + 9;
     else if (it === 'bomb') want = ahead(18, 45) || t > ai.itemAt + 9;
     else if (it === 'spring') want = !k.air && (traps.some(tr => tr.cut === k.cut && sdiff(tr.s, k.s) > 3 && sdiff(tr.s, k.s) < 14 && Math.abs(tr.d - k.d) < 2.5) || t > ai.itemAt + 7);
-    else want = karts.some(o => o !== k && sdiff(k.s, o.s) > 2 && sdiff(k.s, o.s) < 25) || t > ai.itemAt + 6;   // 함정: 바로 뒤에 누가 오면
+    else if (it === 'trap3') want = karts.some(o => o !== k && sdiff(k.s, o.s) > 2 && sdiff(k.s, o.s) < 12) || t > ai.itemAt + 12;   // 줄줄이 함정은 들고 다니며 막다가 바짝 따라오면 놓음
+    else if (it === 'horn') want = threatened(k) || karts.some(o => o !== k && !o.finished && (o.x - k.x) ** 2 + (o.z - k.z) ** 2 < 49) || t > ai.itemAt + 12;
+    else if (it === 'ufo' || it === 'barricade') want = k.place > 1 || t > ai.itemAt + 10;
+    else if (it === 'ghost') want = karts.some(o => o !== k && o.item && sdiff(o.s, k.s) > 0 && sdiff(o.s, k.s) < 150) || t > ai.itemAt + 8;
+    else if (it === 'plane') want = !k.air && (k.place >= 3 || t > ai.itemAt + 6);
+    else if (it === 'boomerang') want = karts.some(o => o !== k && o.cut === k.cut && sdiff(o.s, k.s) > 4 && sdiff(o.s, k.s) < 30 && Math.abs(o.d - k.d) < 5) || t > ai.itemAt + 8;
+    else if (it === 'cloud') want = true;   // 먹구름은 바로 쓰고 다른 카트에 넘기러 감
+    else if (it === 'shrink') want = karts.some(o => o !== k && !o.finished && o.prog > k.prog) || t > ai.itemAt + 8;
+    else if (it === 'pow') want = karts.some(o => o !== k && !o.finished && o.prog > k.prog && o.prog - k.prog < 120) || t > ai.itemAt + 10;
+    else if (it === 'water') want = ahead(16, 42) || t > ai.itemAt + 9;
+    else want = karts.some(o => o !== k && sdiff(k.s, o.s) > 2 && sdiff(k.s, o.s) < 25) || t > ai.itemAt + 6;   // 함정·가짜 상자: 바로 뒤에 누가 오면
     c.item = !!want && !k.prevItem;   // 누를 때마다 하나씩 (두 칸 연달아 쓸 때도)
   }
 }
@@ -1318,7 +1766,7 @@ function step(h) {
   const racing = game.demo || game.state === 'race' || game.state === 'finish';
   for (const k of karts) {
     if (game.only && !game.only.includes(k)) continue;
-    const c = isAI(k) ? aiControl(k, h) : k.ctl;
+    const c = isAI(k) || k.planeT > 0 ? aiControl(k, h) : k.ctl;   // 꼬마 비행기는 사람 카트도 저절로
     if (!racing) { k.v = 0; k.vl = 0; continue; }   // 출발 신호 전
     const item = !!c.item, swap = !!c.swap;
     if (item && !k.prevItem) useItem(k);
@@ -2268,6 +2716,7 @@ function buildCourse3D() {
   if (COURSE.bumps) buildBridge(grp, th);
   buildRampAndPanels(grp);
   buildJets(grp);
+  buildHazards(grp);
   buildZones(grp);
   buildScenery(grp, th);
   buildTrackside(grp, th);
@@ -2518,6 +2967,104 @@ function syncJets(t) {
     J.fire.scale.set(flick, 7 * grow + 0.01, flick); J.hot.scale.set(1, 5 * grow + 0.01, 1);
     if (Math.random() < 0.3) spark(J.grp.position.x + rand(-0.8, 0.8), J.grp.position.y + rand(1, 6) * grow, J.grp.position.z + rand(-0.8, 0.8), Math.random() < 0.5 ? 0xff8a3a : 0xffd166, 0.5, rand(-1, 1), rand(2, 5), rand(-1, 1), 0.5);
   }
+}
+// 코스 장애물 그리기: 종류마다 한 번에 (InstancedMesh). 선로·통나무 틀처럼 안 움직이는 부분은 처음에 한 번
+function buildHazards(Sc) {
+  G3.haz = {};
+  if (!HAZ.length) return;
+  const bx = new THREE.BoxGeometry(1, 1, 1), cy = new THREE.CylinderGeometry(1, 1, 1, 14), sp = new THREE.SphereGeometry(1, 14, 10), C = c => new THREE.Color(c);
+  const mk = (type, parts) => {
+    const n = HAZ.filter(z => z.type === type).length;
+    if (!n) return;
+    const m = new THREE.InstancedMesh(mergeGeoms(parts), G3.matLit, n); m.frustumCulled = false; Sc.add(m); G3.haz[type] = m;
+  };
+  const statics = [];
+  // 쿵쿵 돌: 용암 금이 간 큰 돌 + 다가오는 쪽(-z)에 노란 눈 · 성난 눈썹 · 입. 밑에 그림자
+  mk('stomp', [{ geo: bx, matrix: partM(0, 1.5, 0, 0, 0, 0, 3.8, 3.0, 3.8), color: C('#5b5560') }, { geo: bx, matrix: partM(0, 3.04, 0, 0, 0, 0, 3.4, 0.12, 3.4), color: C('#6f6874') },
+    { geo: bx, matrix: partM(-1.91, 1.4, 0.4, 0, 0, 0.5, 0.05, 1.8, 0.14), color: C('#ff8a3d') }, { geo: bx, matrix: partM(1.91, 1.8, -0.6, 0, 0, -0.4, 0.05, 1.5, 0.14), color: C('#ff8a3d') },
+    { geo: bx, matrix: partM(0.5, 1.2, 1.91, 0, 0, 0.3, 1.4, 0.12, 0.05), color: C('#ff8a3d') },
+    { geo: bx, matrix: partM(-0.8, 1.9, -1.92, 0, 0, 0, 0.7, 0.5, 0.06), color: C('#ffd166') }, { geo: bx, matrix: partM(0.8, 1.9, -1.92, 0, 0, 0, 0.7, 0.5, 0.06), color: C('#ffd166') },
+    { geo: bx, matrix: partM(-0.8, 2.35, -1.93, 0, 0, 0.35, 0.9, 0.14, 0.06), color: C('#2e2428') }, { geo: bx, matrix: partM(0.8, 2.35, -1.93, 0, 0, -0.35, 0.9, 0.14, 0.06), color: C('#2e2428') },
+    { geo: bx, matrix: partM(0, 0.85, -1.92, 0, 0, 0, 1.6, 0.35, 0.06), color: C('#2e2428') }]);
+  if (G3.haz.stomp) {
+    const sh = new THREE.PlaneGeometry(4.2, 4.2); sh.rotateX(-Math.PI / 2);
+    G3.haz.shadow = new THREE.InstancedMesh(sh, basic(0x000000, { transparent: true, opacity: 0.32, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5 }), G3.haz.stomp.count);
+    G3.haz.shadow.frustumCulled = false; Sc.add(G3.haz.shadow);
+  }
+  // 흔들 통나무: 줄 둘 + 통나무 (매단 곳이 원점). 틀(기둥 둘 + 가로대)은 길 밖에
+  mk('swing', [{ geo: bx, matrix: partM(0, -3.3, 1.3, 0, 0, 0, 0.08, 6.6, 0.08), color: C('#d9c49a') }, { geo: bx, matrix: partM(0, -3.3, -1.3, 0, 0, 0, 0.08, 6.6, 0.08), color: C('#d9c49a') },
+    { geo: cy, matrix: partM(0, -7, 0, Math.PI / 2, 0, 0, 0.55, 3.2, 0.55), color: C('#8a5a3a') },
+    { geo: cy, matrix: partM(0, -7, 1.61, Math.PI / 2, 0, 0, 0.5, 0.03, 0.5), color: C('#d9b48a') }, { geo: cy, matrix: partM(0, -7, -1.61, Math.PI / 2, 0, 0, 0.5, 0.03, 0.5), color: C('#d9b48a') }]);
+  // 꽃게: 빨간 몸통 + 집게 둘 + 눈 + 다리 (다가오는 카트 쪽을 보고 옆으로 걸음)
+  const crab = [{ geo: sp, matrix: partM(0, 0.55, 0, 0, 0, 0, 1.0, 0.45, 0.75), color: C('#e5484d') },
+    { geo: sp, matrix: partM(-0.95, 0.65, -0.55, 0, 0, 0, 0.38, 0.3, 0.3), color: C('#ef6a5a') }, { geo: sp, matrix: partM(0.95, 0.65, -0.55, 0, 0, 0, 0.38, 0.3, 0.3), color: C('#ef6a5a') }];
+  for (const x of [-0.3, 0.3]) {
+    crab.push({ geo: bx, matrix: partM(x, 1.0, -0.45, 0, 0, 0, 0.08, 0.35, 0.08), color: C('#c2363b') }, { geo: sp, matrix: partM(x, 1.2, -0.45, 0, 0, 0, 0.14, 0.14, 0.14), color: C('#ffffff') }, { geo: sp, matrix: partM(x, 1.22, -0.57, 0, 0, 0, 0.06, 0.06, 0.06), color: C('#1f2329') });
+    for (let j = 0; j < 3; j++) crab.push({ geo: bx, matrix: partM(x * 3, 0.3, -0.25 + j * 0.28, 0, 0, x > 0 ? -0.6 : 0.6, 0.6, 0.08, 0.08), color: C('#c2363b') });
+  }
+  mk('crab', crab);
+  // 사탕 공: 줄무늬 공 (공마다 색)
+  const ng = HAZ.filter(z => z.type === 'gum').length;
+  if (ng) {
+    const gTex = canvasTex(64, 64, (g, w, h) => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(120,60,90,0.16)'; for (let i = 0; i < 4; i++) g.fillRect(0, i * 16 + 5, w, 6); });
+    const m = new THREE.InstancedMesh(new THREE.SphereGeometry(1.35, 18, 12), lam(0xffffff, { map: gTex }), ng);
+    ['#ff8fc0', '#7ae0b0', '#ffd166', '#8fc8ff', '#c4b5fd', '#ff9a6a'].slice(0, ng).forEach((c, i) => m.setColorAt(i, new THREE.Color(c)));
+    m.frustumCulled = false; Sc.add(m); G3.haz.gum = m;
+  }
+  // 광산 수레: 나무 수레 + 바퀴 넷 + 실은 돌 (선로를 따라 길을 가로질러 감)
+  const cart = [{ geo: bx, matrix: partM(0, 0.85, 0, 0, 0, 0, 2.2, 0.9, 1.4), color: C('#8a5a3a') }, { geo: bx, matrix: partM(0, 1.32, 0, 0, 0, 0, 2.3, 0.1, 1.5), color: C('#5b3a24') },
+    { geo: sp, matrix: partM(-0.5, 1.35, 0, 0, 0, 0, 0.42, 0.36, 0.42), color: C('#c9a26b') }, { geo: sp, matrix: partM(0.4, 1.4, 0.2, 0, 0, 0, 0.36, 0.32, 0.36), color: C('#ffd166') }, { geo: sp, matrix: partM(0.1, 1.45, -0.3, 0, 0, 0, 0.3, 0.28, 0.3), color: C('#9a8a7a') }];
+  for (const x of [-0.7, 0.7]) for (const z of [-0.72, 0.72]) cart.push({ geo: cy, matrix: partM(x, 0.35, z, Math.PI / 2, 0, 0, 0.35, 0.15, 0.35), color: C('#2b2d3a') });
+  mk('cart', cart);
+  // 자동차: 몸통(차마다 색) + 지붕·창 + 바퀴 + 앞뒤 불빛
+  const car = [{ geo: bx, matrix: partM(0, 0.75, 0, 0, 0, 0, 2.0, 0.8, 4.0), color: C('#ffffff') }, { geo: bx, matrix: partM(0, 1.45, -0.3, 0, 0, 0, 1.7, 0.65, 2.0), color: C('#e8edf2') },
+    { geo: bx, matrix: partM(0, 1.48, -0.3, 0, 0, 0, 1.72, 0.4, 1.7), color: C('#56657a') }];
+  for (const x of [-0.95, 0.95]) {
+    for (const z of [-1.3, 1.3]) car.push({ geo: cy, matrix: partM(x, 0.38, z, 0, 0, Math.PI / 2, 0.38, 0.25, 0.38), color: C('#23252e') });
+    car.push({ geo: bx, matrix: partM(x * 0.62, 0.85, 2.01, 0, 0, 0, 0.42, 0.2, 0.04), color: C('#fff6c2') }, { geo: bx, matrix: partM(x * 0.62, 0.85, -2.01, 0, 0, 0, 0.42, 0.2, 0.04), color: C('#ff4d4d') });
+  }
+  mk('car', car);
+  if (G3.haz.car) HAZ.filter(z => z.type === 'car').forEach((z, i) => G3.haz.car.setColorAt(i, new THREE.Color(z.color || '#ffffff')));
+  // 안 움직이는 것: 통나무 틀 · 수레 선로
+  for (const z of HAZ) {
+    const Cc = z.cut >= 0 ? CUTS[z.cut] : null, at = (s, d) => { const p = Cc ? pathPoint(Cc.P, s, d) : trackPoint(s, d); return { x: p.x, z: p.z, a: Math.atan2(p.tx, p.tz), y: Cc ? cutGround(Cc, s, d) : groundAt(s, d) }; };
+    const s0 = z.cut >= 0 ? z.cs : z.s;
+    if (z.type === 'swing') {
+      for (const d of [-10, 10]) { const q = at(s0, d); statics.push({ geo: bx, matrix: partM(q.x, q.y + 4.4, q.z, 0, q.a, 0, 0.5, 8.8, 0.5), color: C('#6b4a2e') }); }
+      const q = at(s0, 0); statics.push({ geo: bx, matrix: partM(q.x, q.y + 8.3, q.z, 0, q.a, 0, 20.5, 0.45, 0.45), color: C('#6b4a2e') });
+    } else if (z.type === 'cart') {
+      const q = at(s0, 0), w = (Cc ? Cc.wall : TRACK.wall) * 2 + 2;
+      for (const off of [-0.55, 0.55]) { const r = at(s0 + off, 0); statics.push({ geo: bx, matrix: partM(r.x, r.y + 0.07, r.z, 0, r.a, 0, w, 0.12, 0.12), color: C('#8b8f99') }); }
+      for (let d = -w / 2 + 0.6; d < w / 2; d += 1.4) { const r = at(s0, d); statics.push({ geo: bx, matrix: partM(r.x, r.y + 0.03, r.z, 0, q.a, 0, 0.35, 0.06, 1.6), color: C('#6b4a2e') }); }
+    }
+  }
+  if (statics.length) Sc.add(new THREE.Mesh(mergeGeoms(statics), G3.matLit));
+  bx.dispose(); cy.dispose(); sp.dispose();
+}
+function syncHazards(t) {
+  if (!HAZ.length || !G3.haz) return;
+  const K = K3, E = G3.rocketEuler, n = {};
+  for (const z of HAZ) {
+    const m = G3.haz[z.type]; if (!m) continue;
+    const i = n[z.type] = (n[z.type] === undefined ? 0 : n[z.type] + 1);
+    hazAt(z, t);
+    if (z.type === 'swing') {   // 매단 곳에서 길을 가로질러 흔들림
+      const Cc = z.cut >= 0 ? CUTS[z.cut] : null, p = Cc ? pathPoint(Cc.P, z.cs, 0) : trackPoint(z.s, 0), a = Math.atan2(p.tx, p.tz), y = (Cc ? 0 : groundAt(z.s, 0)) + 8;
+      E.set(0, a, -HZ.th); K.q.setFromEuler(E); K.m.compose(K.v.set(p.x, y, p.z), K.q, K.w.set(1, 1, 1));
+    } else {
+      const w = hazWorld(z);
+      if (z.type === 'stomp') {   // 위에서 덜덜 떨다가 쾅. 그림자는 내려올수록 진하고 크게
+        const shake = HZ.y > 5.9 && ((t + z.phase) % HAZ_KIND.stomp.period) > 1.4 ? Math.sin(t * 60) * 0.12 : 0;
+        const sc = 0.55 + 0.45 * (1 - HZ.y / 6);
+        K.e.set(0, w.a, 0); K.q.setFromEuler(K.e); G3.haz.shadow.setMatrixAt(i, K.m.compose(K.v.set(w.x, w.y + 0.05, w.z), K.q, K.w.set(sc, 1, sc)));
+        K.m.compose(K.v.set(w.x + shake, w.y + HZ.y, w.z), K.q, K.w.set(1, 1, 1));
+      } else if (z.type === 'gum') { E.set(0, w.a, -HZ.d / 1.35); K.q.setFromEuler(E); K.m.compose(K.v.set(w.x, w.y + 1.35, w.z), K.q, K.w.set(1, 1, 1)); }   // 구르며 건넘
+      else if (z.type === 'crab') { K.e.set(0, w.a, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(w.x, w.y + Math.abs(Math.sin(t * 14 + i)) * 0.08, w.z), K.q, K.w.set(1, 1, 1)); }
+      else { K.e.set(0, w.a, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(w.x, w.y + (z.type === 'car' ? Math.abs(Math.sin(t * 9 + i)) * 0.03 : 0), w.z), K.q, K.w.set(1, 1, 1)); }
+    }
+    m.setMatrixAt(i, K.m);
+  }
+  for (const m of Object.values(G3.haz)) m.instanceMatrix.needsUpdate = true;
 }
 // 점프대(노랑·검정 줄무늬 쐐기) · 대시 판(움직이는 화살표)
 function buildRampAndPanels(Sc) {
@@ -3289,7 +3836,7 @@ function buildItemsFx(Sc) {
   Sc.add(G3.boxes);
   G3.shotMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.42, 12, 8), basic(0xfff27a), 12);
   G3.shotMesh.count = 0; Sc.add(G3.shotMesh);
-  G3.trapMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), lam(0x7dc8f7, { transparent: true, opacity: 0.85, emissive: 0x16406a }), 16);
+  G3.trapMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), lam(0x7dc8f7, { transparent: true, opacity: 0.85, emissive: 0x16406a }), 32);   // 놓은 함정 + 줄줄이 함정
   G3.trapMesh.count = 0; Sc.add(G3.trapMesh);
   G3.ballMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.5, 14, 10), lam(0x6ee7a0, { emissive: 0x1d5c3a }), 12);
   G3.ballMesh.count = 0; Sc.add(G3.ballMesh);
@@ -3312,12 +3859,55 @@ function buildItemsFx(Sc) {
   for (const m of [G3.rocketMesh, G3.tornadoMesh, G3.tornadoCore, G3.snowMesh, G3.bombMesh, G3.iceMesh]) { m.count = 0; m.frustumCulled = false; Sc.add(m); }
   G3.rocketEuler = new THREE.Euler(0, 0, 0, 'YXZ');
   cyl.dispose(); cone.dispose(); box.dispose();
+  buildMoreItemsFx(Sc, sph);
   G3.ptsAdd = makePoints(700, true); G3.ptsNorm = makePoints(420, false);
   Sc.add(G3.ptsAdd, G3.ptsNorm);
   // 모든 카트의 바퀴를 한 번에 (카트 10대 × 4)
   G3.wheels = new THREE.InstancedMesh(wheelGeo(), G3.matLit, 40);
   G3.wheels.count = 0; G3.wheels.frustumCulled = false; Sc.add(G3.wheels);
   G3.wheelEuler = new THREE.Euler(0, 0, 0, 'YXZ');   // 꺾고(Y) → 굴림(X)
+}
+
+// 새 아이템 2: 가짜 상자 · 바리케이드 · UFO(+끌어당기는 빛) · 유령 · 비행기 날개(+프로펠러) · 부메랑 · 먹구름 · 물풍선(+물방울 돔) · 물방울에 갇힌 카트 · 쿵 블록 · 나팔 고리
+function buildMoreItemsFx(Sc, sph) {
+  const bx = new THREE.BoxGeometry(1, 1, 1), cy = new THREE.CylinderGeometry(1, 1, 1, 12), sp = new THREE.SphereGeometry(1, 12, 8), C = c => new THREE.Color(c);
+  const fTex = canvasTex(128, 128, (g, w, h) => {   // 가짜 상자: 진짜와 비슷하지만 분홍빛에 물음표가 거꾸로
+    const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#ffb3c7'); gr.addColorStop(0.5, '#ffe0b0'); gr.addColorStop(1, '#ffc2d9');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(255,255,255,0.9)'; g.lineWidth = 10; g.strokeRect(5, 5, w - 10, h - 10);
+    g.translate(w / 2, h / 2); g.rotate(Math.PI);
+    g.fillStyle = '#fffdf8'; g.font = `900 84px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.strokeStyle = 'rgba(194,65,107,0.7)'; g.lineWidth = 8; g.strokeText('?', 0, 4); g.fillText('?', 0, 4);
+  });
+  G3.fakeMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1.25, 1.25, 1.25), lam(0xffffff, { map: fTex, transparent: true, opacity: 0.92 }), 12);
+  const bar = [];   // 바리케이드: 빨강·하양 판 + 다리 둘 (길을 가로질러 3.2m)
+  for (let i = 0; i < 4; i++) bar.push({ geo: bx, matrix: partM(-1.2 + i * 0.8, 1.05, 0, 0, 0, 0, 0.8, 0.55, 0.18), color: C(i % 2 ? '#fff6ec' : '#e5484d') });
+  for (const x of [-1.25, 1.25]) { bar.push({ geo: bx, matrix: partM(x, 0.55, 0, 0, 0, 0, 0.16, 1.1, 0.16), color: C('#5b4636') }); bar.push({ geo: bx, matrix: partM(x, 0.06, 0, 0, 0, 0, 0.3, 0.12, 0.9), color: C('#3f3127') }); }
+  G3.barMesh = new THREE.InstancedMesh(mergeGeoms(bar), G3.matLit, 12);
+  const ufo = [{ geo: sp, matrix: partM(0, 0, 0, 0, 0, 0, 2.3, 0.5, 2.3), color: C('#cbd5e1') }, { geo: sp, matrix: partM(0, 0.35, 0, 0, 0, 0, 1.0, 0.75, 1.0), color: C('#86efac') }];
+  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; ufo.push({ geo: sp, matrix: partM(Math.cos(a) * 1.9, -0.05, Math.sin(a) * 1.9, 0, 0, 0, 0.18, 0.18, 0.18), color: C('#fde047') }); }
+  G3.ufoMesh = new THREE.InstancedMesh(mergeGeoms(ufo), G3.matLit, 4);
+  const beam = new THREE.ConeGeometry(1, 1, 16, 1, true); beam.translate(0, -0.5, 0);   // 꼭대기가 UFO, 아래로 넓어짐
+  G3.beamMesh = new THREE.InstancedMesh(beam, basic(0x86efac, { transparent: true, opacity: 0.28, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }), 4);
+  G3.ghostMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.62), basic(0xf3f0ff, { transparent: true, opacity: 0.16, depthWrite: false }), 6);   // 옅게 (내 카트를 감싸도 앞이 보이게)
+  const pl = [{ geo: bx, matrix: partM(0, 0.95, 0.15, 0, 0, 0, 4.6, 0.12, 0.95), color: C('#7dd3fc') }, { geo: bx, matrix: partM(0, 1.0, -1.7, 0, 0, 0, 1.8, 0.1, 0.55), color: C('#7dd3fc') },
+    { geo: bx, matrix: partM(0, 1.35, -1.75, 0, 0, 0, 0.1, 0.7, 0.55), color: C('#e5484d') }, { geo: cy, matrix: partM(0, 0.75, 1.65, Math.PI / 2, 0, 0, 0.16, 0.3, 0.16), color: C('#3b3f52') }];
+  for (const x of [-2.3, 2.3]) pl.push({ geo: bx, matrix: partM(x, 0.95, 0.15, 0, 0, 0, 0.12, 0.3, 0.95), color: C('#e5484d') });   // 날개 끝 빨강
+  G3.planeMesh = new THREE.InstancedMesh(mergeGeoms(pl), G3.matLit, 6);
+  G3.propMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(2.0, 0.16, 0.05), lam(0x3b3f52), 6);
+  const bo = [{ geo: bx, matrix: partM(-0.32, 0, 0.18, 0, 0.8, 0, 0.9, 0.08, 0.26), color: C('#ffa94d') }, { geo: bx, matrix: partM(0.32, 0, 0.18, 0, -0.8, 0, 0.9, 0.08, 0.26), color: C('#ffa94d') }];
+  G3.boomMesh = new THREE.InstancedMesh(mergeGeoms(bo), G3.matLit, 12);
+  const cl = [[0, 0, 0, 1.1], [0.95, -0.15, 0.1, 0.8], [-0.95, -0.1, -0.1, 0.85], [0.3, 0.45, -0.2, 0.75], [-0.4, 0.35, 0.3, 0.7]].map(([x, y, z, r]) => ({ geo: sp, matrix: partM(x, y, z, 0, 0, 0, r, r * 0.8, r), color: C('#4b5563') }));
+  G3.cloudMesh = new THREE.InstancedMesh(mergeGeoms(cl), G3.matLit, 6);
+  G3.waterMesh = new THREE.InstancedMesh(sph, lam(0x5cc8f0, { emissive: 0x174a6b }), 6);
+  G3.domeMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), basic(0x8fd8f2, { transparent: true, opacity: 0.2, depthWrite: false }), 6);   // 옅게 (안에 갇힌 카트가 보이게)
+  G3.bubbleMesh = new THREE.InstancedMesh(sph, basic(0xbfeaff, { transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending }), 10);
+  const pTex = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#60a5fa'; g.fillRect(0, 0, w, h); g.strokeStyle = '#1e3a8a'; g.lineWidth = 12; g.strokeRect(6, 6, w - 12, h - 12); g.fillStyle = '#ffffff'; g.font = `900 64px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('쿵', w / 2, h / 2 + 4); });
+  G3.powMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(2.6, 2.6, 2.6), lam(0xffffff, { map: pTex }), 8);
+  const ring = new THREE.TorusGeometry(1, 0.08, 6, 40); ring.rotateX(Math.PI / 2);
+  G3.hornMesh = new THREE.InstancedMesh(ring, basic(0xfde047, { transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending }), 4);
+  for (const m of [G3.fakeMesh, G3.barMesh, G3.ufoMesh, G3.beamMesh, G3.ghostMesh, G3.planeMesh, G3.propMesh, G3.boomMesh, G3.cloudMesh, G3.waterMesh, G3.domeMesh, G3.bubbleMesh, G3.powMesh, G3.hornMesh]) { m.count = 0; m.visible = false; m.frustumCulled = false; Sc.add(m); }
+  bx.dispose(); cy.dispose(); sp.dispose();
 }
 
 // ---------- 입자 (불꽃·연기·흙먼지·별) ----------
@@ -3372,6 +3962,13 @@ function emitKartFx(dt) {
       const a = Math.random() * Math.PI * 2;
       spark(k.x + Math.cos(a) * 1.2, k.y + rand(0.3, 1.8), k.z + Math.sin(a) * 1.2, CONFETTI[Math.floor(Math.random() * 5)], 0.5, rand(-1, 1), rand(0.5, 2), rand(-1, 1), 0.35, true);
     }
+    if (k.cloudT > 0) {   // 천둥 먹구름: 빗방울 + 끝날 무렵 번쩍번쩍
+      if (Math.random() < chance * 0.7) spark(k.x + rand(-1, 1), k.y + 2.8, k.z + rand(-1, 1), 0x9fb7d6, 0.22, 0, -9, 0, 0.3, false, 0);
+      if (k.cloudT < 3 && Math.random() < chance * 0.12) for (let y = 0.6; y < 3; y += 0.6) spark(k.x + rand(-0.3, 0.3), k.y + y, k.z + rand(-0.3, 0.3), 0xfff27a, 0.5, 0, 0, 0, 0.12);
+    }
+    if (k.planeT > 0 && Math.random() < chance) for (const side of [-2.3, 2.3]) { const [x, y, z] = back(side, -0.2, 0.95 + planeLift(k, T())); spark(x, y, z, 0xeaf6ff, 0.16, -fx * 3, 0, -fz * 3, 0.3, true, 0); }   // 날개 끝 구름 줄
+    if (k.tinyT > 0 && Math.random() < chance * 0.3) spark(k.x + rand(-0.6, 0.6), k.y + rand(0.2, 1), k.z + rand(-0.6, 0.6), 0xc4b5fd, 0.3, 0, 1, 0, 0.4);
+    if (k.ghostT > 0 && Math.random() < chance * 0.5) { const [x, y, z] = back(rand(-0.8, 0.8), 1.2, rand(0.3, 1.5)); spark(x, y, z, 0xd8cfff, 0.22, -fx, 0.3, -fz, 0.45, true, 0); }
     if (k.boostT > 0) for (const side of [-0.18, 0.18]) if (Math.random() < chance) {
       const [x, y, z] = back(side, 1.55, 0.66);
       spark(x, y, z, Math.random() < 0.5 ? 0xff9b3b : 0xffe27a, 0.55, -fx * 4 + rand(-0.5, 0.5), rand(0, 1), -fz * 4 + rand(-0.5, 0.5), 0.22, true);
@@ -3452,12 +4049,17 @@ function podiumCam(cs) {
 // ---------- 매 프레임 3D 갱신 ----------
 function syncKart3D(m, k, t, dt) {
   m.group.visible = m.blob.visible = true;
-  m.group.position.set(k.x, k.y, k.z);
+  const lift = planeLift(k, t) + bubbleLift(k);
+  m.group.position.set(k.x, k.y + lift, k.z);
+  m.sc = lerp(m.sc || 1, k.tinyT > 0 ? 0.55 : 1, 1 - Math.exp(-dt * 10));   // 작아져라 광선 · 천둥 먹구름: 쪼그맣게
+  const flat = k.flatT > 0.3 ? 0.3 : k.flatT > 0 ? 0.3 + 0.7 * (1 - k.flatT / 0.3) : 1;   // 밟히면 납작했다가 펴짐
+  m.group.scale.set(m.sc, m.sc * flat, m.sc);
   let yaw = k.a;
   const driftYaw = k.drift ? k.drift.dir * (0.3 + 0.18 * clamp(k.steer * k.drift.dir, -1, 1)) : 0;   // 드리프트: 코가 커브 안쪽을 봄
   m.driftYaw = lerp(m.driftYaw || 0, driftYaw, 1 - Math.exp(-dt * 9));   // 홱 꺾이지 않고 부드럽게 기울었다 돌아옴
   yaw -= m.driftYaw;
   if (k.spinT > 0) yaw += (1 - k.spinT / 1.25) * Math.PI * 4;
+  if (k.bubbleT > 0) yaw += (1.5 - k.bubbleT) * 2.2;   // 물방울 안에서 천천히 빙그르
   m.group.rotation.y = yaw;
   // 서스펜션: 가속하면 코가 들리고 브레이크면 숙임, 착지하면 살짝 눌렸다 펴짐
   const acc = dt > 0 ? (k.v - (m.lastV == null ? k.v : m.lastV)) / dt : 0;
@@ -3470,10 +4072,10 @@ function syncKart3D(m, k, t, dt) {
   m.steer = k.steer; m.spinRate = k.air ? (m.spinRate || 0) : k.v / WHEEL.r;
   m.lean.rotation.z = -k.steer * 0.16;
   m.lean.position.y = k.spinT > 0 ? 0 : Math.abs(Math.sin(t * 9 + k.slot * 2)) * 0.02;
-  m.group.visible = !(k.immuneT > 0 && k.spinT <= 0 && Math.floor(t * 12) % 2 === 1);   // 맞은 뒤 무적일 땐 깜빡
+  m.group.visible = !(k.immuneT > 0 && k.spinT <= 0 && k.bubbleT <= 0 && Math.floor(t * 12) % 2 === 1) && !(k.ghostT > 0 && Math.floor(t * 20) % 3 === 0);   // 맞은 뒤 무적일 땐 깜빡 · 유령은 아른아른
   const gy = groundUnder(k);
   m.blob.position.set(k.x, gy + 0.05, k.z);
-  m.blob.scale.setScalar(clamp(1 - (k.y - gy) * 0.15, 0.4, 1));
+  m.blob.scale.setScalar(clamp(1 - (k.y + lift - gy) * 0.15, 0.4, 1) * m.sc);
 }
 function sync3D(dt) {
   const t = T();
@@ -3528,9 +4130,18 @@ function sync3D(dt) {
   G3.shotMesh.count = raceView ? Math.min(shots.length, 12) : 0;
   for (let i = 0; i < G3.shotMesh.count; i++) { const s = shots[i], k = 1 + Math.sin(t * 30 + i) * 0.15; K.m.compose(K.v.set(s.x, s.y, s.z), K.q.identity(), K.w.set(k, k, k)); G3.shotMesh.setMatrixAt(i, K.m); }
   G3.shotMesh.instanceMatrix.needsUpdate = true;
-  G3.trapMesh.count = raceView ? Math.min(traps.length, 16) : 0;
-  for (let i = 0; i < G3.trapMesh.count; i++) { const tr = traps[i], k = 1 + Math.sin(t * 4 + i) * 0.06; K.m.compose(K.v.set(tr.x, tr.y + 0.03, tr.z), K.q.identity(), K.w.set(0.95 * k, 0.35, 0.95 * k)); G3.trapMesh.setMatrixAt(i, K.m); }
-  G3.trapMesh.instanceMatrix.needsUpdate = true;
+  // 함정: 물방울 함정 (줄줄이 함정을 첫 칸에 들고 있으면 카트 뒤에 줄줄이) · 가짜 상자 (진짜처럼 빙글) · 바리케이드 (세워지며 톡)
+  let nt = 0, nf = 0, nb = 0;
+  if (raceView) {
+    traps.forEach((tr, i) => {
+      if (tr.kind === 'fake') { if (nf < 12) { K.e.set(t * 0.9 + i, t * 1.3 + i * 0.7, 0.4); K.q.setFromEuler(K.e); K.m.compose(K.v.set(tr.x, tr.y + 1.25 + Math.sin(t * 2.4 + i) * 0.15, tr.z), K.q, K.w.set(1, 1, 1)); G3.fakeMesh.setMatrixAt(nf++, K.m); } }
+      else if (tr.kind === 'barricade') { if (nb < 12) { const pop = clamp((t - tr.t0) / 0.25, 0.05, 1); K.e.set(0, tr.a, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(tr.x, tr.y, tr.z), K.q, K.w.set(1, pop, 1)); G3.barMesh.setMatrixAt(nb++, K.m); } }
+      else if (nt < 32) { const k = 1 + Math.sin(t * 4 + i) * 0.06; K.m.compose(K.v.set(tr.x, tr.y + 0.03, tr.z), K.q.identity(), K.w.set(0.95 * k, 0.35, 0.95 * k)); G3.trapMesh.setMatrixAt(nt++, K.m); }
+    });
+    for (const k of karts) if (k.item === 'trap3' && k.itemN > 0 && k.mesh && k.mesh.group.visible) for (let j = 0; j < k.itemN && nt < 32; j++) { const [x, z] = trailAt(k, j); K.m.compose(K.v.set(x, k.y + 0.03, z), K.q.identity(), K.w.set(0.75, 0.3, 0.75)); G3.trapMesh.setMatrixAt(nt++, K.m); }
+  }
+  G3.trapMesh.count = nt; G3.fakeMesh.count = nf; G3.barMesh.count = nb; G3.fakeMesh.visible = nf > 0; G3.barMesh.visible = nb > 0;
+  for (const m of [G3.trapMesh, G3.fakeMesh, G3.barMesh]) m.instanceMatrix.needsUpdate = true;
   G3.ballMesh.count = raceView ? Math.min(balls.length, 12) : 0;
   for (let i = 0; i < G3.ballMesh.count; i++) { const b = balls[i]; K.e.set(t * 7 + i, t * 5, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(b.x, b.y, b.z), K.q, K.w.set(1, 1, 1)); G3.ballMesh.setMatrixAt(i, K.m); }
   G3.ballMesh.instanceMatrix.needsUpdate = true;
@@ -3549,13 +4160,14 @@ function sync3D(dt) {
   for (const z of G3.zoneTex) z.tex.offset.y = (t * z.flow) % 1;   // 개울·초콜릿 강은 흐르고, 얼음은 가만히
   if (G3.snowfall) G3.snowfall.material.uniforms.uTime.value = t % 1000;
   syncJets(t);
+  syncHazards(t);
   G3.crowd.position.y = Math.abs(Math.sin(t * 7)) * (game.state === 'finish' || game.state === 'result' ? 0.25 : 0.04);
   syncPoints();
 }
 // 새 아이템 그리기: 로켓은 날아가는 쪽을 보고, 회오리는 빙글빙글, 눈덩이는 구르며 커지고, 폭탄은 터지기 전 빨갛게 깜빡, 얼음은 카트를 감쌈
 function syncNewItems(t, show) {
   const K = K3, E = G3.rocketEuler;
-  const set = (mesh, list, fn) => { mesh.count = show ? Math.min(list.length, mesh.instanceMatrix.count) : 0; for (let i = 0; i < mesh.count; i++) fn(list[i], i); mesh.instanceMatrix.needsUpdate = true; };
+  const set = (mesh, list, fn) => { mesh.count = show ? Math.min(list.length, mesh.instanceMatrix.count) : 0; mesh.visible = mesh.count > 0; for (let i = 0; i < mesh.count; i++) fn(list[i], i); mesh.instanceMatrix.needsUpdate = true; };
   set(G3.rocketMesh, rockets, (r, i) => { const l = Math.hypot(r.dx || 0, r.dz || 0); E.set(r.free ? 0.35 : 0, l > 1e-6 ? Math.atan2(r.dx, r.dz) : 0, t * 9); K.q.setFromEuler(E); K.m.compose(K.v.set(r.x, r.y, r.z), K.q, K.w.set(1.2, 1.2, 1.2)); G3.rocketMesh.setMatrixAt(i, K.m); });
   set(G3.tornadoMesh, tornados, (w, i) => { const fade = Math.min(1, w.life / 0.5, (t - w.t0) / 0.3); K.e.set(0, t * 9 + i, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(w.x, w.y, w.z), K.q, K.w.set(2.4 * fade, 5.5 * fade, 2.4 * fade)); G3.tornadoMesh.setMatrixAt(i, K.m); });
   set(G3.tornadoCore, tornados, (w, i) => { const fade = Math.min(1, w.life / 0.5, (t - w.t0) / 0.3); K.e.set(0, -t * 13 + i, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(w.x, w.y, w.z), K.q, K.w.set(1.1 * fade, 4.6 * fade, 1.1 * fade)); G3.tornadoCore.setMatrixAt(i, K.m); });
@@ -3568,7 +4180,27 @@ function syncNewItems(t, show) {
   if (G3.bombMesh.instanceColor) G3.bombMesh.instanceColor.needsUpdate = true;
   const frozen = show ? karts.filter(k => k.frozenT > 0 && k.mesh) : [];
   set(G3.iceMesh, frozen, (k, i) => { K.e.set(0, k.a, 0); K.q.setFromEuler(K.e); const sc = 1 + Math.max(0, k.frozenT - 1.2) * 1.5; K.m.compose(K.v.set(k.x, k.y + 1.0, k.z), K.q, K.w.set(2.7 * sc, 2.3 * sc, 3.3 * sc)); G3.iceMesh.setMatrixAt(i, K.m); });
+  // 새 아이템 2
+  set(G3.ufoMesh, ufos, (u, i) => { K.e.set(0, t * 2.5 + i, Math.sin(t * 3 + i) * 0.08); K.q.setFromEuler(K.e); K.m.compose(K.v.set(u.x, u.y + Math.sin(t * 4 + i) * 0.2, u.z), K.q, K.w.set(1, 1, 1)); G3.ufoMesh.setMatrixAt(i, K.m); });
+  set(G3.beamMesh, show ? ufos.filter(u => u.hover > 0 && u.target) : [], (u, i) => { const hgt = Math.max(0.5, u.y - u.target.y), w = 2.2 + Math.sin(t * 9 + i) * 0.15; K.m.compose(K.v.set(u.x, u.y - 0.2, u.z), K.q.identity(), K.w.set(w, hgt, w)); G3.beamMesh.setMatrixAt(i, K.m); });
+  set(G3.boomMesh, boomerangs, (b, i) => { K.e.set(0, (t - b.t0) * 22, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(b.x, b.y, b.z), K.q, K.w.set(1.3, 1.3, 1.3)); G3.boomMesh.setMatrixAt(i, K.m); });
+  set(G3.waterMesh, show ? waters.filter(w => !w.landed) : [], (w, i) => { const sc = 0.65 + Math.sin(t * 20 + i) * 0.04; K.m.compose(K.v.set(w.x, w.y, w.z), K.q.identity(), K.w.set(sc, sc * 1.1, sc)); G3.waterMesh.setMatrixAt(i, K.m); });
+  set(G3.domeMesh, show ? waters.filter(w => w.landed) : [], (w, i) => { const fade = clamp((1.6 - (t - w.landed)) / 0.3, 0.05, 1), r = Math.max(0.1, w.r) * fade; K.m.compose(K.v.set(w.x, w.y, w.z), K.q.identity(), K.w.set(r, r * 0.65, r)); G3.domeMesh.setMatrixAt(i, K.m); });
+  set(G3.cloudMesh, show ? karts.filter(k => k.cloudT > 0 && k.mesh) : [], (k, i) => { const sh = k.cloudT < 2 ? Math.sin(t * 40) * 0.08 : 0, sc = 1 + Math.sin(t * 3 + i) * 0.05; K.e.set(0, t * 0.6, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(k.x + sh, k.y + (k.tinyT > 0 ? 2.6 : 3.4), k.z), K.q, K.w.set(sc, sc, sc)); G3.cloudMesh.setMatrixAt(i, K.m); });
+  set(G3.ghostMesh, show ? karts.filter(k => k.ghostT > 0 && k.mesh) : [], (k, i) => { K.e.set(0, k.a, 0); K.q.setFromEuler(K.e); const sc = (k.tinyT > 0 ? 0.55 : 1) * (1 + Math.sin(t * 6 + i) * 0.04); K.m.compose(K.v.set(k.x, k.y + 0.35 + Math.sin(t * 5) * 0.1, k.z), K.q, K.w.set(1.5 * sc, 1.9 * sc, 2.0 * sc)); G3.ghostMesh.setMatrixAt(i, K.m); });
+  const planes = show ? karts.filter(k => k.planeT > 0 && k.mesh) : [];
+  set(G3.planeMesh, planes, (k, i) => { K.e.set(0, k.a, Math.sin(t * 3 + i) * 0.06); K.q.setFromEuler(K.e); K.m.compose(K.v.set(k.x, k.y + planeLift(k, t), k.z), K.q, K.w.set(1, 1, 1)); G3.planeMesh.setMatrixAt(i, K.m); });
+  set(G3.propMesh, planes, (k, i) => { E.set(0, k.a, t * 40); K.q.setFromEuler(E); K.m.compose(K.v.set(k.x + Math.sin(k.a) * 1.8, k.y + 0.75 + planeLift(k, t), k.z + Math.cos(k.a) * 1.8), K.q, K.w.set(1, 1, 1)); G3.propMesh.setMatrixAt(i, K.m); });
+  set(G3.bubbleMesh, show ? karts.filter(k => k.bubbleT > 0 && k.mesh) : [], (k, i) => { const sc = (k.tinyT > 0 ? 0.6 : 1) * (1.75 + Math.sin(t * 7 + i) * 0.08); K.m.compose(K.v.set(k.x, k.y + bubbleLift(k) + 0.9, k.z), K.q.identity(), K.w.set(sc, sc, sc)); G3.bubbleMesh.setMatrixAt(i, K.m); });
+  const drops = [];   // 쿵 블록: 맞을 카트마다 머리 위에서 내려옴 (떨어지기 직전엔 덜덜)
+  if (show) for (const pw of pows) for (const o of pw.targets) if (!o.finished && drops.length < 8) drops.push([pw, o]);
+  set(G3.powMesh, drops, ([pw, o], i) => { const left = Math.max(0, pw.at - t), sh = left < 0.5 ? Math.sin(t * 50 + i) * 0.12 : 0; K.e.set(0, o.a, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(o.x + sh, o.y + 2.4 + left * 5, o.z), K.q, K.w.set(0.8, 0.8, 0.8)); G3.powMesh.setMatrixAt(i, K.m); });
+  set(G3.hornMesh, show ? horns : [], (hn, i) => { const a = clamp((t - hn.t0) / 0.5, 0, 1), rw = 1 + a * 9; K.m.compose(K.v.set(hn.x, hn.y, hn.z), K.q.identity(), K.w.set(rw, 1 + a * 4, rw)); G3.hornMesh.setMatrixAt(i, K.m); G3.hornMesh.setColorAt(i, K.col.setRGB(1 - a, 1 - a, 1 - a)); });
+  if (G3.hornMesh.instanceColor) G3.hornMesh.instanceColor.needsUpdate = true;
 }
+// 보이는 것만 들어 올림: 꼬마 비행기는 땅 위로 살짝 떠서 (뜨고 내릴 땐 천천히), 물방울에 갇히면 동동
+const planeLift = (k, t) => k.planeT > 0 ? 0.75 * Math.min(1, (4.2 - k.planeT) / 0.35, k.planeT / 0.35) + Math.sin(t * 6 + k.slot) * 0.08 : 0;
+const bubbleLift = k => k.bubbleT > 0 ? 1.1 * Math.min(1, (1.5 - k.bubbleT) / 0.3, k.bubbleT / 0.15) : 0;
 // 보이는 카트마다 바퀴 4개: 차체를 따라가고, 굴러가고(속도/반지름), 앞바퀴는 핸들만큼 꺾임
 function syncWheels(dt) {
   const W = G3.wheels, K = K3, E = G3.wheelEuler, cap = W.instanceMatrix.count;
@@ -3747,6 +4379,65 @@ function drawItemIcon(g, kind, x, y, s) {
     for (let i = 0; i < 6; i++) g.lineTo(i % 2 ? 22 : -22, 22 - i * 10);
     g.lineTo(0, -34); g.stroke();
     g.fillStyle = '#e5484d'; rr(g, -26, -44, 52, 12, 5); g.fill();
+  } else if (kind === 'fake') {   // 가짜 상자: 상자처럼 생겼는데 분홍빛에 물음표가 거꾸로
+    const gr = g.createLinearGradient(-40, -40, 40, 40); gr.addColorStop(0, '#ffb3c7'); gr.addColorStop(1, '#ffd0a8');
+    g.fillStyle = gr; g.strokeStyle = '#c2416b'; g.lineWidth = 5; rr(g, -38, -38, 76, 76, 12); g.fill(); g.stroke();
+    g.save(); g.rotate(Math.PI); g.font = `900 58px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#c2416b'; g.fillText('?', 0, 2); g.restore();
+  } else if (kind === 'trap3') {   // 줄줄이 함정: 물방울 셋이 줄줄이
+    for (const [x, y, sc] of [[-24, 16, 0.5], [0, 4, 0.56], [24, -8, 0.62]]) {
+      g.save(); g.translate(x, y); g.scale(sc, sc); g.fillStyle = '#6cc3f5'; g.strokeStyle = '#2f6f9b'; g.lineWidth = 8;
+      g.beginPath(); g.moveTo(0, -44); g.bezierCurveTo(14, -20, 34, 0, 34, 18); g.arc(0, 18, 34, 0, Math.PI); g.bezierCurveTo(-34, 0, -14, -20, 0, -44); g.closePath(); g.fill(); g.stroke(); g.restore();
+    }
+  } else if (kind === 'horn') {   // 빵빵 나팔: 노란 나팔 + 퍼지는 소리 줄
+    g.fillStyle = '#ffd166'; g.strokeStyle = '#9a6a12'; g.lineWidth = 5;
+    g.beginPath(); g.moveTo(-42, -8); g.lineTo(-10, -8); g.lineTo(20, -30); g.lineTo(20, 30); g.lineTo(-10, 8); g.lineTo(-42, 8); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.ellipse(20, 0, 8, 30, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.strokeStyle = '#ff8a3d'; g.lineWidth = 5; g.lineCap = 'round'; for (const rad of [16, 26]) { g.beginPath(); g.arc(22, 0, rad, -0.6, 0.6); g.stroke(); }
+  } else if (kind === 'ufo') {   // 외계인 UFO: 은빛 접시 + 초록 뚜껑 + 노란 불 + 빛
+    g.fillStyle = 'rgba(134,239,172,0.55)'; g.beginPath(); g.moveTo(-12, 8); g.lineTo(-32, 46); g.lineTo(32, 46); g.lineTo(12, 8); g.closePath(); g.fill();
+    g.fillStyle = '#86efac'; g.strokeStyle = '#2f7a55'; g.lineWidth = 4; g.beginPath(); g.ellipse(0, -8, 18, 18, 0, Math.PI, 0); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#cbd5e1'; g.strokeStyle = '#475569'; g.beginPath(); g.ellipse(0, 0, 44, 13, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.fillStyle = '#fde047'; for (const x of [-28, -9, 9, 28]) { g.beginPath(); g.arc(x, 2, 4, 0, Math.PI * 2); g.fill(); }
+  } else if (kind === 'ghost') {   // 꼬마 유령: 하얀 유령 + 동그란 눈 + 물결 치마
+    g.fillStyle = '#f8f7ff'; g.strokeStyle = '#8b83b5'; g.lineWidth = 5;
+    g.beginPath(); g.moveTo(-32, 40); g.lineTo(-32, -6); g.arc(0, -6, 32, Math.PI, 0); g.lineTo(32, 40);
+    for (let i = 0; i < 4; i++) g.quadraticCurveTo(24 - i * 16, 28, 16 - i * 16, 40);
+    g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#3b3561'; g.beginPath(); g.ellipse(-11, -8, 5, 8, 0, 0, Math.PI * 2); g.ellipse(11, -8, 5, 8, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#f9a8d4'; g.beginPath(); g.ellipse(0, 10, 6, 4, 0, 0, Math.PI * 2); g.fill();
+  } else if (kind === 'plane') {   // 꼬마 비행기: 하늘색 날개 + 빨간 몸통 + 프로펠러 (위에서 본 모양)
+    g.fillStyle = '#7dd3fc'; g.strokeStyle = '#1e5f86'; g.lineWidth = 4;
+    rr(g, -46, -6, 92, 16, 7); g.fill(); g.stroke(); rr(g, -18, 30, 36, 10, 4); g.fill(); g.stroke();
+    g.fillStyle = '#e5484d'; g.strokeStyle = '#7a1f22'; g.beginPath(); g.ellipse(0, 6, 12, 36, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.fillStyle = '#3b3f52'; rr(g, -20, -38, 40, 6, 3); g.fill();
+  } else if (kind === 'boomerang') {   // 부메랑: 주황 V자
+    g.translate(0, 16); g.fillStyle = '#ffa94d'; g.strokeStyle = '#8a4a12'; g.lineWidth = 5;
+    for (const a of [-0.7, 0.7]) { g.save(); g.rotate(a); rr(g, -9, -50, 18, 56, 9); g.fill(); g.stroke(); g.restore(); }
+    g.fillStyle = '#fff3d6'; g.beginPath(); g.arc(0, -2, 5, 0, Math.PI * 2); g.fill();
+  } else if (kind === 'cloud') {   // 천둥 먹구름: 까만 구름 + 노란 번개 + 눈
+    g.fillStyle = '#4b5563'; g.beginPath(); g.arc(-18, -6, 20, 0, Math.PI * 2); g.arc(4, -16, 24, 0, Math.PI * 2); g.arc(24, -2, 18, 0, Math.PI * 2); g.fill(); g.fillRect(-34, -6, 62, 22);
+    g.fillStyle = '#fde047'; g.strokeStyle = '#8a6a12'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, 12); g.lineTo(-12, 32); g.lineTo(-2, 32); g.lineTo(-8, 48); g.lineTo(12, 26); g.lineTo(2, 26); g.lineTo(8, 12); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#ffffff'; g.beginPath(); g.arc(-8, -8, 4, 0, Math.PI * 2); g.arc(10, -8, 4, 0, Math.PI * 2); g.fill();
+  } else if (kind === 'shrink') {   // 작아져라 광선: 보라 요술봉 + 별 + 아래로 반짝
+    g.strokeStyle = '#6d28d9'; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(-32, 38); g.lineTo(6, 0); g.stroke();
+    g.fillStyle = '#e9d5ff'; g.strokeStyle = '#7c3aed'; g.lineWidth = 4; g.beginPath();
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rad = i % 2 ? 9 : 22; g.lineTo(16 + Math.cos(a) * rad, -14 + Math.sin(a) * rad); }
+    g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#c4b5fd'; for (const [x, y] of [[34, 14], [-6, -36], [40, -34]]) { g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill(); }
+  } else if (kind === 'barricade') {   // 바리케이드: 빨강·하양 줄무늬 판 + 다리
+    g.fillStyle = '#5b4636'; g.fillRect(-34, -4, 8, 44); g.fillRect(26, -4, 8, 44);
+    g.save(); rr(g, -44, -24, 88, 26, 5); g.clip();
+    for (let i = -6; i < 6; i++) { g.fillStyle = (i + 6) % 2 ? '#e5484d' : '#fff6ec'; g.beginPath(); g.moveTo(i * 16, -24); g.lineTo(i * 16 + 16, -24); g.lineTo(i * 16 + 4, 2); g.lineTo(i * 16 - 12, 2); g.closePath(); g.fill(); }
+    g.restore(); g.strokeStyle = '#7a1f22'; g.lineWidth = 4; rr(g, -44, -24, 88, 26, 5); g.stroke();
+  } else if (kind === 'pow') {   // 쿵 블록: 파란 블록에 '쿵' + 땅이 흔들리는 줄
+    g.fillStyle = '#60a5fa'; g.strokeStyle = '#1e3a8a'; g.lineWidth = 5; rr(g, -36, -42, 72, 64, 10); g.fill(); g.stroke();
+    g.fillStyle = '#ffffff'; g.font = `900 36px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('쿵', 0, -9);
+    g.strokeStyle = '#fde047'; g.lineWidth = 5; g.lineCap = 'round'; for (const [x0, x1] of [[-40, -48], [40, 48], [-18, -24], [18, 24]]) { g.beginPath(); g.moveTo(x0, 30); g.lineTo(x1, 44); g.stroke(); }
+  } else if (kind === 'water') {   // 물풍선 폭탄: 파란 풍선 + 매듭 + 반짝
+    const gr = g.createRadialGradient(-12, -16, 4, 0, -4, 40); gr.addColorStop(0, '#e0f6ff'); gr.addColorStop(0.5, '#7dd3fc'); gr.addColorStop(1, '#2b8fd0');
+    g.fillStyle = gr; g.strokeStyle = '#1e5f86'; g.lineWidth = 4; g.beginPath(); g.ellipse(0, -6, 32, 36, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.fillStyle = '#1e5f86'; g.beginPath(); g.moveTo(-6, 31); g.lineTo(6, 31); g.lineTo(0, 41); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.85)'; g.beginPath(); g.ellipse(-12, -18, 7, 11, 0.5, 0, Math.PI * 2); g.fill();
   } else if (kind === 'paint') {   // 물감 폭탄: 동그란 폭탄 + 알록달록 물감 방울
     g.fillStyle = '#4b3f72'; g.beginPath(); g.arc(-4, 8, 30, 0, Math.PI * 2); g.fill();
     g.strokeStyle = '#8a6a12'; g.lineWidth = 5; g.beginPath(); g.moveTo(14, -16); g.quadraticCurveTo(26, -34, 36, -30); g.stroke();
@@ -3827,6 +4518,12 @@ function drawView(g, r, p, cs, two, t) {
   if (k.paintT > 0) paintSplats(g, r, u, k, t);
   const bolt = t - k.boltFx;
   if (bolt >= 0 && bolt < 0.35) { g.fillStyle = `rgba(255,252,220,${0.65 * (1 - bolt / 0.35)})`; g.fillRect(r.x, r.y, r.w, r.h); }   // 천둥 번개 번쩍
+  if (k.ufoT > 0) { g.fillStyle = `rgba(134,239,172,${0.14 + 0.06 * Math.sin(t * 12)})`; g.fillRect(r.x, r.y, r.w, r.h); }   // UFO 빛에 끌려가는 중
+  if (k.bubbleT > 0 || k.ghostT > 0) {   // 물방울 안 · 유령: 가장자리가 뿌옇게
+    const gr = g.createRadialGradient(r.x + r.w / 2, r.y + r.h / 2, Math.min(r.w, r.h) * 0.3, r.x + r.w / 2, r.y + r.h / 2, Math.max(r.w, r.h) * 0.6);
+    gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, k.bubbleT > 0 ? 'rgba(143,216,242,0.55)' : 'rgba(236,231,255,0.4)');
+    g.fillStyle = gr; g.fillRect(r.x, r.y, r.w, r.h);
+  }
   const bx = r.x + pad, by = r.y + pad, iw = 392 * u, ih = 132 * u;
   hudPanel(g, bx, by, iw, ih, u);
   g.fillStyle = COLORS[p]; rr(g, bx + 16 * u, by + 17 * u, 44 * u, 28 * u, 7 * u); g.fill();
@@ -3844,11 +4541,11 @@ function drawView(g, r, p, cs, two, t) {
   else { g.textAlign = 'center'; g.fillStyle = HUD.muted; g.font = `800 ${36 * u}px ${FONT}`; g.fillText('?', ix, iy); }
   if (it2) drawItemIcon(g, it2, jx, jy, 30 * u * swPop);
   const badge = (x, y, n, rad) => { g.fillStyle = HUD.orange; g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill(); g.textAlign = 'center'; g.font = `900 ${rad * 1.2}px ${FONT}`; g.fillStyle = HUD.cream; g.fillText(`×${n}`, x, y); };
-  if (rolling !== 1 && it1 === 'triple') badge(bx + 82 * u, by + 108 * u, k.itemN, 14 * u);   // 남은 개수 배지
-  if (rolling !== 2 && it2 === 'triple') badge(bx + 138 * u, by + 110 * u, k.itemN2, 10 * u);
+  if (rolling !== 1 && it1 && ITEMS[it1].n) badge(bx + 82 * u, by + 108 * u, k.itemN, 14 * u);   // 남은 개수 배지 (불꽃 대시 ×3 · 줄줄이 함정 · 부메랑)
+  if (rolling !== 2 && it2 && ITEMS[it2].n) badge(bx + 138 * u, by + 110 * u, k.itemN2, 10 * u);
   g.textAlign = 'left'; hudLabel(g, k.roulT > 0 ? 'ITEM ROULETTE' : it2 ? 'ITEM  ⇄' : 'ITEM', bx + 160 * u, by + 65 * u, u);
   g.font = `800 ${24 * u}px ${FONT}`; g.fillStyle = HUD.cream;
-  g.fillText(rolling === 1 ? '아이템 고르는 중' : it1 === 'triple' ? `불꽃 대시 ×${k.itemN}` : it1 ? ITEMS[it1].name : '상자를 지나 보세요', bx + 160 * u, by + 98 * u, 220 * u);
+  g.fillText(rolling === 1 ? '아이템 고르는 중' : it1 ? itemLabel(it1, k.itemN) : '상자를 지나 보세요', bx + 160 * u, by + 98 * u, 220 * u);
   // 바퀴와 시간: 동일한 카드 안에서 작은 라벨과 큰 숫자로 구분.
   const rw = 350 * u, rx = r.x + r.w - pad - rw;
   hudPanel(g, rx, by, rw, ih, u);
@@ -3893,6 +4590,20 @@ function drawView(g, r, p, cs, two, t) {
       g.fillStyle = i < k.drift.level ? dc : 'rgba(255,249,237,0.2)';
       rr(g, bx + (104 + i * 40) * u, dy + 17 * u, 31 * u, 12 * u, 4 * u); g.fill();
     }
+  }
+  if (k.cloudT > 0 && !k.finished) {   // 천둥 먹구름: 남은 시간 (기록 칸 아래)
+    const cw = 330 * u, cxr = r.x + r.w - pad - cw, cyr = by + ih + 12 * u;
+    hudPanel(g, cxr, cyr, cw, 58 * u, u);
+    drawItemIcon(g, 'cloud', cxr + 34 * u, cyr + 29 * u, 40 * u);
+    g.textAlign = 'left'; g.font = `900 ${23 * u}px ${FONT}`; g.fillStyle = k.cloudT < 3 && Math.floor(t * 6) % 2 ? '#fca5a5' : HUD.cream;
+    g.fillText(`먹구름 ${Math.ceil(k.cloudT)}초 · 부딪혀 넘겨요!`, cxr + 64 * u, cyr + 30 * u, cw - 74 * u);
+  }
+  const pw = pows.find(q => q.targets.includes(k));
+  if (pw && !k.finished) {   // 쿵 블록: 위에서 내려오는 블록 + 점프 타이밍
+    const left = pw.at - t, cx0 = r.x + r.w / 2, cy0 = by + 112 * u + Math.max(0, 1 - left / 1.5) * 36 * u, sh = left < 0.5 ? Math.sin(t * 50) * 6 * u : 0;   // 위쪽 버튼 아래에서 내려옴
+    drawItemIcon(g, 'pow', cx0 + sh, cy0, 96 * u);
+    g.textAlign = 'center'; g.font = `900 ${38 * u}px ${FONT}`;
+    outlined(g, left < 0.45 ? '지금 점프!' : '쿵 블록이 떨어져요!', cx0, cy0 + 72 * u, left < 0.45 ? '#86efac' : '#fca5a5', 8 * u);
   }
   const hc = game.hitCam[p], hage = hc ? t - hc.t : 99;
   if (hc && hage <= HITCAM) {   // 맞힌 카메라 창: 노란 테두리 + 아래쪽에 '맞혔다! 이름' 이름표 (3D 장면은 그 안에 그려져 있음)
@@ -4119,8 +4830,8 @@ requestAnimationFrame(frame);
 window.__KT = { game, karts, settings, T, update, render: renderFrame, startRace, toMenu, openSelect, selMove, selReady, selSet, sel, pause, resume,
   TRACK, boxes, shots, traps, KART, trackPoint, locate, groundAt, elevAt, elevCurv, sdiff, useItem, spinOut, joySteer, tilt, readInputs, keys, inCreek,
   gfx, G3, Q, applyQuality, autoStep, parts, CHARS, joycon: JC, setDemoPaused, showResult, mergeGeoms, views, humanKart, levelFor,
-  COURSES, switchCourse, DRIFT, ITEM_KEYS, ATTACK, gp, CUPS, GP_POINTS, resultNext, pathPoint, fmtTime, rockets, tornados, snowballs, bombs, freezeOut, hitBy, HITCAM, REC, lodFor, rollItem, balls, JET, jetState,
-  get JETS() { return JETS; }, get CUTS() { return CUTS; }, get GP_COURSES() { return gp.on ? gpCourses() : (menuCup() || CUPS[0]).courses; },
+  COURSES, switchCourse, DRIFT, ITEMS, ITEM_KEYS, ATTACK, gp, CUPS, GP_POINTS, resultNext, pathPoint, fmtTime, rockets, tornados, snowballs, bombs, ufos, boomerangs, waters, pows, horns, itemLabel, freezeOut, hitBy, HITCAM, REC, lodFor, rollItem, balls, JET, jetState,
+  get JETS() { return JETS; }, get CUTS() { return CUTS; }, get HAZ() { return HAZ; }, hazAt, HZ, HAZ_KIND, get GP_COURSES() { return gp.on ? gpCourses() : (menuCup() || CUPS[0]).courses; },
   get TR() { return TR; }, get L() { return L; }, get RAMP() { return RAMP; }, get PANELS() { return PANELS; }, get ZONES() { return ZONES; },
   get COURSE() { return COURSE; }, get BOX_ROWS() { return BOX_ROWS; },
   setClock: f => { realNow = f; } };

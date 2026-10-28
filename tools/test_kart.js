@@ -104,8 +104,10 @@ function run(sec, each) {
 function placeK(k, s, d, v = 0, back = false) {
   const p = KT.trackPoint(s, d);
   Object.assign(k, { x: p.x, z: p.z, y: p.y, a: Math.atan2(p.tx, p.tz) + (back ? Math.PI : 0), v, vl: 0, vy: 0, vyG: 0, air: false, rampAir: false, trick: false, hop: false,
-    drift: null, driftArm: false, spinT: 0, frozenT: 0, immuneT: 0, boostT: 0, roulT: 0, item: null, stuckT: 0, wrongT: 0, steer: 0, cut: -1 });
+    drift: null, driftArm: false, spinT: 0, frozenT: 0, immuneT: 0, boostT: 0, roulT: 0, item: null, stuckT: 0, wrongT: 0, steer: 0, cut: -1,
+    ghostT: 0, planeT: 0, cloudT: 0, tinyT: 0, flatT: 0, ufoT: 0, bubbleT: 0 });
   const q = KT.locate(k.x, k.z, Math.floor(((s % KT.L) + KT.L) % KT.L / KT.TR.step) % KT.TR.n); k.seg = q.i; k.s = q.s; k.d = q.d;   // 다리 위·아래 중 제 층으로 (s 근처부터 찾음)
+  k.prog = (k.lap - 1) * KT.L + k.s;   // 앞뒤(등수)도 바로 맞춤 (멈춰 둔 카트는 갱신이 안 되니까)
 }
 function startRace(mode, forceCPU = null) {
   KT.settings.mode = mode; G.forceCPU = forceCPU; G.only = null;
@@ -1026,7 +1028,7 @@ console.log('\n[22] 아주 큰 맵 · 지름길: 모래 협곡 광산 · 빌딩 
         if (Math.abs(k.prog - prev[i]) > 3) jumps++;
         prev[i] = k.prog;
         if (k.cut >= 0) { if (onCut[i] !== k.cut) { onCut[i] = k.cut; maxCs[i] = 0; } maxCs[i] = Math.max(maxCs[i], k.cs); }
-        else if (onCut[i] >= 0) { if (maxCs[i] > CUTS[onCut[i]].P.len - 5) used[onCut[i]]++; onCut[i] = -1; }
+        else if (onCut[i] >= 0) { const Cq = CUTS[onCut[i]]; if (maxCs[i] > Cq.P.len - Cq.e1 - 4) used[onCut[i]]++; onCut[i] = -1; }   // 합류 구간까지 가서 큰길로 옮겨 탔으면 다 탄 것
       });
     });
     assert(bad < 0 && karts.every(k => k.lap - lapB[k.slot] >= 2), `${nm} 시범 레이스: 200초에 모두 2바퀴 이상 (${karts.map((k, i) => k.lap - lapB[i]).join(',')})`);
@@ -1088,7 +1090,7 @@ console.log('\n[22] 아주 큰 맵 · 지름길: 모래 협곡 광산 · 빌딩 
     G.only = null; G.forceCPU = null;
   }
   // 쉬움: 아이처럼 흔들리며 달려도 이김 (큰 맵은 한 바퀴만)
-  const kids = [8, 9].map(ci => { KT.settings.course = ci; KT.toMenu(); return kidRace(0, 2000 + ci * 7, 1); });
+  const kids = [8, 9].flatMap(ci => [0, 1, 2].map(j => { KT.settings.course = ci; KT.toMenu(); return kidRace(0, 2000 + ci * 7 + j * 31, 1); }));   // 장애물 자리가 시각마다 달라서 세 판씩
   assert(avgPlace(kids) <= 2, `큰 맵 쉬움: 아이처럼 달려도 평균 ${avgPlace(kids).toFixed(1)}등 (${kids.map(r => r.place).join(',')})`);
   KT.settings.course = 0; KT.settings.laps = 3; KT.settings.cpuLevel = 1; G.forceCPU = null; KT.toMenu(); KT.switchCourse(0); KT.toMenu();
   assert(KT.COURSE.name === '몬스터 서킷' && KT.CUTS.length === 0, '다시 몬스터 서킷으로 (지름길 없음)');
@@ -1102,7 +1104,7 @@ console.log('\n[23] 새 아이템 다섯 · 맞힌 카메라');
   const me = KT.humanKart(0), cpus = karts.filter(k => k.human < 0), [c1, c2, c3] = cpus;
   const tap = code => { press(code); run(0.05); release(code); run(0.05); };
   const clear = k => Object.assign(k, { item: null, itemN: 0, item2: null, itemN2: 0, roulT: 0, shieldT: 0, magnetT: 0, paintT: 0, spinT: 0, immuneT: 0, starT: 0, frozenT: 0 });
-  const park = list => list.forEach((k, i) => placeK(k, 300 + i * 9, 0, 0));
+  const park = list => list.forEach((k, i) => { k.lap = 0; placeK(k, 300 + i * 9, 0, 0); });   // 안 쓰는 카트는 한 바퀴 뒤로 쳐서 세워 둠 (1등으로 안 잡히게)
   const use = it => { me.item = it; me.itemN = 1; tap('ControlLeft'); };
   // 추적 로켓: 멀리 앞선 1등에게 날아가 꽝 → 내 화면 왼쪽 위에 맞힌 카메라
   for (const k of karts) { clear(k); k.lap = 1; }
@@ -1153,8 +1155,8 @@ console.log('\n[23] 새 아이템 다섯 · 맞힌 카메라');
   const gotLast = new Set(); for (let i = 0; i < 4000; i++) gotLast.add(KT.rollItem(me));
   me.place = 1;
   const gotFirst = new Set(); for (let i = 0; i < 4000; i++) gotFirst.add(KT.rollItem(me));
-  assert(!KT.ATTACK.some(x => got.has(x)) && KT.ITEM_KEYS.length === 15 && KT.ITEM_KEYS.every(x => gotLast.has(x)) && !gotFirst.has('rocket'),
-    `쉬움 CPU는 공격 아이템 없음 · 꼴등은 15가지 다 나옴 · 1등은 로켓 없음 (${[...gotFirst].join(',')})`);
+  assert(!KT.ATTACK.some(x => got.has(x)) && KT.ITEM_KEYS.length === 27 && KT.ITEM_KEYS.every(x => gotLast.has(x)) && !['rocket', 'ufo', 'barricade', 'plane'].some(x => gotFirst.has(x)),
+    `쉬움 CPU는 공격 아이템 없음 · 꼴등은 27가지 다 나옴 · 1등은 로켓·UFO·바리케이드·비행기 없음 (${[...gotFirst].join(',')})`);
   KT.toMenu();
 }
 {
@@ -1163,8 +1165,200 @@ console.log('\n[23] 새 아이템 다섯 · 맞힌 카메라');
   KT.settings.cpuLevel = 1; G.stats.used = {};
   startRace('1p', true); skipCountdown(); run(150);
   const used = Object.keys(G.stats.used || {});
-  assert(['rocket', 'tornado', 'snow', 'bomb', 'spring'].filter(x => used.includes(x)).length >= 4, `CPU가 새 아이템 다섯도 씀 (${used.join(', ')})`);
+  const fresh = ['fake', 'trap3', 'horn', 'ufo', 'ghost', 'plane', 'boomerang', 'cloud', 'shrink', 'barricade', 'pow', 'water'], nf = fresh.filter(x => used.includes(x)).length;
+  assert(used.length >= 14 && nf >= 5, `CPU가 여러 가지 아이템을 씀 (${used.length}가지 · 새 아이템 ${nf}가지: ${used.join(', ')})`);
   G.forceCPU = null; KT.toMenu();
+}
+
+// ---------- 24. 새 아이템 열두 가지 ----------
+console.log('\n[24] 새 아이템 열두 가지 (카트라이더·마리오카트 느낌)');
+{
+  KT.settings.course = 0; KT.settings.gp = 0; KT.settings.cpuLevel = 1; KT.toMenu();
+  startRace('1p'); skipCountdown();
+  const me = KT.humanKart(0), cpus = karts.filter(k => k.human < 0), [c1, c2, c3] = cpus;
+  const tap = code => { press(code); run(0.05); release(code); run(0.05); };
+  const clear = k => Object.assign(k, { item: null, itemN: 0, item2: null, itemN2: 0, roulT: 0, shieldT: 0, magnetT: 0, paintT: 0, spinT: 0, immuneT: 0, starT: 0, frozenT: 0,
+    ghostT: 0, planeT: 0, cloudT: 0, cloudBy: null, tinyT: 0, flatT: 0, ufoT: 0, bubbleT: 0 });
+  const park = list => list.forEach((k, i) => { k.lap = 0; placeK(k, 600 + i * 9, 0, 0); });   // 안 쓰는 카트는 한 바퀴 뒤로 쳐서 멀리
+  const use = (it, n = 1) => { me.item = it; me.itemN = n; tap('ControlLeft'); };
+  const reset = () => {
+    for (const k of karts) { clear(k); k.lap = 1; k.ai.lane = 0; k.ai.laneAt = 1e9; k.ai.itemAt = 1e9; }
+    for (const a of [KT.traps, KT.shots, KT.balls, KT.rockets, KT.snowballs, KT.ufos, KT.boomerangs, KT.waters, KT.pows]) a.length = 0;
+  };
+  // 가짜 상자: 진짜 상자처럼 생겨서 보통 CPU는 속아서 밟음
+  reset(); G.only = [me, c1]; park(cpus.slice(1));
+  placeK(me, 60, 0, 14); placeK(c1, 30, 0, 14);
+  use('fake');
+  let fakeHit = false; run(3, () => { if (c1.spinT > 0) fakeHit = true; });
+  assert(fakeHit && KT.traps.length === 0, '가짜 상자: 뒤 CPU(보통)는 속아서 밟고 빙글');
+  // 줄줄이 함정: 첫 칸에 들고 있으면 카트 뒤에 달려서 뒤에서 온 번개 구슬을 막고, 누를 때마다 하나씩 놓음
+  reset(); G.only = [me, c1]; park(cpus.slice(1));
+  placeK(me, 80, 0, 10); placeK(c1, 50, 0, 10);
+  me.item = 'trap3'; me.itemN = 3; c1.item = 'zap'; c1.itemN = 1; KT.useItem(c1);
+  let trailSpun = false; run(2, () => { if (me.spinT > 0) trailSpun = true; });
+  assert(!trailSpun && me.itemN === 2 && KT.shots.length === 0, '줄줄이 함정: 뒤에서 온 번개 구슬을 하나가 대신 막음 (3 → 2)');
+  tap('ControlLeft');
+  assert(me.itemN === 1 && KT.traps.length === 1 && KT.itemLabel('trap3', 1) === '줄줄이 함정 ×1', '누를 때마다 하나씩 뒤에 놓음 (남은 개수 표시)');
+  // 빵빵 나팔: 나를 노린 로켓을 부수고, 바로 옆 카트는 빙글 돌며 밀려남
+  reset(); G.only = [me, c1, c2]; park(cpus.slice(2));
+  placeK(me, 200, 0, 12); placeK(c1, 100, 0, 12);
+  c1.item = 'rocket'; c1.itemN = 1; KT.useItem(c1);
+  let honked = false; run(8, () => {
+    const r = KT.rockets[0];
+    if (r && !honked && (r.x - me.x) ** 2 + (r.z - me.z) ** 2 < 8 * 8) { honked = true; const v = me.v; placeK(c2, me.s - 3, me.d + 2.5, v); me.v = v; me.item = 'horn'; me.itemN = 1; KT.useItem(me); }   // 나팔이 닿는 9m 안으로 들어오면
+  });
+  assert(honked && KT.rockets.length === 0 && me.spinAt < KT.T() - 8 && c2.spinAt > KT.T() - 8, `빵빵 나팔: 날아오던 로켓을 부수고 옆 카트는 빙글 [${honked} ${KT.rockets.length} ${(KT.T() - me.spinAt).toFixed(1)} ${(KT.T() - c2.spinAt).toFixed(1)}]`);
+  // 외계인 UFO: 멀리 앞선 1등 머리 위에서 3초 동안 끌어당겨 느리게 (보호막으로는 못 막음)
+  reset(); G.only = [me, c1]; park(cpus.slice(1));
+  placeK(me, 40, 0, 15); placeK(c1, 220, 0, 20); c1.shieldT = 30;
+  use('ufo');
+  let beamT = 0, beamMin = 99, cam = null; run(14, () => { if (c1.ufoT > 0) { beamT += 1 / 60; beamMin = Math.min(beamMin, c1.v); if (!cam && G.hitCam[0]) cam = G.hitCam[0].why; } });
+  assert(beamT > 2.5 && beamT < 3.6 && beamMin < KT.KART.VMAX * 0.6 && c1.shieldT > 0 && KT.ufos.length === 0 && cam === 'ufo', `외계인 UFO: 1등을 ${beamT.toFixed(1)}초 동안 끌어당김 (${beamMin.toFixed(1)}m/s까지 느려짐) · 보호막은 그대로 · 맞힌 카메라`);
+  // 꼬마 유령: 앞 카트의 아이템을 훔쳐 오고, 4초 동안 아무것도 안 맞음
+  reset(); G.only = [me, c1, c2]; park(cpus.slice(2));
+  placeK(me, 40, 0, 10); placeK(c1, 120, 0, 10); placeK(c2, 20, 0, 12); c1.item = 'star'; c1.itemN = 1;
+  use('ghost');
+  const stole = me.item === 'star' && !c1.item;
+  c2.item = 'zap'; c2.itemN = 1; KT.useItem(c2);
+  let ghostHit = false; run(2, () => { if (me.spinT > 0) ghostHit = true; });
+  assert(stole && !ghostHit && me.ghostT > 0, '꼬마 유령: 앞 카트의 반짝 별을 훔쳐 오고 번개 구슬도 지나감');
+  // 꼬마 비행기: 손을 놓아도 저절로 아주 빠르게 날아가고, 앞을 막은 카트는 튕겨 냄
+  reset(); G.only = [me]; park(cpus.slice(1));
+  KT.settings.autoGas = false; placeK(me, 40, 0, 15);
+  use('plane'); run(0.6); placeK(c1, me.s + 22, me.d, 0);
+  let planeTop = 0, planeHit = false; const ps0 = me.prog, pw0 = G.stats.walls;
+  run(4, () => { planeTop = Math.max(planeTop, me.v); if (c1.spinT > 0) planeHit = true; });
+  KT.settings.autoGas = true;
+  assert(planeTop > KT.KART.VMAX * 1.4 && me.prog - ps0 > 110 && planeHit && G.stats.walls === pw0 && me.planeT === 0, `꼬마 비행기: 저절로 ${planeTop.toFixed(1)}m/s로 ${(me.prog - ps0).toFixed(0)}m · 앞 카트를 튕겨 냄 · 벽에 안 부딪힘`);
+  // 부메랑: 앞으로 날아가 앞 카트를 맞히고 돌아옴 (세 번)
+  reset(); G.only = [me]; park(cpus.slice(1));
+  placeK(me, 40, 0, 6); placeK(c1, 62, 0.5, 0);
+  use('boomerang', 3);
+  let boomHit = false, boomBack = false; run(3, () => { if (c1.spinT > 0) boomHit = true; if (KT.boomerangs.length === 0) boomBack = true; });
+  assert(boomHit && boomBack && me.item === 'boomerang' && me.itemN === 2, '부메랑: 앞 카트를 맞히고 돌아옴 · 세 번 중 두 번 남음');
+  // 천둥 먹구름: 부딪혀서 넘기고, 시간이 다 되면 들고 있던 카트가 작아지며 빙글
+  reset(); G.only = [me, c1]; park(cpus.slice(1));
+  placeK(me, 40, 0, 16); placeK(c1, 52, 0, 4);
+  use('cloud');
+  let passed = false; run(9.5, () => { if (c1.cloudT > 0) passed = true; });
+  const struck = [me, c1].filter(k => k.tinyT > 0);
+  assert(passed && struck.length === 1 && me.cloudT === 0 && c1.cloudT === 0, `천둥 먹구름: 부딪혀 넘기고 8초 뒤 들고 있던 카트(${struck.map(k => k === me ? '나' : 'CPU').join(',')})에 번개`);
+  // 작아져라 광선: 앞 카트 모두 작아지고, 큰 카트에 밟히면 납작
+  reset(); G.only = [me, c1, c2]; park(cpus.slice(2));
+  placeK(me, 40, 0, 20); placeK(c1, 60, 0, 3); placeK(c2, 90, 4, 3);
+  use('shrink');
+  const bothTiny = c1.tinyT > 0 && c2.tinyT > 0 && me.tinyT === 0;
+  let flat = false; run(2.5, () => { if (c1.flatT > 0) flat = true; });
+  assert(bothTiny && flat, '작아져라 광선: 앞 카트 모두 작아지고, 큰 카트에 밟히면 납작');
+  // 바리케이드: 1등 36m 앞에 길을 가로질러 셋 (사이 틈으로 빠져나감), 9초 뒤 사라짐
+  reset(); G.only = [me, c1]; park(cpus.slice(1));
+  me.lap = 0; placeK(me, KT.L - 120, 0, 10); placeK(c1, 6, 0, 16);
+  use('barricade');
+  const bars = KT.traps.filter(t => t.kind === 'barricade');
+  assert(bars.length === 3 && bars.every(b => Math.abs(KT.sdiff(b.s, c1.s) - 36) < 3) && bars.map(b => b.d).join() === '-6,0,6', `바리케이드: 1등 앞 ${bars.map(b => KT.sdiff(b.s, c1.s).toFixed(0)).join('·')}m에 길을 가로질러 셋`);
+  let barHit = false; run(3, () => { if (c1.spinT > 0) barHit = true; });
+  run(6.5);
+  assert(!barHit && KT.traps.filter(t => t.kind === 'barricade').length === 0, '보통 CPU는 사이 틈으로 빠져나가고, 9초 뒤 사라짐');
+  // 쿵 블록: 떨어질 때 땅에 붙어 있으면 빙글, 점프하면 피함 (사람도 드리프트 버튼으로)
+  reset(); G.only = [me, c1, c2]; park(cpus.slice(2));
+  for (const k of [c1, c2]) k.ai.driftSkill = 0;
+  placeK(me, 40, 0, 15); placeK(c1, 120, 0, 15); placeK(c2, 160, 0, 15);
+  c3.lap = 0; placeK(c3, KT.L - 100, 0, 0); G.only = [me, c1, c2];   // 쿵 블록은 맨 뒤 CPU가 씀 → 나머지 셋이 맞을 차례
+  c3.item = 'pow'; c3.itemN = 1; KT.useItem(c3);
+  const pw = KT.pows[0]; pw.hop.set(c1, true); pw.hop.set(c2, false);
+  let meSpin = false, c1spin = false, c2spin = false, jumped = false;
+  run(2.2, () => {
+    if (!jumped && KT.pows.length && KT.pows[0].at - KT.T() < 0.12) { jumped = true; press('Space'); }
+    if (me.spinT > 0) meSpin = true; if (c1.spinT > 0) c1spin = true; if (c2.spinT > 0) c2spin = true;
+  });
+  release('Space');
+  assert([me, c1, c2].every(k => pw.targets.includes(k)) && jumped && !meSpin && !c1spin && c2spin, `쿵 블록: 떨어질 때 점프한 사람·CPU는 피하고, 안 뛴 CPU는 빙글 [${jumped} ${meSpin} ${c1spin} ${c2spin}]`);
+  for (const k of [c1, c2]) k.ai.driftSkill = 0.55;
+  // 물풍선 폭탄: 떨어진 자리에 물방울 돔 → 안에 있던 카트는 물방울에 갇힘 (던진 사람은 안 갇힘)
+  reset(); G.only = [me]; park(cpus.slice(3));
+  placeK(me, 40, 0, 18); placeK(c1, 76, -2, 0); placeK(c2, 75, 1.5, 0); placeK(c3, 100, 0, 0);
+  use('water');
+  let bub = { c1: false, c2: false, c3: false, me: false }; run(3, () => { for (const [n, k] of [['c1', c1], ['c2', c2], ['c3', c3], ['me', me]]) if (k.bubbleT > 0) bub[n] = true; });
+  assert(bub.c1 && bub.c2 && !bub.c3 && !bub.me, `물풍선 폭탄: 떨어진 자리 둘레 카트만 물방울에 갇힘 [${JSON.stringify(bub)}]`);
+  // 아이템 칸 그림 27가지 · 화면 효과 (먹구름 · 쿵 블록 경고 · UFO 빛 · 물방울)
+  G.only = null; reset();
+  for (const it of KT.ITEM_KEYS) { me.item = it; me.itemN = KT.ITEMS[it].n || 1; KT.render(); }
+  me.item = null; me.cloudT = 5; me.ufoT = 1; me.bubbleT = 1; me.ghostT = 1; KT.pows.push({ owner: c1, at: KT.T() + 1, t0: KT.T(), targets: [me], hop: new Map() }); KT.render();
+  reset();
+  assert(errors.length === 0 && draw.nan === 0, '아이템 칸 그림 27가지와 화면 효과를 그려도 예외·NaN 없음');
+  KT.toMenu();
+}
+
+// ---------- 25. 코스 장애물 ----------
+console.log('\n[25] 코스 장애물: 쿵쿵 돌 · 흔들 통나무 · 꽃게 · 사탕 공 · 광산 수레 · 자동차');
+{
+  const expect = { 4: ['stomp', 3, '쿵쿵 돌'], 5: ['swing', 3, '흔들 통나무'], 6: ['crab', 6, '꽃게'], 7: ['gum', 6, '사탕 공'], 8: ['cart', 3, '광산 수레'], 9: ['car', 6, '자동차'] };
+  const autoGas0 = KT.settings.autoGas;
+  let demoHits = 0;
+  for (const ci of [4, 5, 6, 7, 8, 9]) {
+    KT.settings.course = ci; KT.settings.gp = 0; KT.settings.cpuLevel = 1; KT.settings.laps = 3; KT.toMenu(); KT.switchCourse(ci); KT.toMenu();
+    const H = KT.HAZ, [type, n, nm] = expect[ci], cname = KT.COURSE.name;
+    assert(H.length === n && H.every(z => z.type === type) && G3.haz[type] && G3.haz[type].count === n, `${cname}: ${nm} ${n}개 (3D도)`);
+    // 시범 레이스 80초: 끼이지 않고 잘 돎 (CPU도 가끔 맞음)
+    G.stats.haz = {}; const r0 = G.stats.rescues, lapB = karts.map(k => k.lap);
+    let bad = -1; run(80, j => { if (bad < 0 && !karts.every(finite)) bad = j; });
+    const hits = G.stats.haz[type] || 0; demoHits += hits;
+    assert(bad < 0 && G.stats.rescues - r0 <= 2 && karts.every((k, i) => k.lap - lapB[i] >= 1), `${cname} 시범 80초: 끼이지 않고 돎 · CPU가 ${nm}에 ${hits}번 맞음`);
+  }
+  assert(demoHits > 10, `CPU도 장애물에 가끔 맞음 (모두 ${demoHits}번)`);
+  // 장애물 규칙 하나하나 (멈춰 선 사람 카트로)
+  KT.settings.autoGas = false;
+  const at = (ci, f) => { KT.settings.course = ci; KT.toMenu(); KT.switchCourse(ci); startRace('1p'); skipCountdown(); const me = KT.humanKart(0); G.only = [me]; return f(me, KT.HAZ); };
+  const waitFor = (sec, cond) => { let ok = false; run(sec, () => { if (cond()) { ok = true; return false; } }); return ok; };
+  const stillHit = (me, sec) => { me.immuneT = 0; return waitFor(sec, () => me.spinT > 0); };
+  // 쿵쿵 돌: 올라가 있을 때 그 밑에 서 있으면 내려찍혀 납작, 옆 줄은 괜찮음
+  at(4, (me, H) => {
+    const z = H[1];
+    waitFor(4, () => KT.hazAt(z, KT.T()).y > 5.5);
+    placeK(me, z.s, z.d, 0);
+    const hit = stillHit(me, 3.5), flat = me.flatT > 0;
+    waitFor(4, () => KT.hazAt(z, KT.T()).y > 5.5);
+    placeK(me, z.s, z.d + 4.6, 0);
+    const side = stillHit(me, 3.5);
+    assert(hit && flat && !side, '쿵쿵 돌: 밑에 있으면 내려찍혀 납작 · 옆 줄은 괜찮음');
+  });
+  // 흔들 통나무: 길 가운데에 서 있으면 맞고 옆으로 튕겨 남, 길 가장자리는 통나무가 높이 지나가서 괜찮음
+  at(5, (me, H) => {
+    const z = H[0];
+    placeK(me, z.s, 0, 0);
+    const hit = stillHit(me, 3.2), pushed = waitFor(0.8, () => Math.abs(me.d) > 1.5);
+    placeK(me, z.s, 7.6, 0);
+    const edge = stillHit(me, 3.2);
+    assert(hit && pushed && !edge, `흔들 통나무: 가운데는 맞고 옆으로 튕겨 남 · 길 가장자리는 높이 지나감 [${hit} ${pushed} ${edge}]`);
+  });
+  // 꽃게: 서 있으면 걸어와서 꼬집, 점프 중이면 넘어감
+  at(6, (me, H) => {
+    const z = H[0];
+    placeK(me, z.s, 0, 0);
+    const hit = stillHit(me, 6);
+    waitFor(12, () => Math.abs(KT.hazAt(z, KT.T()).d) < 0.4 && KT.HZ.vd > 0 && me.immuneT <= 0);
+    placeK(me, z.s, 0, 0); me.air = true; me.vy = 6; me.y += 1.0;
+    const over = !stillHit(me, 0.25);
+    assert(hit && over, '꽃게: 길을 건너다 닿으면 꼬집 · 점프 중이면 넘어감');
+  });
+  // 사탕 공 · 광산 수레(광산 굴 안) · 자동차(뒤에서 와서 들이받음)
+  at(7, (me, H) => { placeK(me, H[0].s, 0, 0); assert(stillHit(me, 7), '사탕 공: 길을 굴러 건너다 닿으면 빙글'); });
+  at(8, (me, H) => {
+    const z = H.find(q => q.cut >= 0), C = KT.CUTS[z.cut], p = { ...KT.pathPoint(C.P, z.cs, 0) };
+    placeK(me, C.from, 0, 0); Object.assign(me, { x: p.x, z: p.z, y: 0, a: Math.atan2(p.tx, p.tz), cut: z.cut, cs: z.cs, cd: 0, d: 0, cseg: Math.round(z.cs / C.P.step) });
+    assert(stillHit(me, 9.5) && me.cut === z.cut, '광산 수레: 광산 굴 안 선로를 건너다 닿으면 덜컹');
+  });
+  at(9, (me, H) => {
+    const z = H.find(q => { KT.hazAt(q, KT.T()); return q.b - KT.HZ.s > 120 && KT.HZ.s - q.a > 20; });   // 길 중간을 달리는 차
+    KT.hazAt(z, KT.T());
+    const s = KT.HZ.s + 30, lane = z.d;
+    placeK(me, s, lane, 0);
+    const hit = stillHit(me, 5), side = waitFor(0.8, () => Math.abs(me.d - lane) > 1.8);   // 차 옆으로 비켜날 만큼
+    assert(hit && side, '자동차: 같은 줄에 서 있으면 뒤에서 와서 들이받고 옆으로 튕겨 냄');
+  });
+  KT.settings.autoGas = autoGas0; G.only = null;
+  KT.settings.course = 0; KT.settings.laps = 3; KT.toMenu(); KT.switchCourse(0); KT.toMenu();
+  assert(KT.HAZ.length === 0 && Object.keys(G3.haz || {}).length === 0, '기본 코스엔 장애물 없음');
 }
 
 // ---------- 19. 그 밖 ----------

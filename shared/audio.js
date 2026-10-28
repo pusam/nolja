@@ -14,6 +14,8 @@
  *            plop() · splash() · sand() · fire() · bump(세기) · trick() · land() · finalLap()
  *            아이템: shield() 보호막 · pop() 보호막 터짐 · magnet() 자석 · thunder() 천둥 · boing() 통통 공 · splat() 물감
  *                    rocket() 로켓 · whirl() 회오리 · freeze() 꽁꽁 · boom() 꽝 · throw() 휙 · spring() 스프링
+ *                    horn() 나팔 · ufo() UFO · ghost() 유령 · steal() 훔침 · plane() 비행기 · boomerang() 부메랑 · cloud() 먹구름
+ *                    shrink() 작아짐 · squash() 납작 · wood() 바리케이드 · powWarn() 쿵 블록 경고 · thud() 쿵 · bubble() 물방울
  * ============================================================ */
 (function () {
   'use strict';
@@ -598,6 +600,81 @@
       const c = this.ctx, t = c.currentTime, o = this.tone(t, 200, 700, 0.5, 0.11, 'triangle');
       const lfo = c.createOscillator(), depth = c.createGain();
       lfo.frequency.value = 14; depth.gain.value = 60; lfo.connect(depth).connect(o.frequency); lfo.start(t); lfo.stop(t + 0.55);
+    },
+    horn() {   // 빵빵 나팔 "빠-빵!": 굵은 네모파 두 음 + 퍼지는 바람
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      for (const [dt, f] of [[0, 392], [0.18, 523]]) { this.tone(t + dt, f, f * 0.98, 0.28, 0.12, 'square', null, 0.01); this.tone(t + dt, f * 1.5, f * 1.48, 0.28, 0.05, 'sawtooth', null, 0.01); }
+      const n = this.noise(t + 0.15, 0.6, 400, 0.7, 0.12); n.frequency.exponentialRampToValueAtTime(2400, t + 0.7);
+    },
+    ufo() {   // 외계인 UFO "우잉우잉": 떨리며 오르내리는 맑은 소리
+      if (!this.live()) return;
+      const c = this.ctx, t = c.currentTime, o = this.tone(t, 700, 760, 1.2, 0.07, 'sine', null, 0.05);
+      const lfo = c.createOscillator(), depth = c.createGain();
+      lfo.frequency.value = 7; depth.gain.value = 260; lfo.connect(depth).connect(o.frequency); lfo.start(t); lfo.stop(t + 1.25);
+    },
+    ghost() {   // 꼬마 유령 "우~": 낮게 흔들리는 소리 + 높은 휘파람
+      if (!this.live()) return;
+      const c = this.ctx, t = c.currentTime, o = this.tone(t, 330, 250, 0.9, 0.08, 'triangle', null, 0.12);
+      const lfo = c.createOscillator(), depth = c.createGain();
+      lfo.frequency.value = 5; depth.gain.value = 18; lfo.connect(depth).connect(o.frequency); lfo.start(t); lfo.stop(t + 0.95);
+      this.tone(t + 0.1, 1200, 900, 0.6, 0.02, 'sine', null, 0.2);
+    },
+    steal() {   // 아이템 훔침 "휙 띠링"
+      if (!this.live()) return;
+      const t = this.ctx.currentTime, n = this.noise(t, 0.2, 1200, 1.5, 0.1);
+      n.frequency.exponentialRampToValueAtTime(3000, t + 0.18);
+      this.tone(t + 0.15, 1320, 1320, 0.1, 0.09, 'triangle'); this.tone(t + 0.24, 1760, 1760, 0.16, 0.09, 'triangle');
+    },
+    plane() {   // 꼬마 비행기 "부우웅": 프로펠러 붕붕 + 위로 슝
+      if (!this.live()) return;
+      const c = this.ctx, t = c.currentTime, o = this.tone(t, 90, 140, 1.3, 0.1, 'sawtooth', null, 0.05);
+      const lfo = c.createOscillator(), depth = c.createGain();
+      lfo.frequency.value = 28; depth.gain.value = 25; lfo.connect(depth).connect(o.frequency); lfo.start(t); lfo.stop(t + 1.35);
+      const n = this.noise(t, 0.8, 900, 1, 0.08); n.frequency.exponentialRampToValueAtTime(2600, t + 0.7);
+    },
+    boomerang() {   // 부메랑 "휘휘휙": 빠르게 도는 바람 소리
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      for (let i = 0; i < 4; i++) this.noise(t + i * 0.09, 0.12, 1400 + i * 200, 2, 0.07);
+    },
+    cloud() {   // 천둥 먹구름이 옴 "우르릉": 낮게 깔리는 잡음
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      this.noise(t, 1.0, 120, 0.8, 0.18, null, 'lowpass');
+      this.tone(t, 70, 50, 0.9, 0.12);
+    },
+    shrink() {   // 작아져라 광선 "뾰로로롱": 내려가는 반짝 소리
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      [1760, 1480, 1245, 1047, 880, 740].forEach((f, i) => this.tone(t + i * 0.06, f, f * 0.9, 0.1, 0.06, 'triangle'));
+    },
+    squash() {   // 밟혀서 납작 "뿌직"
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      this.tone(t, 300, 60, 0.25, 0.16, 'square');
+      this.noise(t, 0.15, 700, 1, 0.12);
+    },
+    wood() {   // 바리케이드 "탁탁탁": 나무 치는 소리 셋
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      for (let i = 0; i < 3; i++) { this.noise(t + i * 0.11, 0.06, 900, 3, 0.18); this.tone(t + i * 0.11, 260, 180, 0.06, 0.12, 'triangle'); }
+    },
+    powWarn() {   // 쿵 블록이 곧 떨어짐: "똑 똑 똑" 점점 빨라지는 경고
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      [0, 0.45, 0.8, 1.05, 1.25].forEach(dt => this.tone(t + dt, 1000, 800, 0.08, 0.1, 'square'));
+    },
+    thud() {   // 쿵! 큰 블록이 떨어짐: 아주 낮은 쿵 + 먼지
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      this.tone(t, 80, 30, 0.6, 0.4);
+      this.noise(t, 0.5, 250, 0.7, 0.3, null, 'lowpass');
+    },
+    bubble() {   // 물방울에 갇힘 "뽀글뽀글"
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      for (let i = 0; i < 5; i++) { const f = rnd(500, 900); this.tone(t + i * 0.07, f, f * 1.8, 0.07, 0.07, 'sine'); }
     },
     splat() {   // 물감 폭탄 "철퍽": 젖은 잡음이 아래로
       if (!this.live()) return;
