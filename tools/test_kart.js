@@ -104,7 +104,7 @@ function run(sec, each) {
 function placeK(k, s, d, v = 0, back = false) {
   const p = KT.trackPoint(s, d);
   Object.assign(k, { x: p.x, z: p.z, y: p.y, a: Math.atan2(p.tx, p.tz) + (back ? Math.PI : 0), v, vl: 0, vy: 0, vyG: 0, air: false, rampAir: false, trick: false, hop: false,
-    drift: null, driftArm: false, spinT: 0, immuneT: 0, boostT: 0, roulT: 0, item: null, stuckT: 0, wrongT: 0, steer: 0 });
+    drift: null, driftArm: false, spinT: 0, frozenT: 0, immuneT: 0, boostT: 0, roulT: 0, item: null, stuckT: 0, wrongT: 0, steer: 0, cut: -1 });
   const q = KT.locate(k.x, k.z, Math.floor(((s % KT.L) + KT.L) % KT.L / KT.TR.step) % KT.TR.n); k.seg = q.i; k.s = q.s; k.d = q.d;   // 다리 위·아래 중 제 층으로 (s 근처부터 찾음)
 }
 function startRace(mode, forceCPU = null) {
@@ -513,7 +513,7 @@ KT.settings.cpuLevel = 1; startRace('1p'); skipCountdown();
 
 // ---------- 14. 코스 넷: 바닷가 · 눈꽃 마을 · 사탕 공원 ----------
 console.log('\n[14] 기본 코스 넷');
-assert(KT.COURSES.length === 8 && KT.COURSES.every(c => c.cps[0][1] === 0 && c.cps[1][1] === 0) && KT.COURSES.filter(c => c.hard).length === 4, '코스 8개 (도전 코스 넷) · 모두 출발선이 z=0 직선');
+assert(KT.COURSES.length === 10 && KT.COURSES.every(c => c.cps[0][1] === 0 && c.cps[1][1] === 0) && KT.COURSES.filter(c => c.hard).length === 6 && KT.COURSES.filter(c => c.big).length === 2, '코스 10개 (도전 코스 넷 · 아주 큰 맵 둘) · 모두 출발선이 z=0 직선');
 assert(KT.CUPS.map(c => c.courses.join()).join(' | ') === '0,1,2,3 | 4,5,6,7', '그랑프리 컵 둘: 몬스터 컵은 기본 코스 넷, 도전 컵은 도전 코스 넷');
 // (s, d)가 든 바닥 구역 (kart.js zoneAt과 같은 규칙)
 const zoneOf = (s, d) => KT.ZONES.find(z => { const u = KT.sdiff(s, z.s); return u >= 0 && u <= z.len && d >= z.d0 && d <= z.d1; }) || null;
@@ -705,16 +705,16 @@ console.log('\n[17] 코스마다 레이스 곡 · 주변 소리');
     songs.push(AU.mus && AU.mus.name); ambs.push(AU.nat && AU.nat.kind);
     for (let i = 0; i < 120; i++) { run(0.1); AU.pump(); AU.naturePump(); }   // 테스트엔 타이머가 없어서 곡·주변 소리를 직접 12초 돌림 (파도·갈매기·바람·풍경·새까지)
   }
-  assert(songs.join(',') === KT.COURSES.map(c => c.song).join(',') && new Set(songs).size === 8, `코스마다 다른 레이스 곡 (${songs.join(', ')})`);
-  assert(ambs.join(',') === 'meadow,beach,snow,candy,lava,meadow,beach,candy' && menuQuiet, `코스마다 주변 소리 (새 코스는 비슷한 곳 소리), 메뉴에선 없음 (${ambs.join(', ')})`);
+  assert(songs.join(',') === KT.COURSES.map(c => c.song).join(',') && new Set(songs).size === 10, `코스마다 다른 레이스 곡 (${songs.join(', ')})`);
+  assert(ambs.join(',') === 'meadow,beach,snow,candy,lava,meadow,beach,candy,canyon,city' && menuQuiet, `코스마다 주변 소리 (새 코스는 비슷한 곳 소리), 메뉴에선 없음 (${ambs.join(', ')})`);
   KT.pause(); run(0.1);
   const pausedQuiet = !AU.nat;
   KT.resume(); run(0.1);
-  assert(pausedQuiet && AU.nat && AU.nat.kind === 'candy', '일시정지면 주변 소리를 끄고, 다시 달리면 켬');
+  assert(pausedQuiet && AU.nat && AU.nat.kind === 'city', '일시정지면 주변 소리를 끄고, 다시 달리면 켬');
   KT.toMenu(); run(0.1);
   assert(!AU.nat && AU.mus && AU.mus.name === 'menu', '메뉴로 나가면 주변 소리 없이 메뉴 곡');
   const S = AU.SONGS, okSong = k => S[k] && S[k].chords.length === 8 && S[k].melody.length === 8 && S[k].melody.every(bar => bar.every(([at, n, len]) => at >= 0 && at + len <= 16 && n >= 60 && n <= 96));
-  assert(['beach', 'snow', 'candy', 'lava', 'forest', 'coast', 'coaster'].every(okSong), '코스 곡 악보: 8마디 · 음 위치·높이가 정상');
+  assert(['beach', 'snow', 'candy', 'lava', 'forest', 'coast', 'coaster', 'canyon', 'city'].every(okSong), '코스 곡 악보: 8마디 · 음 위치·높이가 정상');
   G.forceCPU = null; KT.settings.course = 0;
 }
 
@@ -980,6 +980,193 @@ console.log('\n[21] 새 도전 코스: 구름다리 숲 · 소라 해안 · 사�
   assert(KT.COURSE.name === '몬스터 서킷' && !G3.snowfall, '다시 몬스터 서킷으로');
 }
 
+// ---------- 22. 아주 큰 맵 · 지름길 ----------
+console.log('\n[22] 아주 큰 맵 · 지름길: 모래 협곡 광산 · 빌딩 고가도로');
+{
+  const placeCut = (k, C, cs, d, v = 0) => {   // 카트를 지름길 위 (cs, d)에 길 방향으로
+    placeK(k, C.from, 0, v);
+    const p = { ...KT.pathPoint(C.P, cs, d) };
+    Object.assign(k, { x: p.x, z: p.z, y: 0, a: Math.atan2(p.tx, p.tz), cut: C.idx, cs, cd: d, d, cseg: Math.round(cs / C.P.step) });
+  };
+  const autoGas0 = KT.settings.autoGas;
+  for (const ci of [8, 9]) {
+    KT.settings.course = ci; KT.settings.gp = 0; KT.settings.cpuLevel = 1; KT.settings.laps = 3; KT.toMenu(); KT.switchCourse(ci); KT.toMenu();
+    const C0 = KT.COURSE, T2 = KT.TR, CUTS = KT.CUTS, nm = C0.name;
+    assert(C0.hard && C0.big && G3.courseFor === C0 && els.courseName.textContent === nm && T2.len > 1800 && T2.len < 2500 && CUTS.length >= 1, `${nm}: 아주 큰 맵 · 한 바퀴 ${T2.len.toFixed(0)}m · 지름길 ${CUTS.length}개`);
+    let r2 = Infinity, g2 = Infinity, cross = 0;
+    for (let j = 0; j < T2.n; j++) r2 = Math.min(r2, 1 / Math.max(1e-6, Math.abs(T2.curv[j])));
+    for (let a = 0; a < T2.n; a += 2) for (let b = a + 2; b < T2.n; b += 2) {
+      const ds = Math.min(b - a, T2.n - (b - a)); if (ds <= 90) continue;
+      const gap = Math.hypot(T2.px[a] - T2.px[b], T2.pz[a] - T2.pz[b]);
+      if (Math.abs(T2.py[a] - T2.py[b]) >= 4.5) { if (gap < 2 * KT.TRACK.wall) cross++; continue; }
+      g2 = Math.min(g2, gap);
+    }
+    assert(r2 > 17 && g2 > 2 * KT.TRACK.wall + 4 && cross > 0, `${nm}: 가장 급한 커브 반지름 ${r2.toFixed(1)}m · 같은 층 길끼리 ${g2.toFixed(0)}m 떨어짐 · 높은 길이 아래 길 위를 지나감`);
+    const p20 = { ...KT.trackPoint(20, 0) }, p40 = { ...KT.trackPoint(40, 0) };
+    assert(Math.abs(p20.z) < 1 && Math.abs(p40.z) < 1 && p40.x > p20.x && p20.y === 0, `${nm}: 출발선 부근은 +x 평지 직선`);
+    // 지름길: 본 길보다 짧고, 가운데는 본 길 벽과 떨어져 있고 (갈림·합류에서만 이어짐), 너무 급한 커브 없음
+    for (const C of CUTS) {
+      let mid = Infinity, rC = Infinity;
+      for (let cs = C.e0 + 8; cs <= C.P.len - C.e1 - 8; cs += 2) {
+        const p = { ...KT.pathPoint(C.P, cs, 0) };
+        for (let j = 0; j < T2.n; j++) if (Math.abs(T2.py[j]) < 4.5) mid = Math.min(mid, Math.hypot(T2.px[j] - p.x, T2.pz[j] - p.z));
+      }
+      for (let j = 3; j < C.P.n - 3; j++) rC = Math.min(rC, 1 / Math.max(1e-6, Math.abs(C.P.curv[j])));
+      assert(C.span - C.P.len > 20 && mid > KT.TRACK.wall + 0.7 + C.wall + 0.8 && rC > 9 && C.e0 > 10 && C.e1 > 10,
+        `${nm} '${C.name}': ${C.P.len.toFixed(0)}m (본 길 ${C.span.toFixed(0)}m보다 ${(C.span - C.P.len).toFixed(0)}m 짧음) · 가운데는 본 길과 ${mid.toFixed(0)}m 떨어짐 · 가장 급한 커브 ${rC.toFixed(1)}m`);
+    }
+    const cutBoxes = CUTS.reduce((a, C) => a + C.boxes.length, 0) * 3;
+    assert(KT.boxes.length === 15 + cutBoxes && KT.boxes.filter(b => b.cut >= 0).length === cutBoxes && cutBoxes > 0, `${nm}: 상자 15개 + 지름길 상자 ${cutBoxes}개`);
+    // 시범 레이스 200초: CPU도 지름길을 끝까지 타고 본 길로 돌아옴. 끼이거나 등수(진행 거리)가 튀지 않음
+    const lapB = karts.map(k => k.lap), r0 = G.stats.rescues, w0 = G.stats.walls, used = CUTS.map(() => 0), onCut = karts.map(() => -1), maxCs = karts.map(() => 0), prev = karts.map(k => k.prog);
+    let bad = -1, jumps = 0;
+    run(200, j => {
+      if (bad < 0 && !karts.every(finite)) bad = j;
+      karts.forEach((k, i) => {
+        if (Math.abs(k.prog - prev[i]) > 3) jumps++;
+        prev[i] = k.prog;
+        if (k.cut >= 0) { if (onCut[i] !== k.cut) { onCut[i] = k.cut; maxCs[i] = 0; } maxCs[i] = Math.max(maxCs[i], k.cs); }
+        else if (onCut[i] >= 0) { if (maxCs[i] > CUTS[onCut[i]].P.len - 5) used[onCut[i]]++; onCut[i] = -1; }
+      });
+    });
+    assert(bad < 0 && karts.every(k => k.lap - lapB[k.slot] >= 2), `${nm} 시범 레이스: 200초에 모두 2바퀴 이상 (${karts.map((k, i) => k.lap - lapB[i]).join(',')})`);
+    assert(used.every(n => n >= 2), `${nm}: CPU가 지름길을 끝까지 타고 나옴 (${CUTS.map((C, i) => `${C.name} ${used[i]}번`).join(' · ')})`);
+    assert(G.stats.rescues - r0 <= 2 && G.stats.walls - w0 <= 6 && jumps === 0, `${nm}: 다시 세움 ${G.stats.rescues - r0}번 · 벽 ${G.stats.walls - w0}번 · 진행 거리가 튀지 않음`);
+    // CPU에게 지름길로 / 본 길로 가라고 정해 주면 그대로 가서 본 길로 돌아옴 (벽에 안 부딪힘)
+    startRace('1p', true); skipCountdown();
+    const me = KT.humanKart(0), tgt = karts.find(k => k.human < 0); G.only = [me];
+    for (const C of CUTS) for (const go of [true, false]) {
+      placeK(me, C.from - 90, 0, 20); me.ai.cutLap = {}; me.ai.cutGo = {};
+      let mid = false, back = false; const wb = G.stats.walls;
+      run(25, () => {
+        if (me.ai.cutLap[C.idx] !== undefined) me.ai.cutGo[C.idx] = go;
+        if (me.cut === C.idx && me.cs > C.e0 + 10 && me.cs < C.P.len - C.e1 - 10) mid = true;
+        if (me.cut < 0 && KT.sdiff(me.s, C.to) > 30) { back = true; return false; }
+      });
+      assert(mid === go && back && G.stats.walls === wb, `${nm} '${C.name}': CPU가 ${go ? '지름길로 들어갔다가' : '본 길로 지나쳐'} 본 길로 돌아옴 · 벽에 안 부딪힘`);
+    }
+    // 사람: 본 길 가운데로 달리면 그대로, 지름길 쪽으로 꺾으면 지름길로
+    G.forceCPU = null; KT.settings.autoGas = true;
+    const drive = aim => {
+      const q = aim(), err = wrapA(Math.atan2(q.x - me.x, q.z - me.z) - me.a), st = -err * 1.6;
+      if (st > 0.1) { press('KeyD'); release('KeyA'); } else if (st < -0.1) { press('KeyA'); release('KeyD'); } else { release('KeyA'); release('KeyD'); }
+    };
+    for (const C of CUTS) {
+      placeK(me, C.from - 40, 0, 20); let leftMain = false;
+      run(9, () => { drive(() => KT.trackPoint(me.s + 12, 0)); if (me.cut >= 0) leftMain = true; });
+      placeK(me, C.from - 40, 0, 20); let mid = false, back = false; const wb = G.stats.walls;
+      run(30, () => {
+        drive(() => me.cut === C.idx ? KT.pathPoint(C.P, me.cs + 12, 0) : KT.sdiff(me.s, C.from) < C.e0 ? KT.pathPoint(C.P, Math.max(0, KT.sdiff(me.s, C.from)) + 12, 0) : KT.trackPoint(me.s + 12, 0));
+        if (me.cut === C.idx && me.cs > C.e0 + 10 && me.cs < C.P.len - C.e1 - 10) mid = true;
+        if (mid && me.cut < 0 && KT.sdiff(me.s, C.to) > 20) { back = true; return false; }
+      });
+      release('KeyA'); release('KeyD');
+      assert(!leftMain && mid && back && G.stats.walls - wb <= 1, `${nm} '${C.name}': 사람이 본 길로 달리면 그대로 · 지름길 쪽으로 꺾으면 지름길을 지나 본 길로 돌아옴`);
+    }
+    KT.settings.autoGas = autoGas0;
+    // 지름길 위 아이템: 번개 구슬·눈덩이는 지름길 안 앞 카트를 맞힘, 본 길에서 쏜 구슬도 지름길 카트에게 날아감, 통통 공은 지름길 벽에서 튕김
+    const C = CUTS[0], tap = code => { press(code); run(0.05); release(code); run(0.05); };
+    const clearK = k => Object.assign(k, { item: null, itemN: 0, item2: null, itemN2: 0, roulT: 0, shieldT: 0, magnetT: 0, starT: 0, spinT: 0, frozenT: 0, immuneT: 0, paintT: 0 });
+    const shoot = (it, setup, check, sec = 2.5) => {
+      KT.shots.length = 0; KT.snowballs.length = 0; KT.balls.length = 0; clearK(me); clearK(tgt); setup();
+      me.item = it; me.itemN = 1; tap('ControlLeft');
+      let ok = false; run(sec, () => { if (check()) ok = true; });
+      return ok;
+    };
+    G.only = [me];
+    const zapCut = shoot('zap', () => { placeCut(me, C, C.e0 + 14, 0, 6); placeCut(tgt, C, C.e0 + 45, 1.5, 0); }, () => tgt.spinT > 0);
+    const snowCut = shoot('snow', () => { placeCut(me, C, C.e0 + 14, 0, 6); placeCut(tgt, C, C.e0 + 40, 0, 0); }, () => tgt.frozenT > 0);
+    const zapFree = shoot('zap', () => { placeK(me, C.from - 10, 0, 10); placeCut(tgt, C, C.e0 + 20, 0, 0); }, () => tgt.spinT > 0, 6);
+    let ballOut = 0, ballBounce = 0;
+    shoot('ball', () => { placeCut(me, C, (C.e0 + C.P.len - C.e1) / 2, 0, 0); me.a += 0.7; placeK(tgt, C.from - 200, 0, 0); }, () => {
+      const b = KT.balls[0]; if (!b) return false;
+      ballBounce = Math.max(ballBounce, b.bounces);
+      if (b.cut === C.idx && Math.abs(b.d) > C.wall + 0.3) ballOut++;
+      return false;
+    }, 1.5);
+    assert(zapCut && snowCut && zapFree && ballBounce >= 1 && ballOut === 0, `${nm} 지름길 아이템: 구슬 ${zapCut} · 눈덩이 ${snowCut} · 본 길→지름길 구슬 ${zapFree} · 통통 공 ${ballBounce}번 튕김, 벽 밖으로 안 나감`);
+    G.only = null; G.forceCPU = null;
+  }
+  // 쉬움: 아이처럼 흔들리며 달려도 이김 (큰 맵은 한 바퀴만)
+  const kids = [8, 9].map(ci => { KT.settings.course = ci; KT.toMenu(); return kidRace(0, 2000 + ci * 7, 1); });
+  assert(avgPlace(kids) <= 2, `큰 맵 쉬움: 아이처럼 달려도 평균 ${avgPlace(kids).toFixed(1)}등 (${kids.map(r => r.place).join(',')})`);
+  KT.settings.course = 0; KT.settings.laps = 3; KT.settings.cpuLevel = 1; G.forceCPU = null; KT.toMenu(); KT.switchCourse(0); KT.toMenu();
+  assert(KT.COURSE.name === '몬스터 서킷' && KT.CUTS.length === 0, '다시 몬스터 서킷으로 (지름길 없음)');
+}
+
+// ---------- 23. 새 아이템 다섯 · 맞힌 카메라 ----------
+console.log('\n[23] 새 아이템 다섯 · 맞힌 카메라');
+{
+  KT.settings.course = 0; KT.settings.gp = 0; KT.settings.cpuLevel = 1; KT.toMenu();
+  startRace('1p'); skipCountdown();
+  const me = KT.humanKart(0), cpus = karts.filter(k => k.human < 0), [c1, c2, c3] = cpus;
+  const tap = code => { press(code); run(0.05); release(code); run(0.05); };
+  const clear = k => Object.assign(k, { item: null, itemN: 0, item2: null, itemN2: 0, roulT: 0, shieldT: 0, magnetT: 0, paintT: 0, spinT: 0, immuneT: 0, starT: 0, frozenT: 0 });
+  const park = list => list.forEach((k, i) => placeK(k, 300 + i * 9, 0, 0));
+  const use = it => { me.item = it; me.itemN = 1; tap('ControlLeft'); };
+  // 추적 로켓: 멀리 앞선 1등에게 날아가 꽝 → 내 화면 왼쪽 위에 맞힌 카메라
+  for (const k of karts) { clear(k); k.lap = 1; }
+  G.only = [me, c1, c2]; park(cpus.slice(2));
+  placeK(me, 40, 0, 15); placeK(c1, 200, 2, 15); placeK(c2, 120, -2, 15); run(0.1);
+  G.hitCam[0] = null; use('rocket');
+  let rocketAt = -1, cam = null; run(9, i => { if (c1.spinT > 0 && rocketAt < 0) { rocketAt = i / 60; cam = G.hitCam[0] && { ...G.hitCam[0] }; } });
+  assert(rocketAt > 0 && c2.spinT === 0 && KT.rockets.length === 0, `추적 로켓: 2등은 지나치고 1등을 맞힘 (${rocketAt.toFixed(1)}초)`);
+  assert(cam && cam.k === c1 && cam.why === 'rocket' && KT.T() - G.hitCam[0].t > KT.HITCAM, '맞힌 사람 화면에 노린 카트를 비추는 카메라가 떴다가 2.6초 뒤 사라짐');
+  // 회오리 바람: 앞 카트 셋을 차례로 따라가 쓸어 감
+  for (const k of karts) clear(k);
+  G.only = [me]; park(cpus.slice(3));
+  placeK(me, 40, 0, 10); placeK(c1, 80, -3, 0); placeK(c2, 100, 3, 0); placeK(c3, 70, 0, 0);
+  use('tornado');
+  run(5);
+  assert([c1, c2, c3].every(k => k.spinAt > KT.T() - 5) && KT.tornados.length === 0 && me.spinT === 0, '회오리 바람: 앞 카트 셋을 따라가 모두 빙글 (나는 안 맞음)');
+  // 눈덩이: 앞 카트를 꽁꽁 (멈췄다가 다시 달림)
+  for (const k of karts) clear(k);
+  G.only = [me, c1]; park(cpus.slice(1));
+  placeK(me, 40, 0, 12); placeK(c1, 70, 0, 6);
+  use('snow');
+  let froze = false, minV = 99; run(4, () => { if (c1.frozenT > 0) { froze = true; minV = Math.min(minV, c1.v); } });
+  assert(froze && minV < 0.5 && c1.frozenT === 0 && c1.v > 3, `눈덩이: 앞 카트가 꽁꽁 멈췄다가 (${minV.toFixed(1)}m/s) 녹으면 다시 달림`);
+  // 꽝 폭탄: 떨어진 자리 둘레 카트만 빙글, 던진 나는 안 맞음
+  for (const k of karts) clear(k);
+  G.only = [me]; park(cpus.slice(3));
+  placeK(me, 40, 0, 18); placeK(c1, 75, -2, 0); placeK(c2, 78, 3, 0); placeK(c3, 95, 0, 0);
+  use('bomb');
+  run(4);
+  const boomed = k => k.spinAt > KT.T() - 4;
+  assert(boomed(c1) && boomed(c2) && !boomed(c3) && me.spinT === 0 && KT.bombs.length === 0, '꽝 폭탄: 떨어진 자리 둘레 카트만 빙글, 멀리 있거나 던진 나는 그대로');
+  // 통통 스프링: 높이 뛰고, 공중에서 트릭하면 착지 부스트
+  for (const k of karts) clear(k);
+  G.only = [me]; placeK(me, 40, 0, 18);
+  use('spring');
+  let maxY = 0, airT = 0, tricked = false, boosted = false;
+  run(2, () => { maxY = Math.max(maxY, me.y); if (me.air) airT += 1 / 60; if (me.air && !tricked && me.vy < 2) { press('Space'); tricked = true; } if (tricked && !me.air && me.boostT > 0) boosted = true; });
+  release('Space');
+  assert(maxY > 2 && airT > 0.8 && boosted, `통통 스프링: ${maxY.toFixed(1)}m 높이 · ${airT.toFixed(2)}초 공중 · 트릭 → 착지 부스트`);
+  // 맞힌 카메라 그리기
+  G.only = null;
+  G.hitCam[0] = { k: c1, why: 'zap', t: KT.T(), snap: true }; KT.render(); run(0.5);
+  assert(errors.length === 0 && draw.nan === 0, '맞힌 카메라 창을 그려도 예외·NaN 없음');
+  // 아이템 고르기: 쉬움 CPU는 공격 아이템 없음 · 꼴등은 15가지 다 · 1등은 로켓이 안 나옴
+  KT.settings.cpuLevel = 0; c1.place = 6;
+  const got = new Set(); for (let i = 0; i < 4000; i++) got.add(KT.rollItem(c1));
+  KT.settings.cpuLevel = 1; me.place = 6;
+  const gotLast = new Set(); for (let i = 0; i < 4000; i++) gotLast.add(KT.rollItem(me));
+  me.place = 1;
+  const gotFirst = new Set(); for (let i = 0; i < 4000; i++) gotFirst.add(KT.rollItem(me));
+  assert(!KT.ATTACK.some(x => got.has(x)) && KT.ITEM_KEYS.length === 15 && KT.ITEM_KEYS.every(x => gotLast.has(x)) && !gotFirst.has('rocket'),
+    `쉬움 CPU는 공격 아이템 없음 · 꼴등은 15가지 다 나옴 · 1등은 로켓 없음 (${[...gotFirst].join(',')})`);
+  KT.toMenu();
+}
+{
+  // CPU도 새 아이템 다섯을 씀
+  randomSeed = 0x2468ace1; pilotSeed = 0x13579bdf;
+  KT.settings.cpuLevel = 1; G.stats.used = {};
+  startRace('1p', true); skipCountdown(); run(150);
+  const used = Object.keys(G.stats.used || {});
+  assert(['rocket', 'tornado', 'snow', 'bomb', 'spring'].filter(x => used.includes(x)).length >= 4, `CPU가 새 아이템 다섯도 씀 (${used.join(', ')})`);
+  G.forceCPU = null; KT.toMenu();
+}
+
 // ---------- 19. 그 밖 ----------
 console.log('\n[19] 그 밖');
 KT.toMenu(); KT.setDemoPaused(true); KT.render();
@@ -987,6 +1174,7 @@ assert(karts.every(k => k.mesh.group.position.distanceTo(new sandbox.THREE.Vecto
   '시범 레이스를 멈춰 둬도 카트가 제자리에 그려지고 시상대·선택 화면 카트는 숨김');
 KT.setDemoPaused(false);
 assert(KT.levelFor('2d') === 'lowest' && KT.levelFor('high') === 'high', "테니스의 '2D' 설정은 카트에선 가장 가벼운 3D");
+assert(['0:05.0', '0:10.0', '1:10.0', '2:05.3'].join() === [5.04, 9.96, 69.96, 125.3].map(KT.fmtTime).join(), `시간 표시: 9.96초도 '0:10.0' (${[5.04, 9.96, 69.96, 125.3].map(KT.fmtTime).join(' · ')})`);
 // 거울처럼 뒤집힌 부품도 면 방향이 바깥을 봄
 const THREE = sandbox.THREE, bx = new THREE.BoxGeometry(1, 1, 1);
 const mg = KT.mergeGeoms([{ geo: bx, matrix: new THREE.Matrix4().makeScale(-1, 1, 1), color: new THREE.Color(1, 0, 0) }]);

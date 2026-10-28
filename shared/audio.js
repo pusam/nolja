@@ -6,13 +6,14 @@
  *  - 효과음: hit(세기, { spin, perfect, wrong, kind }) · bounce(속도 m/s) · net() · whoosh(세기) · toss() · squeak()
  *            point() · tick() · ready()
  *  - 관중:   ambience(켜기) 웅성거림 · applause(세기 0~1) 박수 · ooh() 감탄 · groan() 아쉬움 · cheer(초) 함성
- *            nature(종류) 카트 코스 주변 소리 'meadow' 새·산들바람 · 'beach' 파도·갈매기 · 'snow' 바람·풍경 · 'candy' 반짝반짝 · 'lava' 용암 부글부글·우르릉 (null이면 끔)
- *  - 음악:   music(켜기, 곡) 곡 'menu' 밝은 배경 음악 · 'race' 신나는 레이스 곡 · 코스 곡 'beach' 'snow' 'candy' 'lava' 'forest' 'coast' 'coaster' (계속 반복) · tempo(배) 빠르기
+ *            nature(종류) 카트 코스 주변 소리 'meadow' 새·산들바람 · 'beach' 파도·갈매기 · 'snow' 바람·풍경 · 'candy' 반짝반짝 · 'lava' 용암 부글부글·우르릉 · 'canyon' 협곡 바람·매·곡괭이 · 'city' 도시 차 소리·경적 (null이면 끔)
+ *  - 음악:   music(켜기, 곡) 곡 'menu' 밝은 배경 음악 · 'race' 신나는 레이스 곡 · 코스 곡 'beach' 'snow' 'candy' 'lava' 'forest' 'coast' 'coaster' 'canyon' 'city' (계속 반복) · tempo(배) 빠르기
  *            jingle(크게) 이겼을 때 짧은 축하
  *  - 카트:   engine(id, 속도 0~1.4, 부스트 0~1, 드리프트 0~1) 엔진·타이어 소리 (계속, engine(id, null)이면 끔) · enginesOff()
  *            countdown(숫자, 0이면 출발) · boost() · spark(단계) · itemBox() · roulette() · itemGet() · zap() · crash()
- *            plop() · splash() · fire() · bump(세기) · trick() · land() · finalLap()
+ *            plop() · splash() · sand() · fire() · bump(세기) · trick() · land() · finalLap()
  *            아이템: shield() 보호막 · pop() 보호막 터짐 · magnet() 자석 · thunder() 천둥 · boing() 통통 공 · splat() 물감
+ *                    rocket() 로켓 · whirl() 회오리 · freeze() 꽁꽁 · boom() 꽝 · throw() 휙 · spring() 스프링
  * ============================================================ */
 (function () {
   'use strict';
@@ -213,6 +214,8 @@
       else if (kind === 'meadow') bed(1100, 0.8, 0.012, 'bandpass', 0.11, 0.007);                    // 아주 약한 산들바람
       else if (kind === 'candy') bed(2400, 3, 0.004, 'bandpass', 0.2, 0.003);                       // 아주 약한 반짝이 바탕
       else if (kind === 'lava') { bed(140, 0.9, 0.05, 'lowpass', 0.07, 0.02); bed(700, 1.2, 0.006, 'bandpass', 0.3, 0.004); }   // 낮게 우르릉 + 지글지글
+      else if (kind === 'canyon') { bed(320, 1.1, 0.026, 'bandpass', 0.07, 0.014, 0.05, 140); bed(1300, 3, 0.006, 'bandpass', 0.17, 0.004, 0.09, 500); }   // 협곡을 지나는 마른 바람
+      else if (kind === 'city') { bed(180, 0.8, 0.03, 'lowpass', 0.05, 0.008); bed(900, 1.5, 0.004, 'bandpass', 0.11, 0.002); }   // 멀리 웅웅 도시 차 소리
       nat.timer = setInterval(() => this.naturePump(), 120);
     },
     naturePump() {
@@ -239,6 +242,16 @@
         for (let i = 0; i < 3; i++) if (Math.random() < 0.5) this.noise(t + rnd(0, 0.8), 0.02, rnd(3000, 5000), 2, 0.016, out, 'highpass');
         if (Math.random() < 0.12) this.noise(t + 0.4, 2.4, 90, 0.7, 0.12, out, 'lowpass');
         n.next = t + rnd(0.7, 1.8);
+      } else if (n.kind === 'city') {   // 차가 "쉬익" 지나가고, 가끔 멀리 경적 "빵빵" · 비둘기 "구구"
+        { const f = this.noise(t + rnd(0, 1), 1.4, 500, 0.8, 0.03, out); f.frequency.exponentialRampToValueAtTime(1800, t + 1.4); }
+        if (Math.random() < 0.3) { const t0 = t + rnd(0.5, 2); for (const [dt, f] of [[0, 415], [0.22, 415]]) { this.tone(t0 + dt, f, f, 0.16, 0.012, 'square', out, 0.01); this.tone(t0 + dt, f * 1.26, f * 1.26, 0.16, 0.01, 'square', out, 0.01); } }
+        if (Math.random() < 0.2) for (let i = 0; i < 3; i++) this.tone(t + 1.5 + i * 0.35, 520, 430, 0.18, 0.008, 'sine', out, 0.03);
+        n.next = t + rnd(3, 6);
+      } else if (n.kind === 'canyon') {   // 바람이 세졌다 잦아들고, 가끔 높이 나는 매 "삐이~" · 멀리 광산 곡괭이 "땡 땡"
+        for (const W of n.beds) { W.g.gain.setTargetAtTime(W.gain * rnd(1.6, 2.4), t, 1.2); W.g.gain.setTargetAtTime(W.gain, t + rnd(2.5, 4), 1.5); }
+        if (Math.random() < 0.35) { const f = rnd(2300, 2700); this.tone(t + rnd(0.3, 2), f, f * 0.62, 0.7, 0.02, 'sine', out, 0.05); }
+        if (Math.random() < 0.4) for (let i = 0, k = 2 + Math.floor(Math.random() * 2); i < k; i++) { const t0 = t + 1 + i * rnd(0.5, 0.7); this.tone(t0, 2900, 2600, 0.12, 0.012, 'triangle', out, 0.002); this.noise(t0, 0.03, 5000, 3, 0.01, out); }
+        n.next = t + rnd(6, 10);
       } else if (n.kind === 'meadow') {   // 새가 "짹짹" 두세 번 (가끔 "삐요" 내려오는 소리)
         const f0 = rnd(2600, 3400), k = 2 + Math.floor(Math.random() * 3);
         for (let i = 0; i < k; i++) this.tone(t + i * rnd(0.09, 0.14), f0 * rnd(0.95, 1.05), f0 * 1.3, 0.06, 0.026, 'sine', out);
@@ -328,6 +341,18 @@
         if (s === 0 || s === 8 || s === 10) this.tone(t, 120, 46, 0.12, 0.2, 'sine', out);
         if (s === 4 || s === 12) { this.noise(t, 0.09, 1800, 0.8, 0.07, out); this.noise(t + 0.03, 0.35, 2600, 3, 0.015, out); }
         if (s % 2 === 1) this.noise(t, 0.02, 8800, 0.7, 0.014, out, 'highpass');
+      } else if (song.style === 'funk') {   // 빌딩 고가도로: 튕기는 슬랩 베이스(옥타브 "팝") · 엇박 클라비 "칙" · 16분음표 하이햇 · 묵직한 킥과 스네어
+        if ([0, 3, 6, 8, 10, 11, 14].includes(s)) { const pop = s === 6 || s === 14, n = chord.bass - (pop ? 0 : 12); this.tone(t, mtof(n), mtof(n) * (pop ? 1 : 0.99), q * (pop ? 0.18 : 0.3), pop ? 0.13 : 0.2, pop ? 'square' : 'triangle', out, 0.003); }
+        if (s % 4 === 2) for (const k of chord.keys) this.tone(t, mtof(k), mtof(k), 0.07, 0.024, 'square', out, 0.002);
+        if (s === 0 || s === 7 || s === 8) this.tone(t, 120, 44, 0.13, 0.22, 'sine', out);
+        if (s === 4 || s === 12) { this.noise(t, 0.11, 1700, 0.9, 0.075, out); this.noise(t, 0.05, 6000, 1, 0.02, out, 'highpass'); }
+        this.noise(t, 0.02, 9500, 0.8, s % 2 ? 0.01 : 0.017, out, 'highpass');
+      } else if (song.style === 'western') {   // 모래 협곡: "둥·다·둥" 말 달리는 베이스 · 엇박 기타 "착" · 말발굽 "딱 딱" 나무 블록
+        if (s % 4 === 0 || s % 4 === 3) { const n = chord.bass - (s % 4 ? 0 : 12); this.tone(t, mtof(n), mtof(n), q * 0.3, 0.2, 'triangle', out, 0.004); }
+        if (s % 4 === 2) { const n = chord.bass + 7 - 12; this.tone(t, mtof(n), mtof(n), q * 0.25, 0.15, 'triangle', out, 0.004); for (const k of chord.keys) this.tone(t, mtof(k), mtof(k) * 0.99, 0.11, 0.028, 'sawtooth', out); }
+        if (s === 0 || s === 8) this.tone(t, 110, 46, 0.12, 0.18, 'sine', out);
+        if (s % 2 === 0) this.noise(t, 0.03, s % 4 ? 1300 : 2100, 8, 0.055, out);
+        if (s === 12 && bar % 2) this.noise(t, 0.18, 3800, 1.2, 0.03, out, 'highpass');
       } else if (song.style === 'carnival') {   // 사탕 롤러코스터: "쿵(으뜸음)·짝(5도)" 움파 베이스 · 엇박 오르간 화음 · 네 마디마다 심벌
         if (s % 4 === 0) { const n = chord.bass - 12 + (s % 8 ? 7 : 0); this.tone(t, mtof(n), mtof(n), q * 0.5, 0.21, 'triangle', out, 0.006); }
         if (s % 4 === 2) for (const n of chord.keys) { this.tone(t, mtof(n), mtof(n), 0.1, 0.028, 'square', out); this.tone(t, mtof(n), mtof(n), 0.12, 0.03, 'triangle', out); }
@@ -372,6 +397,15 @@
           this.tone(t, f * 2, f * 2, d * 0.6, 0.012, 'triangle', out, 0.02);
         } else if (song.style === 'wave') {   // 서프 기타: 16분음표마다 다시 튕기는 트레몰로 (톱니파 + 세모파)
           for (let r = 0; r < len; r++) { const tr = t + r * q / 4; this.tone(tr, f * 1.006, f, 0.09, r ? 0.026 : 0.034, 'sawtooth', out, 0.003); this.tone(tr, f, f, 0.1, r ? 0.04 : 0.05, 'triangle', out, 0.003); }
+        } else if (song.style === 'funk') {   // 신스 브라스: 살짝 어긋난 톱니파 둘 + 네모파
+          const d = Math.min(0.4, len * q / 4 + 0.05);
+          this.tone(t, f, f, d, 0.028, 'sawtooth', out, 0.006);
+          this.tone(t, f * 1.004, f * 1.004, d, 0.024, 'sawtooth', out, 0.006);
+          this.tone(t, f, f, d * 0.8, 0.03, 'square', out, 0.004);
+        } else if (song.style === 'western') {   // 서부 기타: 살짝 아래에서 끌어올리는 톱니파 "띠잉" + 세모파
+          const d = Math.min(0.45, len * q / 4 + 0.06);
+          this.tone(t, f * 0.95, f, d, 0.034, 'sawtooth', out, 0.004);
+          this.tone(t, f, f, d, 0.06, 'triangle', out, 0.004);
         } else if (song.style === 'carnival') {   // 서커스 오르간: 네모파 + 사인 + 한 옥타브 위 사인
           const d = Math.min(0.4, len * q / 4 + 0.05);
           this.tone(t, f, f, d, 0.03, 'square', out);
@@ -482,6 +516,12 @@
       f.frequency.exponentialRampToValueAtTime(400, t + 0.35);
       this.tone(t, 500, 150, 0.2, 0.1);
     },
+    sand() {   // 모래늪에 빠짐 "푸석": 마른 잡음이 아래로 + 낮게 "퍽"
+      if (!this.live()) return;
+      const t = this.ctx.currentTime, f = this.noise(t, 0.32, 2200, 0.7, 0.16, null, 'lowpass');
+      f.frequency.exponentialRampToValueAtTime(500, t + 0.3);
+      this.tone(t, 160, 80, 0.12, 0.12);
+    },
     bump(p = 0.5) {   // 벽·카트에 부딪힘 "쿵"
       if (!this.live()) return;
       const t = this.ctx.currentTime, k = clamp(p, 0.1, 1);
@@ -523,6 +563,41 @@
       if (!this.live()) return;
       const t = this.ctx.currentTime;
       this.tone(t, 240, 640, 0.13, 0.09, 'triangle'); this.tone(t, 120, 70, 0.08, 0.08);
+    },
+    rocket() {   // 추적 로켓 "슈우웅": 잡음이 위로 쓸려 올라가며 휘파람
+      if (!this.live()) return;
+      const t = this.ctx.currentTime, f = this.noise(t, 0.7, 600, 1.2, 0.14);
+      f.frequency.exponentialRampToValueAtTime(3200, t + 0.6);
+      this.tone(t, 320, 1100, 0.6, 0.05, 'sawtooth');
+    },
+    whirl() {   // 회오리 "휘이잉": 바람 잡음이 오르내림
+      if (!this.live()) return;
+      const t = this.ctx.currentTime, f = this.noise(t, 1.2, 500, 2.5, 0.12);
+      f.frequency.linearRampToValueAtTime(1500, t + 0.5); f.frequency.linearRampToValueAtTime(700, t + 1.1);
+    },
+    freeze() {   // 눈덩이에 갇힘 "쨍 꽁꽁": 맑은 종 셋 + 얼음 금 가는 소리
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      [1760, 2350, 3135].forEach((f, i) => this.tone(t + i * 0.05, f, f, 0.35, 0.05, 'sine', null, 0.002));
+      this.noise(t, 0.12, 5000, 2, 0.08, null, 'highpass');
+    },
+    boom() {   // 로켓·폭탄 "꽝": 낮게 터지는 잡음 + 쿵 + 파편
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      this.noise(t, 1.0, 320, 0.6, 0.4, null, 'lowpass');
+      this.tone(t, 95, 34, 0.7, 0.35);
+      this.noise(t + 0.05, 0.4, 3500, 0.8, 0.08, null, 'highpass');
+    },
+    throw() {   // 던지기 "휙"
+      if (!this.live()) return;
+      const t = this.ctx.currentTime, f = this.noise(t, 0.22, 1600, 1.5, 0.1);
+      f.frequency.exponentialRampToValueAtTime(500, t + 0.2);
+    },
+    spring() {   // 스프링 "보잉~": 올라가며 떨리는 소리
+      if (!this.live()) return;
+      const c = this.ctx, t = c.currentTime, o = this.tone(t, 200, 700, 0.5, 0.11, 'triangle');
+      const lfo = c.createOscillator(), depth = c.createGain();
+      lfo.frequency.value = 14; depth.gain.value = 60; lfo.connect(depth).connect(o.frequency); lfo.start(t); lfo.stop(t + 0.55);
     },
     splat() {   // 물감 폭탄 "철퍽": 젖은 잡음이 아래로
       if (!this.live()) return;
@@ -683,6 +758,36 @@
     [[0, 78, 2], [2, 81, 2], [4, 84, 2], [6, 86, 2], [8, 84, 2], [10, 81, 2], [12, 78, 4]],
     [[0, 79, 1], [1, 81, 1], [2, 83, 1], [3, 84, 1], [4, 86, 4], [8, 83, 2], [10, 79, 2], [12, 74, 4]],
   ];
+  // 모래 협곡 광산: 150bpm · Am-G-F-E-Am-G-F-E7. 말 달리는 서부 질주
+  const CANYON_CHORDS = [
+    { bass: 45, keys: [57, 60, 64] }, { bass: 43, keys: [55, 59, 62] }, { bass: 41, keys: [57, 60, 65] }, { bass: 40, keys: [56, 59, 64] },
+    { bass: 45, keys: [57, 60, 64] }, { bass: 43, keys: [55, 59, 62] }, { bass: 41, keys: [57, 60, 65] }, { bass: 40, keys: [56, 62, 64] },
+  ];
+  const CANYON_MELODY = [
+    [[0, 76, 3], [3, 76, 1], [4, 77, 2], [6, 76, 2], [8, 74, 2], [10, 72, 2], [12, 69, 4]],
+    [[0, 74, 3], [3, 74, 1], [4, 76, 2], [6, 74, 2], [8, 72, 2], [10, 71, 2], [12, 67, 4]],
+    [[0, 72, 3], [3, 72, 1], [4, 74, 2], [6, 72, 2], [8, 69, 2], [10, 72, 2], [12, 77, 4]],
+    [[0, 76, 6], [6, 74, 2], [8, 72, 2], [10, 71, 2], [12, 68, 4]],
+    [[0, 81, 3], [3, 81, 1], [4, 79, 2], [6, 77, 2], [8, 76, 4], [12, 72, 4]],
+    [[0, 79, 3], [3, 79, 1], [4, 77, 2], [6, 76, 2], [8, 74, 4], [12, 71, 4]],
+    [[0, 77, 2], [2, 76, 2], [4, 74, 2], [6, 72, 2], [8, 74, 2], [10, 76, 2], [12, 77, 4]],
+    [[0, 80, 4], [4, 76, 2], [6, 74, 2], [8, 71, 2], [10, 68, 2], [12, 64, 4]],
+  ];
+  // 빌딩 고가도로: 126bpm · Em7-A7-Em7-A7-Cmaj7-Bm7-Am7-B7. 튕기는 도시 펑크
+  const CITY_CHORDS = [
+    { bass: 40, keys: [59, 62, 64] }, { bass: 45, keys: [61, 64, 67] }, { bass: 40, keys: [59, 62, 64] }, { bass: 45, keys: [61, 64, 67] },
+    { bass: 48, keys: [60, 64, 67] }, { bass: 47, keys: [57, 62, 66] }, { bass: 45, keys: [57, 60, 64] }, { bass: 47, keys: [57, 63, 66] },
+  ];
+  const CITY_MELODY = [
+    [[0, 76, 2], [3, 74, 1], [4, 76, 2], [8, 79, 2], [11, 76, 1], [12, 74, 4]],
+    [[0, 73, 2], [3, 74, 1], [4, 76, 2], [8, 79, 3], [12, 76, 4]],
+    [[0, 76, 2], [3, 79, 1], [4, 81, 2], [8, 79, 2], [10, 76, 2], [12, 74, 4]],
+    [[0, 76, 1], [2, 73, 1], [4, 69, 4], [8, 73, 2], [10, 76, 2], [12, 79, 4]],
+    [[0, 79, 2], [2, 76, 2], [4, 72, 4], [8, 76, 2], [10, 79, 2], [12, 83, 4]],
+    [[0, 81, 2], [2, 78, 2], [4, 74, 4], [8, 78, 2], [10, 81, 2], [12, 83, 4]],
+    [[0, 84, 2], [2, 81, 2], [4, 76, 2], [6, 72, 2], [8, 76, 2], [10, 79, 2], [12, 81, 4]],
+    [[0, 83, 3], [3, 81, 1], [4, 78, 2], [6, 75, 2], [8, 71, 4], [12, 75, 4]],
+  ];
   const SONGS = {
     menu: { bpm: 112, style: 'pop', chords: CHORDS, melody: MELODY },
     race: { bpm: 148, style: 'drive', chords: RACE_CHORDS, melody: RACE_MELODY },
@@ -693,6 +798,8 @@
     forest: { bpm: 138, style: 'folk', chords: FOREST_CHORDS, melody: FOREST_MELODY },
     coast: { bpm: 164, style: 'wave', chords: COAST_CHORDS, melody: COAST_MELODY },
     coaster: { bpm: 168, style: 'carnival', chords: COASTER_CHORDS, melody: COASTER_MELODY },
+    canyon: { bpm: 150, style: 'western', chords: CANYON_CHORDS, melody: CANYON_MELODY },
+    city: { bpm: 126, style: 'funk', chords: CITY_CHORDS, melody: CITY_MELODY },
   };
   A.SONGS = SONGS;   // (테스트에서 곡 목록 확인용)
 

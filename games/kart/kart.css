@@ -119,6 +119,13 @@ input[type=range], input[type=checkbox] { accent-color: var(--kart-orange-dark);
 .course-options .hard-course.on, .course-options .gp-hard.on { background: #3b2730; border-color: #3b2730; }
 .course-options .hard-course.on .course-thumb { color: #ffb08a; }
 .course-options .hard-course.on .challenge-tag { background: #ff7a3a; color: #2b1d22; }
+/* Big maps (KartRider-style, with hidden shortcuts) read as their own blue group. */
+.course-options .big-course { border-color: #9dbbe0; background: linear-gradient(90deg, #edf4ff, #fafcff); }
+.course-options .big-course .course-thumb { color: #2f6aa3; }
+.course-options .big-course .challenge-tag { background: #2f6aa3; }
+.course-options .big-course.on { background: #20324a; border-color: #20324a; }
+.course-options .big-course.on .course-thumb { color: #9cc8ff; }
+.course-options .big-course.on .challenge-tag { background: #5fa8ff; color: #10203a; }
 .start-area { padding-top: 18px; }
 .setup-summary { min-height: 14px; margin: 0 0 11px; color: #717765; font: 700 9px/1.5 Arial, "Malgun Gothic", sans-serif; letter-spacing: 1px; }
 .start-button.primary { background: var(--kart-orange); color: #282c24; border-radius: 10px; box-shadow: inset 0 -3px 0 #bd4f262e; min-height: 56px; padding: 14px 20px; font-size: 15px; gap: 16px; margin: 0; }
