@@ -7,7 +7,7 @@
  *            point() · tick() · ready()
  *  - 관중:   ambience(켜기) 웅성거림 · applause(세기 0~1) 박수 · ooh() 감탄 · groan() 아쉬움 · cheer(초) 함성
  *            nature(종류) 카트 코스 주변 소리 'meadow' 새·산들바람 · 'beach' 파도·갈매기 · 'snow' 바람·풍경 · 'candy' 반짝반짝 · 'lava' 용암 부글부글·우르릉 (null이면 끔)
- *  - 음악:   music(켜기, 곡) 곡 'menu' 밝은 배경 음악 · 'race' 신나는 레이스 곡 · 코스 곡 'beach' 'snow' 'candy' 'lava' (계속 반복) · tempo(배) 빠르기
+ *  - 음악:   music(켜기, 곡) 곡 'menu' 밝은 배경 음악 · 'race' 신나는 레이스 곡 · 코스 곡 'beach' 'snow' 'candy' 'lava' 'forest' 'coast' 'coaster' (계속 반복) · tempo(배) 빠르기
  *            jingle(크게) 이겼을 때 짧은 축하
  *  - 카트:   engine(id, 속도 0~1.4, 부스트 0~1, 드리프트 0~1) 엔진·타이어 소리 (계속, engine(id, null)이면 끔) · enginesOff()
  *            countdown(숫자, 0이면 출발) · boost() · spark(단계) · itemBox() · roulette() · itemGet() · zap() · crash()
@@ -316,6 +316,25 @@
         if (s === 4 || s === 12) this.noise(t, 0.12, 1500, 0.7, 0.07, out);
         if (s === 0 && bar % 4 === 0) this.noise(t, 0.9, 6000, 0.5, 0.03, out, 'highpass');
         if (s % 2 === 1) this.noise(t, 0.02, 8500, 0.7, 0.012, out, 'highpass');
+      } else if (song.style === 'folk') {   // 구름다리 숲: "둥(으뜸음)·둥(5도)" 컨트리 베이스 · 2·4박 "착" 기타 · 8분음표로 굴리는 밴조 · 나무 블록 "톡"
+        if (s % 8 === 0) { const n = chord.bass - 12 + (s ? 7 : 0); this.tone(t, mtof(n), mtof(n), q * 0.55, 0.21, 'triangle', out, 0.006); }
+        if (s % 8 === 4) for (const n of chord.keys) this.tone(t, mtof(n), mtof(n), 0.13, 0.036, 'triangle', out, 0.003);
+        if (s % 2 === 0) { const n = chord.keys[(s >> 1) % 3] + 12; this.tone(t, mtof(n), mtof(n), 0.09, 0.016, 'triangle', out, 0.002); }
+        if (s === 0 || s === 8) this.tone(t, 105, 48, 0.1, 0.16, 'sine', out);
+        if (s % 4 === 2) this.noise(t, 0.035, 2400, 7, 0.06, out);
+      } else if (song.style === 'wave') {   // 소라 해안: 8분음표로 달리는 서프 록 베이스 · 엇박 기타 "착" · 스프링이 울리는 스네어 · 하이햇
+        if (s % 2 === 0) { const n = chord.bass - (s % 4 ? 0 : 12); this.tone(t, mtof(n), mtof(n), q * 0.4, 0.19, 'triangle', out, 0.005); }
+        if (s % 4 === 2) for (const n of chord.keys) this.tone(t, mtof(n), mtof(n) * 0.995, 0.1, 0.03, 'sawtooth', out);
+        if (s === 0 || s === 8 || s === 10) this.tone(t, 120, 46, 0.12, 0.2, 'sine', out);
+        if (s === 4 || s === 12) { this.noise(t, 0.09, 1800, 0.8, 0.07, out); this.noise(t + 0.03, 0.35, 2600, 3, 0.015, out); }
+        if (s % 2 === 1) this.noise(t, 0.02, 8800, 0.7, 0.014, out, 'highpass');
+      } else if (song.style === 'carnival') {   // 사탕 롤러코스터: "쿵(으뜸음)·짝(5도)" 움파 베이스 · 엇박 오르간 화음 · 네 마디마다 심벌
+        if (s % 4 === 0) { const n = chord.bass - 12 + (s % 8 ? 7 : 0); this.tone(t, mtof(n), mtof(n), q * 0.5, 0.21, 'triangle', out, 0.006); }
+        if (s % 4 === 2) for (const n of chord.keys) { this.tone(t, mtof(n), mtof(n), 0.1, 0.028, 'square', out); this.tone(t, mtof(n), mtof(n), 0.12, 0.03, 'triangle', out); }
+        if (s === 0 || s === 8) this.tone(t, 118, 48, 0.12, 0.18, 'sine', out);
+        if (s === 4 || s === 12) this.noise(t, 0.07, 2000, 1, 0.05, out);
+        if (s === 0 && bar % 4 === 0) this.noise(t, 0.7, 7000, 0.6, 0.028, out, 'highpass');
+        if (s % 2 === 1) this.noise(t, 0.018, 9000, 0.7, 0.011, out, 'highpass');
       } else {
         if (s % 4 === 0) this.tone(t, mtof(chord.bass - 12) * (s === 8 ? 1.5 : 1), mtof(chord.bass - 12), q * 0.9, 0.22, 'triangle', out, 0.01);
         if (s % 4 === 2) for (const n of chord.keys) this.tone(t, mtof(n), mtof(n), 0.16, 0.045, 'triangle', out);   // 엇박 코드 "짠"
@@ -347,6 +366,17 @@
           this.tone(t, f, f, d, 0.035, 'square', out);
           this.tone(t, f, f, d, 0.05, 'triangle', out);
           this.tone(t, f * 2, f * 2, 0.06, 0.018, 'sine', out);
+        } else if (song.style === 'folk') {   // 피리: 살짝 아래에서 미끄러져 올라오는 맑은 사인 + 숨소리 같은 세모파
+          const d = Math.min(0.5, len * q / 4 + 0.08);
+          this.tone(t, f * 0.97, f, d, 0.09, 'sine', out, 0.02);
+          this.tone(t, f * 2, f * 2, d * 0.6, 0.012, 'triangle', out, 0.02);
+        } else if (song.style === 'wave') {   // 서프 기타: 16분음표마다 다시 튕기는 트레몰로 (톱니파 + 세모파)
+          for (let r = 0; r < len; r++) { const tr = t + r * q / 4; this.tone(tr, f * 1.006, f, 0.09, r ? 0.026 : 0.034, 'sawtooth', out, 0.003); this.tone(tr, f, f, 0.1, r ? 0.04 : 0.05, 'triangle', out, 0.003); }
+        } else if (song.style === 'carnival') {   // 서커스 오르간: 네모파 + 사인 + 한 옥타브 위 사인
+          const d = Math.min(0.4, len * q / 4 + 0.05);
+          this.tone(t, f, f, d, 0.03, 'square', out);
+          this.tone(t, f, f, d, 0.06, 'sine', out);
+          this.tone(t, f * 2, f * 2, d * 0.8, 0.022, 'sine', out);
         } else {
           this.tone(t, mtof(note), mtof(note), Math.min(0.5, len * q / 4 + 0.08), 0.1, 'sine', out);                  // 마림바
           this.tone(t, mtof(note) * 4, mtof(note) * 4, 0.05, 0.02, 'sine', out);
@@ -608,6 +638,51 @@
     [[0, 79, 2], [2, 82, 2], [4, 86, 2], [6, 82, 2], [8, 79, 2], [10, 77, 2], [12, 74, 4]],
     [[0, 73, 2], [2, 76, 2], [4, 79, 2], [6, 81, 2], [8, 85, 4], [12, 88, 4]],
   ];
+  // 구름다리 숲: 138bpm · G-Em-C-D-G-Em-Am-D7. 피리와 밴조, 숲길을 신나게
+  const FOREST_CHORDS = [
+    { bass: 43, keys: [59, 62, 67] }, { bass: 40, keys: [59, 64, 67] }, { bass: 48, keys: [60, 64, 67] }, { bass: 38, keys: [57, 62, 66] },
+    { bass: 43, keys: [59, 62, 67] }, { bass: 40, keys: [59, 64, 67] }, { bass: 45, keys: [57, 60, 64] }, { bass: 38, keys: [60, 62, 66] },
+  ];
+  const FOREST_MELODY = [
+    [[0, 74, 2], [2, 71, 2], [4, 67, 2], [6, 71, 2], [8, 74, 3], [11, 76, 1], [12, 74, 4]],
+    [[0, 71, 2], [2, 67, 2], [4, 64, 2], [6, 67, 2], [8, 71, 4], [12, 69, 2], [14, 67, 2]],
+    [[0, 72, 2], [2, 76, 2], [4, 79, 4], [8, 76, 2], [10, 72, 2], [12, 76, 4]],
+    [[0, 74, 2], [2, 78, 2], [4, 81, 4], [8, 78, 2], [10, 76, 2], [12, 74, 4]],
+    [[0, 79, 2], [2, 74, 2], [4, 71, 2], [6, 74, 2], [8, 79, 3], [11, 81, 1], [12, 83, 4]],
+    [[0, 83, 2], [2, 79, 2], [4, 76, 2], [6, 79, 2], [8, 83, 4], [12, 81, 2], [14, 79, 2]],
+    [[0, 76, 2], [2, 79, 2], [4, 81, 2], [6, 79, 2], [8, 76, 2], [10, 72, 2], [12, 69, 4]],
+    [[0, 74, 2], [2, 72, 2], [4, 69, 2], [6, 72, 2], [8, 74, 2], [10, 78, 2], [12, 81, 4]],
+  ];
+  // 소라 해안: 164bpm · Em-C-G-D-Em-C-Am-B7. 파도를 타는 서프 록 (기타가 "따라라라" 떨림)
+  const COAST_CHORDS = [
+    { bass: 40, keys: [59, 64, 67] }, { bass: 48, keys: [60, 64, 67] }, { bass: 43, keys: [59, 62, 67] }, { bass: 38, keys: [57, 62, 66] },
+    { bass: 40, keys: [59, 64, 67] }, { bass: 48, keys: [60, 64, 67] }, { bass: 45, keys: [57, 60, 64] }, { bass: 47, keys: [59, 63, 69] },
+  ];
+  const COAST_MELODY = [
+    [[0, 76, 4], [4, 74, 2], [6, 71, 2], [8, 76, 4], [12, 79, 4]],
+    [[0, 76, 4], [4, 72, 2], [6, 74, 2], [8, 76, 6], [14, 72, 2]],
+    [[0, 71, 4], [4, 74, 2], [6, 79, 2], [8, 78, 4], [12, 74, 4]],
+    [[0, 74, 4], [4, 78, 2], [6, 81, 2], [8, 78, 6], [14, 74, 2]],
+    [[0, 76, 2], [2, 79, 2], [4, 83, 4], [8, 81, 2], [10, 79, 2], [12, 76, 4]],
+    [[0, 72, 2], [2, 76, 2], [4, 79, 4], [8, 84, 4], [12, 79, 4]],
+    [[0, 81, 2], [2, 79, 2], [4, 76, 2], [6, 72, 2], [8, 69, 4], [12, 72, 4]],
+    [[0, 71, 4], [4, 75, 2], [6, 78, 2], [8, 81, 4], [12, 83, 4]],
+  ];
+  // 사탕 롤러코스터: 168bpm · C-G7-C-G7-F-C-D7-G7. 서커스 오르간 갤럽, 오르락내리락
+  const COASTER_CHORDS = [
+    { bass: 48, keys: [64, 67, 72] }, { bass: 43, keys: [62, 65, 71] }, { bass: 48, keys: [64, 67, 72] }, { bass: 43, keys: [62, 65, 71] },
+    { bass: 41, keys: [65, 69, 72] }, { bass: 48, keys: [64, 67, 72] }, { bass: 50, keys: [62, 66, 72] }, { bass: 43, keys: [62, 65, 71] },
+  ];
+  const COASTER_MELODY = [
+    [[0, 79, 2], [2, 76, 2], [4, 79, 2], [6, 84, 2], [8, 83, 2], [10, 84, 2], [12, 88, 4]],
+    [[0, 86, 2], [2, 83, 2], [4, 79, 2], [6, 77, 2], [8, 74, 4], [12, 79, 4]],
+    [[0, 76, 2], [2, 79, 2], [4, 84, 2], [6, 79, 2], [8, 76, 2], [10, 79, 2], [12, 84, 4]],
+    [[0, 83, 2], [2, 81, 2], [4, 79, 2], [6, 77, 2], [8, 76, 2], [10, 74, 2], [12, 71, 4]],
+    [[0, 77, 2], [2, 81, 2], [4, 84, 4], [8, 81, 2], [10, 77, 2], [12, 81, 4]],
+    [[0, 79, 2], [2, 84, 2], [4, 88, 4], [8, 84, 2], [10, 79, 2], [12, 76, 4]],
+    [[0, 78, 2], [2, 81, 2], [4, 84, 2], [6, 86, 2], [8, 84, 2], [10, 81, 2], [12, 78, 4]],
+    [[0, 79, 1], [1, 81, 1], [2, 83, 1], [3, 84, 1], [4, 86, 4], [8, 83, 2], [10, 79, 2], [12, 74, 4]],
+  ];
   const SONGS = {
     menu: { bpm: 112, style: 'pop', chords: CHORDS, melody: MELODY },
     race: { bpm: 148, style: 'drive', chords: RACE_CHORDS, melody: RACE_MELODY },
@@ -615,6 +690,9 @@
     snow: { bpm: 144, style: 'sleigh', chords: SNOW_CHORDS, melody: SNOW_MELODY },
     candy: { bpm: 156, style: 'bubble', chords: CANDY_CHORDS, melody: CANDY_MELODY },
     lava: { bpm: 152, style: 'castle', chords: LAVA_CHORDS, melody: LAVA_MELODY },
+    forest: { bpm: 138, style: 'folk', chords: FOREST_CHORDS, melody: FOREST_MELODY },
+    coast: { bpm: 164, style: 'wave', chords: COAST_CHORDS, melody: COAST_MELODY },
+    coaster: { bpm: 168, style: 'carnival', chords: COASTER_CHORDS, melody: COASTER_MELODY },
   };
   A.SONGS = SONGS;   // (테스트에서 곡 목록 확인용)
 

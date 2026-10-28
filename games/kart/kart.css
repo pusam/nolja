@@ -105,15 +105,18 @@ input[type=range], input[type=checkbox] { accent-color: var(--kart-orange-dark);
 .course-options button.on .course-thumb { opacity: 1; }
 .course-options button strong { font-weight: 800; }
 .course-options button span { font-size: 10px; font-weight: 600; letter-spacing: 0; }
-/* Grand Prix runs all four courses, so it gets a full-width card with a trophy under the course grid. */
-.course-options .gp-course { grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr; column-gap: 12px; row-gap: 2px; align-items: center; justify-items: start; text-align: left; min-height: 56px; padding: 9px 16px; }
-.course-options .gp-course .icon { grid-row: 1 / 3; width: 26px; height: 26px; color: var(--kart-orange-dark); }
+/* Small captions split the grid into the basic courses, the challenge courses and the Grand Prix cups. */
+.course-options .course-sub { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin: 6px 0 -1px; color: var(--kart-orange-dark); font: 800 12px/1.3 "Pretendard", "Malgun Gothic", sans-serif; letter-spacing: -.2px; }
+.course-options .course-sub span { color: #737969; font-size: 10px; font-weight: 600; letter-spacing: 0; }
+/* Grand Prix: two cup cards side by side (four basic courses · four challenge courses), each with a trophy. */
+.course-options .gp-course { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; row-gap: 2px; align-items: center; justify-items: start; text-align: left; min-height: 52px; padding: 8px 12px; }
+.course-options .gp-course .icon { grid-row: 1 / 3; width: 24px; height: 24px; color: var(--kart-orange-dark); }
 .course-options .gp-course.on .icon { color: #ffc56b; }
-/* The challenge course (Lava Castle) also spans the row, with a warm lava edge and a "도전!" tag so it reads as the hard one. */
-.course-options .hard-course { grid-column: 1 / -1; grid-template-columns: auto minmax(0, 1fr) auto; border-color: #e9a286; background: linear-gradient(90deg, #fff1e8, #fffaf3); }
+/* Challenge courses: the same cards with a warm lava edge and a small "도전!" badge on the corner, so they read as the long, hard ones. */
+.course-options .hard-course, .course-options .gp-hard { position: relative; border-color: #e9a286; background: linear-gradient(90deg, #fff1e8, #fffaf3); }
 .course-options .hard-course .course-thumb { color: var(--kart-orange-dark); }
-.course-options .hard-course .challenge-tag { grid-column: 3; grid-row: 1 / 3; padding: 4px 9px; border-radius: 999px; background: var(--kart-orange-dark); color: #fff6ec; font: 800 11px/1.2 "Pretendard", "Malgun Gothic", sans-serif; font-style: normal; letter-spacing: 0; }
-.course-options .hard-course.on { background: #3b2730; border-color: #3b2730; }
+.course-options .challenge-tag { position: absolute; top: -7px; right: 8px; padding: 2px 7px; border-radius: 999px; background: var(--kart-orange-dark); color: #fff6ec; font: 800 9px/1.3 "Pretendard", "Malgun Gothic", sans-serif; font-style: normal; letter-spacing: 0; }
+.course-options .hard-course.on, .course-options .gp-hard.on { background: #3b2730; border-color: #3b2730; }
 .course-options .hard-course.on .course-thumb { color: #ffb08a; }
 .course-options .hard-course.on .challenge-tag { background: #ff7a3a; color: #2b1d22; }
 .start-area { padding-top: 18px; }

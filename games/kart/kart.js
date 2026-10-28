@@ -39,8 +39,8 @@ const settings = {
   mode: S.get('kart.mode', '2p'),            // '2p' 둘이 함께 | '1p' 혼자 (CPU랑)
   cpuLevel: S.get('kart.cpuLevel', 1),       // 0 쉬움 · 1 보통 · 2 어려움
   laps: S.get('kart.laps', 3),               // 바퀴 수
-  course: S.get('kart.course', 0),           // 0 몬스터 서킷 · 1 노을 바닷가 · 2 눈꽃 마을 · 3 하트 사탕 공원 · 4 용암 성 (도전)
-  gp: S.get('kart.gp', false),               // 그랑프리: 코스 넷을 차례로 달리고 점수 합산 (켜져 있으면 course 대신)
+  course: S.get('kart.course', 0),           // 0 몬스터 서킷 · 1 노을 바닷가 · 2 눈꽃 마을 · 3 하트 사탕 공원 · 도전: 4 용암 성 · 5 구름다리 숲 · 6 소라 해안 · 7 사탕 롤러코스터
+  gp: S.get('kart.gp', 0),                   // 그랑프리: 0 끔 · 1 몬스터 컵 · 2 도전 컵 — 코스 넷을 차례로 달리고 점수 합산 (켜져 있으면 course 대신)
   autoGas: S.get('kart.autoGas', true),      // 자동 가속: 브레이크만 안 누르면 계속 달림 (아이들과 할 때)
   assist: S.get('kart.assist', true),        // 핸들 보조: 길 밖으로 나가려 하면 살짝 돌려줌
   steerAngle: S.get('kart.steerAngle', 28),  // 조이콘을 이만큼(도) 기울이면 핸들 끝까지
@@ -53,8 +53,8 @@ const KEYS = { mode: 'kart.mode', cpuLevel: 'kart.cpuLevel', laps: 'kart.laps', 
 if (!['2p', '1p'].includes(settings.mode)) settings.mode = '2p';
 if (![0, 1, 2].includes(settings.cpuLevel)) settings.cpuLevel = 1;
 if (![2, 3, 5].includes(settings.laps)) settings.laps = 3;
-if (![0, 1, 2, 3, 4].includes(settings.course)) settings.course = 0;
-settings.gp = settings.gp === true;
+if (!(Number.isInteger(settings.course) && settings.course >= 0 && settings.course <= 7)) settings.course = 0;
+settings.gp = settings.gp === true ? 1 : [1, 2].includes(settings.gp) ? settings.gp : 0;
 if (!(settings.steerAngle >= 15 && settings.steerAngle <= 45)) settings.steerAngle = 28;
 settings.flip = Array.isArray(settings.flip) && settings.flip.length === 2 ? settings.flip.map(v => !!v) : [false, false];
 if (!Array.isArray(settings.chars) || settings.chars.length !== 2 || settings.chars.some(k => !Number.isInteger(k) || k < 0 || k >= CHARS.length)) settings.chars = [0, 1];
@@ -92,7 +92,7 @@ function syncSound() {
   if (menuOpen() || selectOpen() || (resultOpen() && T() > snd.holdUntil)) m = 'menu';
   else if (racingNow() && !game.paused) m = COURSE.song || 'race';
   if (m !== snd.music) { snd.music = m; if (m) { A.music(true, m); A.tempo(m !== 'menu' ? snd.tempo : 1); } else A.music(false); }
-  const amb = (racingNow() && !game.paused) || resultOpen() ? COURSE.theme : null;   // 파도·바람·새… (메뉴·선택·일시정지는 조용히)
+  const amb = (racingNow() && !game.paused) || resultOpen() ? (THEMES[COURSE.theme] || {}).amb || COURSE.theme : null;   // 파도·바람·새… (메뉴·선택·일시정지는 조용히)
   if (amb !== snd.amb) { snd.amb = amb; A.nature(amb); }
   for (const p of [0, 1]) {
     const k = humanKart(p);
@@ -136,6 +136,7 @@ function pathCps(start, segs) {
 //  theme: 분위기(하늘·나무·장식, 주변 소리) · song: 레이스 곡 · ramp: 점프대 · panels: 대시 판 s · boxRows: 아이템 상자 줄 s
 //  zones: 길 위 구역 { s, len, d0, d1, type } — water 개울·mud 초콜릿 늪 (첨벙, 느려짐) · ice 얼음판 (핸들이 덜 먹고 미끄러짐) · lava 용암 (앗 뜨거, 빙글)
 //  jets: 불기둥 { s, d, phase } — 정해진 박자로 솟고, 솟는 동안 닿으면 빙글
+//  bumps: 다리·언덕 { s, flat, ramp, h } — s 앞뒤 flat m는 h 높이로 평평, 그 바깥 ramp m 동안 코사인으로 오르내림. 높이 7m 다리는 아래 길 위를 건너고, 짧고 가파른 언덕은 빠르면 꼭대기에서 붕 뜸
 const COURSES = [
   { name: '몬스터 서킷', en: 'MONSTER CIRCUIT', fact: '드리프트 · 아이템 · 점프', lapSec: 30, theme: 'meadow', song: 'race',
     cps: [[-20, 0], [40, 0], [88, 4], [122, 26], [132, 64], [112, 96], [74, 104], [44, 88], [18, 70], [-10, 72],
@@ -162,20 +163,50 @@ const COURSES = [
     cps: pathCps([-40, 0], [['L', 50, 0], ['A', 50, 45, 45, -90, 45], ['L', -60, 218.6], ['A', -38.8, 239.8, 30, -135, -270], ['L', 30, 269.8],
       ['A', 30, 295.8, 26, -90, 90], ['L', -40, 321.8], ['A', -40, 347.8, 26, -90, -270], ['L', 80, 373.8], ['A', 80, 338.8, 35, 90, 0], ['L', 115, 308.1],
       ['A', 80, 308.1, 35, 0, -45], ['L', -101.8, 76.8], ['A', -70, 45, 45, 135, 270], ['L', -40, 0]]),
-    bridge: { s: 326, flat: 34, ramp: 60, h: 7 },   // 다리: s 326에서 s 1164 길 위를 7m 높이로 지나감 (앞뒤 34m 평평 + 60m 오르막·내리막)
+    bumps: [{ s: 326, flat: 34, ramp: 60, h: 7 }],   // 다리: s 326에서 s 1164 길 위를 7m 높이로 지나감 (앞뒤 34m 평평 + 60m 오르막·내리막)
     ramp: { s: 820, len: 12, h: 2.0 }, panels: [630, 805, 1030], boxRows: [60, 785, 1060],
     zones: [{ s: 556, len: 40, d0: 5.4, d1: 8.6, type: 'lava' }, { s: 707, len: 40, d0: -8.6, d1: -5.4, type: 'lava' }, { s: 836, len: 10, d0: -36, d1: 36, type: 'lava' }],
     jets: [{ s: 495, d: -3.6, phase: 0 }, { s: 515, d: 3.6, phase: 1.7 }, { s: 655, d: 0, phase: 0.9 }, { s: 1085, d: -4, phase: 2.4 }, { s: 1105, d: 4, phase: 0.6 }] },
+  // 도전 코스: 숲 속 꼬임 길. 빙글 도는 고리(왼쪽·오른쪽)를 돌아 오르며 방금 지나온 길 위를 다리로 두 번 건넘 · 고리 안쪽 진흙 웅덩이 · 큰 U턴 · 개울 점프
+  { name: '구름다리 숲', en: 'CLOUD BRIDGE FOREST', fact: '길고 어려운 도전 코스 · 빙글 고리 둘 · 다리 둘 · 개울 점프', lapSec: 65, theme: 'forest', song: 'forest', hard: true,
+    cps: pathCps([-40, 0], [['L', 70, 0], ['A', 70, 40, 40, -90, 0], ['L', 110, 80], ['A', 145, 80, 35, 180, -90], ['L', 55, 45], ['A', 55, 75, 30, -90, -180],
+      ['L', 25, 135], ['A', -5, 135, 30, 0, 90], ['L', -65, 165], ['A', -65, 130, 35, 90, 360], ['L', -30, 210], ['A', -90, 210, 60, 0, 180],
+      ['L', -150, 50], ['A', -100, 50, 50, 180, 270], ['L', -40, 0]]),
+    bumps: [{ s: 410, flat: 22, ramp: 60, h: 7 }, { s: 880, flat: 22, ramp: 60, h: 7 }],   // 다리 둘: 고리를 돌아 오르며 s 178·647 길 위를 7m 높이로
+    ramp: { s: 1185, len: 12, h: 2.0 }, panels: [410, 650, 1140], boxRows: [60, 540, 1235],
+    zones: [{ s: 255, len: 40, d0: -8.6, d1: -4.6, type: 'mud' }, { s: 725, len: 40, d0: 4.6, d1: 8.6, type: 'mud' }, { s: 1201, len: 11, d0: -43, d1: 43, type: 'water' }] },
+  // 도전 코스: 소라 껍데기처럼 안쪽으로 빙글 감겨 드는 바닷가 길. 머리핀 혀 · 꼬불꼬불 물결 길 · 감긴 길을 빠져나가며 바깥 길 위를 건너는 긴 다리 · 개울 점프 · 물웅덩이
+  { name: '소라 해안', en: 'SEASHELL COAST', fact: '길고 어려운 도전 코스 · 소라처럼 빙글 · 머리핀 · 긴 다리', lapSec: 70, theme: 'coast', song: 'coast', hard: true,
+    cps: pathCps([-40, 0], [['L', 80, 0], ['A', 80, 40, 40, -90, 0], ['L', 120, 160], ['A', 80, 160, 40, 0, 90], ['A', 80, 230, 30, -90, -180], ['L', 50, 260],
+      ['A', 25, 260, 25, 0, 180], ['L', 0, 230], ['A', -30, 230, 30, 0, -90], ['L', -90, 200], ['A', -90, 160, 40, 90, 180], ['L', -130, 100],
+      ['A', -90, 100, 40, 180, 305], ['A', -44.11, 34.47, 40, 125, 55], ['A', 1.77, 100, 40, 235, 270], ['L', 11.77, 60], ['A', 11.77, 90, 30, -90, 0],
+      ['L', 41.77, 100], ['A', 11.77, 100, 30, 0, 90], ['L', -168.23, 130], ['A', -168.23, 90, 40, 90, 180], ['L', -208.23, 40], ['A', -168.23, 40, 40, 180, 270], ['L', -40, 0]]),
+    bumps: [{ s: 1198, flat: 22, ramp: 60, h: 7 }],   // 긴 다리: 감긴 길을 빠져나가며 s 750 바깥 길 위를 7m 높이로
+    ramp: { s: 228, len: 12, h: 2.0 }, panels: [625, 890, 1198], boxRows: [60, 735, 1095],
+    zones: [{ s: 244, len: 11, d0: -43, d1: 43, type: 'water' }, { s: 462, len: 40, d0: 4.6, d1: 8.6, type: 'water' }, { s: 958, len: 30, d0: 4.6, d1: 8.6, type: 'water' }] },
+  // 도전 코스: 사탕 롤러코스터. 출발하자마자 높은 다리로 올라가 8자 한가운데를 건너고, 가파른 언덕 셋에선 붕 떠서 트릭 · 머리핀 혀 · 초콜릿 강 점프
+  { name: '사탕 롤러코스터', en: 'CANDY COASTER', fact: '길고 어려운 도전 코스 · 언덕에서 붕! 트릭 · 8자 다리 · 머리핀', lapSec: 68, theme: 'coaster', song: 'coaster', hard: true,
+    cps: pathCps([-40, 0], [['L', 33.43, 0], ['A', 33.43, 40, 40, -90, -45], ['L', 158.28, 108.28], ['A', 186.57, 80, 40, 135, 90], ['L', 206.57, 120],
+      ['A', 206.57, 150, 30, -90, 0], ['L', 236.57, 190], ['A', 261.57, 190, 25, 180, 0], ['L', 286.57, 150], ['A', 316.57, 150, 30, 180, 270], ['L', 326.57, 120],
+      ['A', 326.57, 80, 40, 90, 0], ['L', 366.57, 40], ['A', 326.57, 40, 40, 0, -90], ['L', 186.57, 0], ['A', 186.57, 40, 40, -90, -135], ['L', 61.72, 108.28],
+      ['A', 33.43, 80, 40, 45, 90], ['L', -130, 120], ['A', -130, 80, 40, 90, 180], ['L', -170, 40], ['A', -130, 40, 40, 180, 270], ['L', -40, 0]]),
+    bumps: [{ s: 173, flat: 22, ramp: 60, h: 7 }, { s: 790, flat: 0, ramp: 20, h: 4.5 }, { s: 1105, flat: 0, ramp: 20, h: 4.5 }, { s: 1180, flat: 0, ramp: 20, h: 4.5 }],   // 다리 하나(8자 가운데) + 붕 뜨는 언덕 셋
+    ramp: { s: 828, len: 11, h: 1.8 }, panels: [520, 1000, 1142], boxRows: [60, 640, 1310],
+    zones: [{ s: 395, len: 40, d0: -8.6, d1: -4.6, type: 'mud' }, { s: 843, len: 10, d0: -43, d1: 43, type: 'mud' }] },
 ];
 const JET = { period: 3.6, warn: 0.7, on: 1.2, r: 2.3 };   // 불기둥: 3.6초마다 0.7초 빨갛게 달아올랐다가 1.2초 동안 솟음
-const GP_COURSES = [0, 1, 2, 3];   // 그랑프리(몬스터 컵)에서 달리는 순서
-const lobbyCourse = () => settings.gp ? GP_COURSES[0] : settings.course;   // 메뉴 뒤 시범 레이스 코스
+// 그랑프리 컵: 코스 넷을 차례로 달리고 등수 점수를 더함. 몬스터 컵 = 기본 코스 넷, 도전 컵 = 길고 어려운 도전 코스 넷 (rec: 최고 점수 기록 이름)
+const CUPS = [
+  { name: '몬스터 컵', en: 'MONSTER CUP', courses: [0, 1, 2, 3], rec: 'gp' },
+  { name: '도전 컵', en: 'CHALLENGE CUP', courses: [4, 5, 6, 7], rec: 'gp2' },
+];
+const menuCup = () => CUPS[settings.gp - 1] || null;   // 메뉴에서 고른 컵 (그랑프리가 아니면 null)
+const lobbyCourse = () => settings.gp ? menuCup().courses[0] : settings.course;   // 메뉴 뒤 시범 레이스 코스
 let COURSE = COURSES[0], TR = null, L = 0, RAMP = null, ZONES = [], PANELS = [], BOX_ROWS = [], JETS = [], MAP = null;
 function loadCourse(i) {
   COURSE = COURSES[i] || COURSES[0];
   TR = buildTrack(COURSE.cps); L = TR.len;
-  const br = COURSE.bridge;   // 다리 높이: 1m마다 (가운데 평평 + 양쪽 코사인 오르막·내리막)
-  if (br) for (let i = 0; i < TR.n; i++) { const u = Math.abs(sdiff(i * TR.step, br.s)) - br.flat; TR.py[i] = u <= 0 ? br.h : u < br.ramp ? br.h * (0.5 + 0.5 * Math.cos(Math.PI * u / br.ramp)) : 0; }
+  if (COURSE.bumps) for (let i = 0; i < TR.n; i++) TR.py[i] = bumpY(i * TR.step);   // 다리·언덕 높이 (1m마다, 그리기용)
   RAMP = Object.assign({}, COURSE.ramp);
   ZONES = COURSE.zones.map(z => Object.assign({}, z));
   JETS = (COURSE.jets || []).map(j => Object.assign({}, j));
@@ -227,7 +258,20 @@ function trackPoint(s, d = 0, out = TP) {   // 길 위 (s, d) → 월드 x·z·�
   out.x = lerp(TR.px[i], TR.px[j], u) + out.nx * d; out.z = lerp(TR.pz[i], TR.pz[j], u) + out.nz * d; out.y = lerp(TR.py[i], TR.py[j], u);
   return out;
 }
-function elevAt(s) { const f = wrapS(s) / TR.step, i = Math.floor(f) % TR.n; return lerp(TR.py[i], TR.py[(i + 1) % TR.n], f - Math.floor(f)); }   // 길 높이 (다리 위면 그 높이, 아니면 0)
+// 다리·언덕 높이: 가운데 평평(flat) + 양쪽 코사인 오르막·내리막(ramp), 여럿이면 높은 쪽. 1m 점을 잇지 않고 식 그대로 써서 기울기·굽은 정도가 매끄러움
+function bumpAt(s) {   // 이 자리를 덮는 다리·언덕과 u (평평한 곳 끝에서 더 간 거리, 평평한 곳이면 0 아래)
+  let best = null, y = 0, bu = 0;
+  for (const b of COURSE.bumps) { const u = Math.abs(sdiff(s, b.s)) - b.flat; if (u >= b.ramp) continue; const v = u <= 0 ? b.h : b.h * (0.5 + 0.5 * Math.cos(Math.PI * u / b.ramp)); if (v > y) { y = v; best = b; bu = u; } }
+  return best ? { b: best, u: bu, y } : null;
+}
+function bumpY(s) { const q = bumpAt(s); return q ? q.y : 0; }
+function elevAt(s) { return COURSE.bumps ? bumpY(s) : 0; }   // 길 높이 (다리·언덕 위면 그 높이, 아니면 0)
+function elevCurv(s) {   // 길 높이가 굽은 정도 (높이를 s로 두 번 미분). 음수 = 위로 볼록 (언덕 꼭대기 근처)
+  const q = COURSE.bumps ? bumpAt(s) : null;
+  if (!q || q.u <= 0) return 0;
+  const { b, u } = q, k = Math.PI / b.ramp;
+  return -b.h / 2 * k * k * Math.cos(k * u);
+}
 const LOC = { i: 0, s: 0, d: 0 };
 function locate(x, z, hint = -1, out = LOC) {   // 월드 x·z → 가장 가까운 길 위치 (hint 근처부터 찾음. 다리와 아래 길이 겹치는 곳에선 hint가 있어야 제 층을 찾음)
   let best = -1, bd = Infinity;
@@ -296,7 +340,7 @@ const karts = [];
 const boxes = [], shots = [], traps = [], balls = [];
 function makeKart(slot, ch, human) {
   return { slot, ch, human, color: human >= 0 ? COLORS[human] : CHARS[ch].body,
-    x: 0, y: 0, z: 0, a: 0, v: 0, vl: 0, vy: 0, vyG: 0, air: false, hop: false, rampAir: false, trick: false, trickT: -9,
+    x: 0, y: 0, z: 0, a: 0, v: 0, vl: 0, vy: 0, vyG: 0, air: false, hop: false, rampAir: false, hillAir: false, trick: false, trickT: -9,
     steer: 0, drift: null, driftArm: false, prevDrift: false, prevItem: false, boostT: 0, boostFx: 0, spinT: 0, spinAt: -9, immuneT: 0, panelT: 0,
     item: null, itemN: 0, item2: null, itemN2: 0, swapAt: -9, prevSwap: false, roulT: 0, roulTick: 0, lap: 0, s: 0, d: 0, seg: -1, prog: 0, place: 1, finished: false, finishT: 0,
     lapMax: 0, lapT0: 0, bestLap: 0, newLap: false, newRace: false,
@@ -485,8 +529,11 @@ function driveKart(k, c, h) {
   if (k.air) {
     k.vy -= KART.G * h; k.y += k.vy * h;
     if (k.y <= gy) land(k, gy);
-  } else if (gy < k.y - 0.08) {
-    k.air = true; k.vy = k.vyG; k.rampAir = k.vyG > 1.5; k.trick = false;
+  } else if (gy < k.y - 0.08 || elevCurv(k.s) * (sdiff(k.s, prevS) / h) ** 2 < -KART.G * 1.2) {
+    // 점프대 끝처럼 땅이 확 꺼지거나, 언덕 꼭대기를 빠르게 넘어서 길이 꺾여 내려가는 게 떨어지는 것보다 빠르면 붕 뜸 (언덕에서 뜬 것도 트릭 가능)
+    const hill = gy >= k.y - 0.08;
+    k.air = true; k.vy = k.vyG; k.rampAir = k.vyG > 1.5 || hill; k.hillAir = hill; k.trick = false;
+    if (hill) { k.vy = (gy - k.y) / h; k.y = gy; }   // 언덕: 지금 땅을 따라 오르내리던 빠르기 그대로 떠야 바로 다시 붙지 않음 (오르막 끝에선 6m/s 넘게 오르던 중)
   } else { k.vyG = clamp((gy - k.y) / h, -6, 6); k.y = gy; }   // 점프대 기울기로 올라가는 빠르기 (최고 속도에서도 6m/s 안)
   // 길 밖 · 개울 · 벽
   k.offroad = !k.air && Math.abs(k.d) > TRACK.halfW + 0.6;
@@ -514,10 +561,10 @@ function land(k, gy) {
   k.y = gy; k.vy = 0; k.air = false; k.hop = false;
   if (k.rampAir) {
     k.rampAir = false;
-    if (k.human >= 0) { sfx('land'); rumble(k.human, hard ? 0.6 : 0.3, 90); if (hard) game.shake[k.human] = 0.35; }
+    if (k.human >= 0) { sfx('land'); rumble(k.human, hard ? 0.6 : 0.3, 90); if (hard && !k.hillAir) game.shake[k.human] = 0.35; }   // 언덕에선 덜 흔들림 (연달아 넘으니까)
     if (k.trick) { giveBoost(k, 0.9); if (k.human >= 0) showMsg(k.human, '트릭 성공!', '#facc15'); }
   }
-  k.trick = false;
+  k.trick = false; k.hillAir = false;
 }
 function wallHit(k) {
   const i = k.seg, nx = -TR.tz[i], nz = TR.tx[i], side = Math.sign(k.d), over = Math.abs(k.d) - (TRACK.wall - KART.R);
@@ -564,10 +611,10 @@ function lapUp(k) {
 const REC = (r => r && typeof r === 'object' && !Array.isArray(r) ? r : {})(S.get('kart.records', {}));
 const courseRec = (c = COURSES.indexOf(COURSE)) => { const r = REC[c]; return r && typeof r === 'object' ? r : (REC[c] = { lap: 0, race: {} }); };
 const recordable = k => k.human >= 0 && !game.demo && !game.forceCPU;
-function newRecord(kind, t) {   // kind: 'lap' 바퀴 · 'race' 완주(지금 바퀴 수) · 'gp' 그랑프리 점수(클수록 좋음). 더 좋으면 저장하고 true
+function newRecord(kind, t) {   // kind: 'lap' 바퀴 · 'race' 완주(지금 바퀴 수) · 'gp'·'gp2' 그랑프리 컵 점수(클수록 좋음). 더 좋으면 저장하고 true
   const r = courseRec();
   if (!r.race || typeof r.race !== 'object') r.race = {};
-  if (kind === 'gp') { if (REC.gp && REC.gp >= t) return false; REC.gp = t; }
+  if (kind === 'gp' || kind === 'gp2') { if (REC[kind] && REC[kind] >= t) return false; REC[kind] = t; }
   else if (kind === 'lap') { if (r.lap && r.lap <= t) return false; r.lap = t; }
   else { if (r.race[game.laps] && r.race[game.laps] <= t) return false; r.race[game.laps] = t; }
   S.set('kart.records', REC);
@@ -1131,12 +1178,13 @@ function hideOverlays(...ids) { for (const id of ids) $(id).classList.add('hidde
 const menuOpen = () => !$('menu').classList.contains('hidden');
 const resultOpen = () => !$('result').classList.contains('hidden');
 const selectOpen = () => !$('select').classList.contains('hidden');
-// ---------- 그랑프리 (몬스터 컵): 코스 넷을 차례로 달리고 등수 점수를 더해 종합 순위 ----------
+// ---------- 그랑프리 (몬스터 컵 · 도전 컵): 코스 넷을 차례로 달리고 등수 점수를 더해 종합 순위 ----------
 const GP_POINTS = [10, 8, 6, 4, 2, 1];   // 1~6등 점수 (꼴찌도 1점)
-const gp = { on: false, race: 0, roster: null, pts: [], places: [], scored: -1 };
-const gpLast = () => gp.on && gp.race >= GP_COURSES.length - 1;
+const gp = { on: false, cup: 0, race: 0, roster: null, pts: [], places: [], scored: -1 };
+const gpCup = () => CUPS[gp.cup] || CUPS[0], gpCourses = () => gpCup().courses;
+const gpLast = () => gp.on && gp.race >= gpCourses().length - 1;
 function startGP() {
-  Object.assign(gp, { on: true, race: 0, roster: null, pts: [0, 0, 0, 0, 0, 0], places: [[], [], [], [], [], []], scored: -1 });
+  Object.assign(gp, { on: true, cup: Math.max(0, settings.gp - 1), race: 0, roster: null, pts: [0, 0, 0, 0, 0, 0], places: [[], [], [], [], [], []], scored: -1 });
   startRace();
 }
 function gpScore(order) {   // 레이스가 끝나면 등수대로 점수 (같은 레이스를 두 번 세지 않게)
@@ -1157,7 +1205,7 @@ function startRace() {
   sfxInit(); saveSettings();
   game.demo = false; game.paused = false; selStartAt = 0;
   hideOverlays('menu', 'result', 'pause', 'select');
-  switchCourse(gp.on ? GP_COURSES[gp.race] : settings.course);
+  switchCourse(gp.on ? gpCourses()[gp.race] : settings.course);
   assignJoyCons();
   setupRace(false);
   game.state = 'countdown'; game.stateT = T(); game.goT = T() + 3.6; game.cd = 4;
@@ -1207,11 +1255,11 @@ function showResult() {
   if (gp.on) {
     const st = gpStandings(), bestG = st.find(k => k.human >= 0), rank = st.indexOf(bestG) + 1;
     if (gpLast()) {   // 마지막 코스: 종합 순위로 시상대
-      eyebrow = 'MONSTER CUP · FINAL'; podium = st.slice(0, 3);
+      eyebrow = `${gpCup().en} · FINAL`; podium = st.slice(0, 3);
       title = who(bestG) + (rank === 1 ? '그랑프리 우승!' : `종합 ${rank}위!`);
       for (let i = 0; i < 3; i++) confetti(6, 4.5 + i * 0.6, (i - 1) * 2.4);
     } else {
-      eyebrow = `MONSTER CUP · RACE ${gp.race + 1} / ${GP_COURSES.length}`;
+      eyebrow = `${gpCup().en} · RACE ${gp.race + 1} / ${gpCourses().length}`;
       title = `${who(best)}${best.place}등${best.finished ? ' 골인' : ''}! +${GP_POINTS[best.place - 1]}점`;
     }
     body = gpTable(st);
@@ -1226,7 +1274,7 @@ function showResult() {
     if (k.newLap) recs.push(`${who(k)}가장 빠른 바퀴 ${fmtTime(k.bestLap)}`);
     if (k.newRace) recs.push(`${who(k)}${game.laps}바퀴 ${fmtTime(k.finishT)}`);
   }
-  if (gpLast() && hum.some(recordable)) { const top = Math.max(...hum.map(k => gp.pts[k.slot])); if (newRecord('gp', top)) recs.push(`그랑프리 ${top}점`); }
+  if (gpLast() && hum.some(recordable)) { const top = Math.max(...hum.map(k => gp.pts[k.slot])); if (newRecord(gpCup().rec, top)) recs.push(`${gpCup().name} ${top}점`); }
   const rc = courseRec(), mark = [rc.lap ? `바퀴 ${fmtTime(rc.lap)}` : '', rc.race && rc.race[game.laps] ? `${game.laps}바퀴 ${fmtTime(rc.race[game.laps])}` : ''].filter(Boolean);
   const recLine = recs.length ? `★ 새 기록! ${recs.join(' · ')}` : mark.length ? `${COURSE.name} 최고 기록 · ${mark.join(' · ')}` : '';
   $('resRecord').textContent = recLine;
@@ -1235,7 +1283,7 @@ function showResult() {
   $('resTitle').textContent = title;
   $('resBody').innerHTML = body;
   // 첫 버튼: 그랑프리 중이면 다음 코스, 끝났으면 그랑프리 다시, 아니면 한 판 더. 그랑프리 중엔 레이서를 못 바꿈
-  const mid = gp.on && !gpLast(), next = mid ? COURSES[GP_COURSES[gp.race + 1]] : null;
+  const mid = gp.on && !gpLast(), next = mid ? COURSES[gpCourses()[gp.race + 1]] : null;
   $('btnAgain').innerHTML = mid ? `다음 코스 · ${next.name} <span aria-hidden="true">→</span>` : `${gp.on ? '그랑프리 다시!' : '한 판 더!'} <span aria-hidden="true">↗</span>`;
   $('btnReselect').classList.toggle('hidden', mid);
   $('btnMenu').textContent = mid ? '그랑프리 그만두기' : '레이스 설정';
@@ -1251,8 +1299,8 @@ function showResult() {
 function gpTable(st) {
   return '<ol class="result-list gp-list">' + st.map((k, i) => {
     const pl = gp.places[k.slot], got = GP_POINTS[pl[gp.race] - 1] || 0;
-    const chips = GP_COURSES.map((_, r) => `<i class="${pl[r] ? 'm' + Math.min(pl[r], 4) : 'todo'}">${pl[r] || ''}</i>`).join('');
-    const said = GP_COURSES.map((c, r) => pl[r] ? `${COURSES[c].name} ${pl[r]}등` : '').filter(Boolean).join(', ');
+    const chips = gpCourses().map((_, r) => `<i class="${pl[r] ? 'm' + Math.min(pl[r], 4) : 'todo'}">${pl[r] || ''}</i>`).join('');
+    const said = gpCourses().map((c, r) => pl[r] ? `${COURSES[c].name} ${pl[r]}등` : '').filter(Boolean).join(', ');
     return `<li class="${k.human >= 0 ? 'me p' + (k.human + 1) : ''}"><b>${i + 1}위</b><span class="who">${nameOf(k)}</span><span class="tag">${tagOf(k)}</span>`
       + `<span class="races" role="img" aria-label="${said}">${chips}</span><span class="pts">${gp.pts[k.slot]}점<small>+${got}</small></span></li>`;
   }).join('') + '</ol>';
@@ -1398,14 +1446,14 @@ function syncMenu() {
   document.querySelectorAll('#modeRow button').forEach(b => b.classList.toggle('on', b.dataset.mode === settings.mode));
   document.querySelectorAll('#lvRow button').forEach(b => b.classList.toggle('on', +b.dataset.lv === settings.cpuLevel));
   document.querySelectorAll('#lapRow button').forEach(b => b.classList.toggle('on', +b.dataset.laps === settings.laps));
-  document.querySelectorAll('#courseRow button').forEach(b => b.classList.toggle('on', b.dataset.gp ? settings.gp : !settings.gp && +b.dataset.course === settings.course));
+  document.querySelectorAll('#courseRow button').forEach(b => b.classList.toggle('on', b.dataset.gp ? +settings.gp === +b.dataset.gp : !settings.gp && +b.dataset.course === settings.course));
   document.querySelectorAll('#qRow button').forEach(b => b.classList.toggle('on', b.dataset.q === settings.quality));
   // 시범 레이스 아래 코스 띠: 번호 · 이름 · 특징
   const c = COURSES[settings.course], setText = (id, v) => { const el = $(id); if (el && el.textContent !== v) el.textContent = v; };
   if (settings.gp) {   // 그랑프리: 코스 넷을 바퀴 수만큼씩 → 다 합친 시간
-    const min = Math.round(GP_COURSES.reduce((a, i) => a + COURSES[i].lapSec, 0) * settings.laps / 60);
-    setText('courseNo', 'GP'); setText('courseName', '몬스터 컵'); setText('courseEn', 'MONSTER CUP'); setText('courseFact', '코스 4개 연달아 · 등수 점수 합산');
-    setText('lapHint', `그랑프리: 코스 4개 × ${settings.laps}바퀴 · 모두 약 ${min}분${REC.gp ? ` · 최고 ${REC.gp}점` : ''}`);
+    const cup = menuCup(), n = cup.courses.length, min = Math.round(cup.courses.reduce((a, i) => a + COURSES[i].lapSec, 0) * settings.laps / 60), best = REC[cup.rec];
+    setText('courseNo', 'GP'); setText('courseName', cup.name); setText('courseEn', cup.en); setText('courseFact', `코스 ${n}개 연달아 · 등수 점수 합산`);
+    setText('lapHint', `그랑프리 ${cup.name}: 코스 ${n}개 × ${settings.laps}바퀴 · 모두 약 ${min}분${best ? ` · 최고 ${best}점` : ''}`);
   } else {
     setText('courseNo', String(settings.course + 1).padStart(2, '0')); setText('courseName', c.name); setText('courseEn', c.en); setText('courseFact', c.fact);
     const r = REC[settings.course];
@@ -1744,6 +1792,12 @@ const THEMES = {
     rough: 0x9bc685, curb: ['#ed734d', '#fff4d9'], wall: ['#fff3d6', '#ec7953', '#409f9c'], road: '#47565b', trees: 'round',
     greens: ['#41966c', '#6caf6e', '#4c9e79', '#9ac373', '#6db58b', '#b2ce78'], hills: ['#72bca3', '#96c9a1', '#73b4b1', '#accd97', '#8cbea1'],
     petals: ['#fff2c9', '#f5cd68', '#ed8968', '#e9b7cc'], stem: '#365458' },
+  // 숲: 짙은 초록 · 나무가 빽빽 · 길가 버섯과 통나무 · 돌 다리 (나무 난간)
+  forest: { sky: ['#5fb0de', '#bfe2dc', '#eef0d2'], fog: [0xcfe4d6, 150, 560], hemi: [0xe8f6ea, 0x557d52], ground: '#6aa865', dots: 'rgba(30,70,30,0.09)',
+    rough: 0x86b676, curb: ['#d9603f', '#fff1d6'], wall: ['#fff1d6', '#c9673f', '#3f7d5c'], road: '#4a5552', trees: 'round', treeN: 250,
+    greens: ['#2f7d55', '#3d8c58', '#2a6b4c', '#5c9e57', '#47905f', '#7aa95a'], hills: ['#4f9a78', '#6aa883', '#5a9b8f', '#7fb07e', '#5f9f6c'],
+    petals: ['#fff2c9', '#f5cd68', '#ffffff', '#e9b7cc'], stem: '#365458', decor: 'forest', amb: 'meadow',
+    bridge: { stone: '#b3a184', dark: '#93836a', beam: '#d6c8ad', rail: '#8a5f3c', top: 'rail' } },
   beach: { sky: ['#58a6dd', '#ffcf9a', '#ffe8c4'], fog: [0xf5ddc3, 190, 640], hemi: [0xfff2dd, 0xb99a62], ground: '#ecd6a2', dots: 'rgba(140,100,50,0.08)',
     rough: 0xe3c88f, curb: ['#e9643f', '#fff7e6'], wall: ['#fff7e8', '#f2a541', '#3d9fc6'], road: '#47565b', trees: 'palm',
     greens: ['#3f9a63', '#5fb06a', '#4ea477', '#7cbd62'], hills: ['#5ea98f', '#7cb98c', '#6aa59c', '#8fc29a'],
@@ -1760,8 +1814,15 @@ const THEMES = {
   lava: { sky: ['#3b2747', '#a8505a', '#f0a26b'], fog: [0x6a3a44, 150, 560], hemi: [0xffd9c2, 0x5a3434], ground: '#4a3b3d', dots: 'rgba(255,120,60,0.10)',
     rough: 0x6b5557, curb: ['#ff6a2a', '#f3e6d6'], wall: ['#d9cfc4', '#c4553a', '#6a5a72'], road: '#3e3742', trees: 'spire',
     hills: ['#5a4550', '#4d3c48', '#6a4f55', '#3f343f'], peaks: true, cap: '#ff7a3a',
-    petals: ['#ff7a3a', '#ffb347', '#ffd166'], stem: '#3a2e30', decor: 'lava' },
+    petals: ['#ff7a3a', '#ffb347', '#ffd166'], stem: '#3a2e30', decor: 'lava',
+    bridge: { stone: '#6d6068', dark: '#4a4048', beam: '#8a7c84', top: 'teeth' } },
 };
+// 소라 해안: 한낮의 바닷가 (하늘이 더 파랗고) · 하얀 기둥이 받친 다리 · 빨간 난간
+THEMES.coast = Object.assign({}, THEMES.beach, { sky: ['#3d95d6', '#a6d8ef', '#eef6f2'], fog: [0xdcebf0, 190, 640], hemi: [0xf4fbff, 0xb9a06a], amb: 'beach',
+  bridge: { style: 'pillar', stone: '#f4ecdc', dark: '#d9c9a8', beam: '#ffffff', rail: '#e9643f', top: 'rail' } });
+// 사탕 롤러코스터: 보랏빛 하늘 · 분홍·흰 줄무늬 기둥이 받친 롤러코스터 길 · 노란 테 · 하늘색 난간
+THEMES.coaster = Object.assign({}, THEMES.candy, { sky: ['#9d8cf0', '#e7b8f2', '#ffe6f1'], fog: [0xeedcf3, 160, 600], hemi: [0xfff3fb, 0xc49ad6], amb: 'candy',
+  bridge: { style: 'pillar', stone: '#ff8fc2', dark: '#ffffff', beam: '#ffd36e', rail: '#7cc9f0', top: 'rail' } });
 function ensureScene3D() {
   if (G3.built || !G3.available) return;
   G3.built = true;
@@ -1801,7 +1862,7 @@ function buildCourse3D() {
   buildGround(grp, th);
   buildRoad(grp, th);
   buildWalls(grp, th);
-  if (COURSE.bridge) buildBridge(grp);
+  if (COURSE.bumps) buildBridge(grp, th);
   buildRampAndPanels(grp);
   buildJets(grp);
   buildZones(grp);
@@ -1944,13 +2005,17 @@ function buildWalls(Sc, th) {
   g.setIndex(idx); g.computeVertexNormals();
   Sc.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })));
 }
-// 2층 다리: 위층 길 양옆을 땅까지 돌벽으로 막아 둑처럼 (아래 길이 지나가는 곳만 뚫어 굴다리로) + 다리 밑면 + 굴다리 안쪽 벽 + 다리 난간 위 성벽 톱니
-function buildBridge(Sc) {
+// 다리·언덕 (높은 길): 위층 길 양옆을 땅까지 돌벽 둑으로 막거나(성·숲) 기둥으로 받침(바닷가·사탕 롤러코스터) + 길 밑면.
+//  아래 길이 지나가는 곳은 들보만 남겨 굴다리로 (돌벽이면 굴다리 안쪽 벽까지) · 난간 위엔 성벽 톱니 또는 기둥 + 가로대 난간
+function buildBridge(Sc, th) {
+  const look = th.bridge || THEMES.lava.bridge, pillars = look.style === 'pillar';
   const pos = [], col = [], idx = [], P = [], W1 = TRACK.wall + 0.7, n = TR.n;
-  const stone = new THREE.Color('#6d6068'), dark = new THREE.Color('#4a4048'), beam = new THREE.Color('#8a7c84');
-  const other = (x, z, i) => {   // 이 점 아래·위에 있는 다른 구간 (s가 60m 넘게 떨어진 곳 중 가장 가까운 점)
+  const stone = new THREE.Color(look.stone), dark = new THREE.Color(look.dark), beam = new THREE.Color(look.beam), rail = new THREE.Color(look.rail || look.beam);
+  const high = []; for (let j = 0; j < n; j++) if (TR.py[j] > 3) high.push(j);   // 굴다리를 덮는 높은 곳
+  const other = (x, z, i, onlyHigh) => {   // 이 점 아래·위에 있는 다른 구간 (s가 60m 넘게 떨어진 곳 중 가장 가까운 점)
     let best = -1, bd = Infinity;
-    for (let j = 0; j < n; j++) { if (Math.abs(sdiff(j * TR.step, i * TR.step)) < 60) continue; const dd = (x - TR.px[j]) ** 2 + (z - TR.pz[j]) ** 2; if (dd < bd) { bd = dd; best = j; } }
+    const test = j => { if (Math.abs(sdiff(j * TR.step, i * TR.step)) < 60) return; const dd = (x - TR.px[j]) ** 2 + (z - TR.pz[j]) ** 2; if (dd < bd) { bd = dd; best = j; } };
+    if (onlyHigh) for (const j of high) test(j); else for (let j = 0; j < n; j++) test(j);
     return { j: best, dist: Math.sqrt(bd) };
   };
   const side = (i, sd, d = W1) => [TR.px[i] - TR.tz[i] * d * sd, TR.pz[i] + TR.tx[i] * d * sd];
@@ -1958,21 +2023,30 @@ function buildBridge(Sc) {
   const box = new THREE.BoxGeometry(1, 1, 1);
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n, yi = TR.py[i], yj = TR.py[j];
-    if (yi > 0.02 || yj > 0.02) for (const sd of [-1, 1]) {   // 위층: 옆 돌벽 (아래 길 위에선 두께 1m 들보만)
-      const [ax, az] = side(i, sd), [bx, bz] = side(j, sd), o = other(ax, az, i), open = o.dist < W1 + 0.5 && TR.py[o.j] < yi - 3;
-      quad([ax, open ? yi - 1 : 0, az], [bx, open ? yj - 1 : 0, bz], [ax, yi, az], [bx, yj, bz], open ? beam : (Math.floor(i / 3) % 2 ? stone : dark));
-      if (i % 3 === 0 && yi > 0.6) {   // 난간 위 톱니
+    if (yi > 0.02 || yj > 0.02) for (const sd of [-1, 1]) {   // 위층 옆면: 돌벽 (아래 길 위에선 두께 1m 들보만) · 기둥 다리는 늘 들보 + 4m마다 기둥
+      const [ax, az] = side(i, sd), [bx, bz] = side(j, sd), o = other(ax, az, i), open = o.dist < W1 + 0.5 && TR.py[o.j] < yi - 3, thin = open || pillars;
+      quad([ax, thin ? Math.max(0, yi - 1) : 0, az], [bx, thin ? Math.max(0, yj - 1) : 0, bz], [ax, yi, az], [bx, yj, bz], thin ? beam : (Math.floor(i / 3) % 2 ? stone : dark));
+      if (pillars && !open && i % 4 === 0 && yi > 1.4) {   // 기둥: 1.2m마다 두 색이 번갈아 (사탕은 줄무늬)
+        const [px, pz] = side(i, sd, W1 - 0.45), top = yi - 1;
+        for (let y0 = 0, k = 0; y0 < top - 0.05; y0 += 1.2, k++) { const hh = Math.min(1.2, top - y0); P.push({ geo: box, matrix: partM(px, y0 + hh / 2, pz, 0, TR.ang[i], 0, 0.7, hh, 0.7), color: k % 2 ? dark : stone }); }
+      }
+      if (yi > 0.6 && yj > 0.6) {   // 난간 위
         const [cx, cz] = side(i, sd, TRACK.wall + 0.35);
-        P.push({ geo: box, matrix: partM(cx, yi + 1.3, cz, 0, TR.ang[i], 0, 0.8, 0.6, 1.1), color: beam });
+        if (look.top === 'teeth') { if (i % 3 === 0) P.push({ geo: box, matrix: partM(cx, yi + 1.3, cz, 0, TR.ang[i], 0, 0.8, 0.6, 1.1), color: beam }); }   // 성벽 톱니
+        else {   // 기둥 + 가로대
+          if (i % 3 === 0) P.push({ geo: box, matrix: partM(cx, yi + 1.45, cz, 0, TR.ang[i], 0, 0.22, 0.9, 0.22), color: rail });
+          const [dx, dz] = side(j, sd, TRACK.wall + 0.35);
+          quad([cx, yi + 1.72, cz], [dx, yj + 1.72, dz], [cx, yi + 1.94, cz], [dx, yj + 1.94, dz], rail);
+        }
       }
     }
     if (yi > 1.5 && yj > 1.5) {   // 다리 밑면 (아래 길에서 올려다봄)
       const [ax, az] = side(i, -1), [bx, bz] = side(j, -1), [cx, cz] = side(i, 1), [dx, dz] = side(j, 1);
       quad([ax, yi - 1, az], [bx, yj - 1, bz], [cx, yi - 1, cz], [dx, yj - 1, dz], dark);
     }
-    if (yi < 0.02) for (const sd of [-1, 1]) {   // 아래층: 다리 밑을 지나는 동안 양옆 굴다리 벽
-      const [ax, az] = side(i, sd), [bx, bz] = side(j, sd), o = other(ax, az, i), o2 = other(bx, bz, j);
-      if (o.dist > W1 + 0.5 || o2.dist > W1 + 0.5 || TR.py[o.j] < 3 || TR.py[o2.j] < 3) continue;
+    if (!pillars && yi < 0.02) for (const sd of [-1, 1]) {   // 아래층: 돌벽 다리 밑을 지나는 동안 양옆 굴다리 벽
+      const [ax, az] = side(i, sd), [bx, bz] = side(j, sd), o = other(ax, az, i, true), o2 = other(bx, bz, j, true);
+      if (o.j < 0 || o2.j < 0 || o.dist > W1 + 0.5 || o2.dist > W1 + 0.5) continue;
       quad([ax, 0, az], [bx, 0, bz], [ax, TR.py[o.j] - 1, az], [bx, TR.py[o2.j] - 1, bz], Math.floor(i / 3) % 2 ? stone : dark);
     }
   }
@@ -2202,7 +2276,7 @@ function buildScenery(Sc, th) {
   const marks = th.decor === 'snow' ? infieldSpots(1, 0) : th.decor === 'candy' || th.decor === 'lava' ? infieldSpots(2, 60) : [];   // 코스 안쪽 큰 장식 자리
   // 나무: 둥근 머리 + 줄기 (인스턴스로 두 번에 그림) · 바닷가는 야자수, 눈 마을은 눈 덮인 전나무 (인스턴스 한 번) · 사탕 공원은 막대 사탕
   const spots = [];
-  for (let tries = 0; spots.length < (sea ? 120 : 170) && tries < 6000; tries++) {
+  for (let tries = 0; spots.length < (th.treeN || (sea ? 120 : 170)) && tries < 8000; tries++) {   // 숲은 더 빽빽하게
     const x = cx - 260 + rng() * 520, z = cz - 210 + rng() * 420;   // 코스 둘레로 넓게
     if (distToTrack(x, z) < TRACK.wall + 6 || Math.hypot(x - 0, z + 34) < 46) continue;   // 길 · 관중석 자리 비우기
     if (sea && z < th.shoreZ + 8 || marks.some(([mx, mz]) => Math.hypot(x - mx, z - mz) < 16)) continue;   // 바다 · 큰 장식 자리엔 안 심음
@@ -2261,6 +2335,7 @@ function buildScenery(Sc, th) {
   if (th.decor === 'beach') buildBeachDecor(Sc, th, rng);
   else if (th.decor === 'snow') { buildSnowDecor(Sc, rng, marks); buildSnowfall(Sc); }
   else if (th.decor === 'candy') buildCandyDecor(Sc, rng, marks);
+  else if (th.decor === 'forest') buildForestDecor(Sc, rng);
   else if (th.decor === 'lava') { buildLavaDecor(Sc, rng, marks); buildSnowfall(Sc, [1, 0.55, 0.2], -0.55); }   // 불티는 위로 날림
   // 구름
   const cp = [], sph = new THREE.SphereGeometry(1, 10, 7), white = new THREE.Color('#ffffff');
@@ -2391,6 +2466,37 @@ function buildSnowDecor(Sc, rng, marks) {
   }
   Sc.add(new THREE.Mesh(mergeGeoms(P), G3.matLit));
   box.dispose(); cyl.dispose(); cone.dispose(); sph.dispose();
+}
+// 구름다리 숲: 길가 점박이 버섯 · 쓰러진 통나무와 그루터기 · 들판의 커다란 버섯
+function buildForestDecor(Sc, rng) {
+  const P = [], cyl = new THREE.CylinderGeometry(1, 1, 1, 10), dome = new THREE.SphereGeometry(1, 12, 5, 0, Math.PI * 2, 0, Math.PI / 2), sph = new THREE.SphereGeometry(1, 6, 4);   // 버섯이 많아서 면을 적게
+  const C = c => new THREE.Color(c), cream = C('#fff3df'), caps = ['#e5533d', '#f08a3c', '#c95b9a', '#e5533d'].map(C), wood = C('#8a5f3c'), wood2 = C('#a8774a'), ring = C('#e2c08f');
+  const mushroom = (b, cap) => {   // 굵은 줄기 + 둥근 갓 (아래는 크림색) + 흰 점
+    P.push({ geo: cyl, matrix: partAt(b, 0, 0.55, 0, 0, 0, 0, 0.36, 1.1, 0.36), color: cream });
+    P.push({ geo: dome, matrix: partAt(b, 0, 1.1, 0, 0, 0, 0, 1.1, 0.75, 1.1), color: cap });
+    P.push({ geo: cyl, matrix: partAt(b, 0, 1.1, 0, 0, 0, 0, 1.05, 0.05, 1.05), color: cream });
+    P.push({ geo: sph, matrix: partAt(b, 0, 1.85, 0, 0, 0, 0, 0.2, 0.07, 0.2), color: cream });
+    for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2 + rng(); P.push({ geo: sph, matrix: partAt(b, Math.cos(a) * 0.66, 1.7, Math.sin(a) * 0.66, 0, 0, 0, 0.17, 0.08, 0.17), color: cream }); }
+  };
+  for (let i = 0; i < 22; i++) {   // 길가 버섯 (작은 것 둘셋이 모여서)
+    const side = i % 2 ? 1 : -1, b = besideTrack(L * (i + 0.3) / 22, side, 2.5 + rng() * 6, 2, 0.8 + rng() * 0.5);
+    if (!b) continue;
+    mushroom(b, caps[i % caps.length]);
+    if (i % 2) mushroom(partAt(b, 1.3, 0, 0.6, 0, 0, 0, 0.55, 0.55, 0.55), caps[(i + 1) % caps.length]);
+  }
+  for (let i = 0; i < 5; i++) {   // 들판의 커다란 버섯
+    const side = i % 2 ? -1 : 1, b = besideTrack(L * (i + 0.55) / 5, side, 20 + rng() * 12, 16, 4 + rng() * 1.5);
+    if (b) mushroom(b, caps[i % 3]);
+  }
+  for (let i = 0; i < 9; i++) {   // 쓰러진 통나무 + 옆 그루터기 (윗면은 나이테 색)
+    const side = i % 2 ? -1 : 1, b = besideTrack(L * (i + 0.75) / 9, side, 6 + rng() * 8, 5, 1);
+    if (!b) continue;
+    P.push({ geo: cyl, matrix: partAt(b, 0, 0.5, 0, 0, rng() * Math.PI, Math.PI / 2, 0.5, 4 + rng() * 2, 0.5), color: wood });
+    P.push({ geo: cyl, matrix: partAt(b, 2.6, 0.4, 1.4, 0, 0, 0, 0.6, 0.8, 0.6), color: wood2 });
+    P.push({ geo: cyl, matrix: partAt(b, 2.6, 0.81, 1.4, 0, 0, 0, 0.52, 0.03, 0.52), color: ring });
+  }
+  Sc.add(new THREE.Mesh(mergeGeoms(P), G3.matLit));
+  cyl.dispose(); dome.dispose(); sph.dispose();
 }
 // 하트 사탕 공원: 길가 지팡이 사탕, 들판의 큰 도넛·컵케이크, 하트 안쪽의 3층 케이크와 아이스크림
 function buildCandyDecor(Sc, rng, marks) {
@@ -3044,7 +3150,7 @@ function gpBanner(g, cx, y, u, t) {
   g.save(); g.globalAlpha = left < 0 ? clamp(1 + left, 0, 1) : 1;
   hudPanel(g, cx - w / 2, y, w, h, u);
   g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.font = `800 ${17 * u}px ${FONT}`; g.fillStyle = HUD.orange; g.fillText(`MONSTER CUP · RACE ${gp.race + 1} / ${GP_COURSES.length}`, cx, y + 20 * u);
+  g.font = `800 ${17 * u}px ${FONT}`; g.fillStyle = HUD.orange; g.fillText(`${gpCup().en} · RACE ${gp.race + 1} / ${gpCourses().length}`, cx, y + 20 * u);
   g.font = `900 ${26 * u}px ${FONT}`; g.fillStyle = HUD.cream; g.fillText(COURSE.name, cx, y + 45 * u);
   g.restore();
 }
@@ -3179,7 +3285,7 @@ function drawMinimap(g, W, Hh, two) {   // 둘이 달릴 때는 구분선을 덮
   g.font = `800 ${(two ? 17 : 19) * u}px ${FONT}`;
   let titleW = mw;
   if (gp.on) {   // 그랑프리: 오른쪽 끝에 몇 번째 코스인지 (코스 이름은 남은 너비에 맞춤)
-    const tag = `GP ${gp.race + 1}/${GP_COURSES.length}`, tw = g.measureText(tag).width;
+    const tag = `GP ${gp.race + 1}/${gpCourses().length}`, tw = g.measureText(tag).width;
     g.fillStyle = HUD.orange; g.textAlign = 'right'; g.fillText(tag, x0 + mw, py + 21 * u); g.textAlign = 'left';
     titleW = mw - tw - 12 * u;
   }
@@ -3250,7 +3356,7 @@ function bindMenu() {
   document.querySelectorAll('#lapRow button').forEach(b => { b.onclick = () => { settings.laps = +b.dataset.laps; syncMenu(); saveSettings(); }; });
   document.querySelectorAll('#courseRow button').forEach(b => {
     b.onclick = () => {   // 코스를 바꾸면 메뉴 뒤 시범 레이스도 그 코스로 (그랑프리는 첫 코스)
-      settings.gp = !!b.dataset.gp;
+      settings.gp = +(b.dataset.gp || 0);
       if (!settings.gp) settings.course = +b.dataset.course;
       saveSettings();
       if (switchCourse(lobbyCourse()) && game.demo) { setupRace(true); game.goT = T(); }
@@ -3327,10 +3433,10 @@ requestAnimationFrame(frame);
 
 // 테스트용 훅
 window.__KT = { game, karts, settings, T, update, render: renderFrame, startRace, toMenu, openSelect, selMove, selReady, selSet, sel, pause, resume,
-  TRACK, boxes, shots, traps, KART, trackPoint, locate, groundAt, sdiff, useItem, spinOut, joySteer, tilt, readInputs, keys, inCreek,
+  TRACK, boxes, shots, traps, KART, trackPoint, locate, groundAt, elevAt, elevCurv, sdiff, useItem, spinOut, joySteer, tilt, readInputs, keys, inCreek,
   gfx, G3, Q, applyQuality, autoStep, parts, CHARS, joycon: JC, setDemoPaused, showResult, mergeGeoms, views, humanKart, levelFor,
-  COURSES, switchCourse, DRIFT, ITEM_KEYS, gp, GP_COURSES, GP_POINTS, resultNext, REC, lodFor, rollItem, balls, JET, jetState,
-  get JETS() { return JETS; },
+  COURSES, switchCourse, DRIFT, ITEM_KEYS, gp, CUPS, GP_POINTS, resultNext, REC, lodFor, rollItem, balls, JET, jetState,
+  get JETS() { return JETS; }, get GP_COURSES() { return gp.on ? gpCourses() : (menuCup() || CUPS[0]).courses; },
   get TR() { return TR; }, get L() { return L; }, get RAMP() { return RAMP; }, get PANELS() { return PANELS; }, get ZONES() { return ZONES; },
   get COURSE() { return COURSE; }, get BOX_ROWS() { return BOX_ROWS; },
   setClock: f => { realNow = f; } };
