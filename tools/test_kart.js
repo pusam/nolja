@@ -738,9 +738,13 @@ console.log('\n[18] 아이템 두 칸 · 새 아이템');
   for (const b of KT.boxes) b.alive = true;
   keepPlace(me, row - 6, 0, 14); run(1.6);
   assert(first && me.item === first && me.item2 && box, `상자 두 번이면 두 칸 (${me.item} · ${me.item2})`);
+  const hint = G.msg[0];
+  assert(hint && hint.text === '아이템 두 칸!' && hint.sub.includes('Q · R'), `두 칸이 처음 차면 바꾸는 키를 알려 줌 (${hint && hint.sub})`);
   me.item = 'ball'; me.itemN = 1; me.item2 = 'shield'; me.itemN2 = 1;
   tap('KeyQ');
   assert(me.item === 'shield' && me.item2 === 'ball', 'Q로 두 칸 순서 바꾸기');
+  tap('KeyR'); const byR = me.item === 'ball' && me.item2 === 'shield'; tap('KeyR');
+  assert(byR && me.item === 'shield', 'R로도 바꿈 (아이템 E 바로 옆)');
   keepPlace(me, 40, 0, 15); tap('ControlLeft');
   assert(me.shieldT > 9 && me.item === 'ball' && !me.item2, '왼쪽 Ctrl로 첫 칸을 쓰면 둘째 칸이 앞으로');
   me.item = 'triple'; me.itemN = 2; me.item2 = 'zap'; me.itemN2 = 1; tap('KeyQ');
@@ -1292,17 +1296,17 @@ console.log('\n[24] 새 아이템 열두 가지 (카트라이더·마리오카�
 // ---------- 25. 코스 장애물 ----------
 console.log('\n[25] 코스 장애물: 쿵쿵 돌 · 흔들 통나무 · 꽃게 · 사탕 공 · 광산 수레 · 자동차');
 {
-  const expect = { 4: ['stomp', 3, '쿵쿵 돌'], 5: ['swing', 3, '흔들 통나무'], 6: ['crab', 6, '꽃게'], 7: ['gum', 6, '사탕 공'], 8: ['cart', 3, '광산 수레'], 9: ['car', 6, '자동차'] };
+  const expect = { 4: [['stomp'], 3, '쿵쿵 돌'], 5: [['swing'], 3, '흔들 통나무'], 6: [['crab'], 6, '꽃게'], 7: [['gum'], 6, '사탕 공'], 8: [['cart'], 3, '광산 수레'], 9: [['car', 'bus', 'truck'], 8, '자동차·버스·트럭'] };
   const autoGas0 = KT.settings.autoGas;
   let demoHits = 0;
   for (const ci of [4, 5, 6, 7, 8, 9]) {
     KT.settings.course = ci; KT.settings.gp = 0; KT.settings.cpuLevel = 1; KT.settings.laps = 3; KT.toMenu(); KT.switchCourse(ci); KT.toMenu();
-    const H = KT.HAZ, [type, n, nm] = expect[ci], cname = KT.COURSE.name;
-    assert(H.length === n && H.every(z => z.type === type) && G3.haz[type] && G3.haz[type].count === n, `${cname}: ${nm} ${n}개 (3D도)`);
+    const H = KT.HAZ, [types, n, nm] = expect[ci], cname = KT.COURSE.name;
+    assert(H.length === n && H.every(z => types.includes(z.type)) && types.every(ty => G3.haz[ty] && G3.haz[ty].count === H.filter(z => z.type === ty).length), `${cname}: ${nm} ${n}개 (3D도)`);
     // 시범 레이스 80초: 끼이지 않고 잘 돎 (CPU도 가끔 맞음)
     G.stats.haz = {}; const r0 = G.stats.rescues, lapB = karts.map(k => k.lap);
     let bad = -1; run(80, j => { if (bad < 0 && !karts.every(finite)) bad = j; });
-    const hits = G.stats.haz[type] || 0; demoHits += hits;
+    const hits = types.reduce((a, ty) => a + (G.stats.haz[ty] || 0), 0); demoHits += hits;
     assert(bad < 0 && G.stats.rescues - r0 <= 2 && karts.every((k, i) => k.lap - lapB[i] >= 1), `${cname} 시범 80초: 끼이지 않고 돎 · CPU가 ${nm}에 ${hits}번 맞음`);
   }
   assert(demoHits > 10, `CPU도 장애물에 가끔 맞음 (모두 ${demoHits}번)`);
@@ -1354,11 +1358,32 @@ console.log('\n[25] 코스 장애물: 쿵쿵 돌 · 흔들 통나무 · 꽃게 �
     const s = KT.HZ.s + 30, lane = z.d;
     placeK(me, s, lane, 0);
     const hit = stillHit(me, 5), side = waitFor(0.8, () => Math.abs(me.d - lane) > 1.8);   // 차 옆으로 비켜날 만큼
-    assert(hit && side, '자동차: 같은 줄에 서 있으면 뒤에서 와서 들이받고 옆으로 튕겨 냄');
+    assert(hit && side, `${({ car: '자동차', bus: '버스', truck: '트럭' })[z.type]}: 같은 줄에 서 있으면 뒤에서 와서 들이받고 옆으로 튕겨 냄`);
   });
   KT.settings.autoGas = autoGas0; G.only = null;
   KT.settings.course = 0; KT.settings.laps = 3; KT.toMenu(); KT.switchCourse(0); KT.toMenu();
   assert(KT.HAZ.length === 0 && Object.keys(G3.haz || {}).length === 0, '기본 코스엔 장애물 없음');
+}
+
+// ---------- 26. 코스 모양 ----------
+console.log('\n[26] 코스 모양: 긴 직선을 줄이고 꼬불꼬불하게');
+{
+  const shapes = [];
+  for (const ci of [4, 5, 6, 7, 8, 9]) {
+    KT.settings.course = ci; KT.toMenu(); KT.switchCourse(ci); KT.toMenu();
+    const T2 = KT.TR;
+    let straight = 0, longest = 0, st = -1, turn = 0;
+    for (let i = 0; i <= T2.n; i++) {
+      const flat = i < T2.n && Math.abs(T2.curv[i]) < 0.006;
+      if (flat && st < 0) st = i;
+      if (!flat && st >= 0) { const len = (i - st) * T2.step; straight += len; longest = Math.max(longest, len); st = -1; }
+      if (i < T2.n) turn += Math.abs(T2.curv[i]) * T2.step;
+    }
+    shapes.push({ nm: KT.COURSE.name, straight: straight / T2.len, longest, turn: turn * 180 / Math.PI / T2.len * 100 });
+  }
+  assert(shapes.every(q => q.straight <= 0.41 && q.longest <= 150 && q.turn >= 78),
+    `도전 코스·큰 맵: 직선 41% 아래 · 가장 긴 직선 150m 아래 · 100m마다 78° 넘게 꺾임 (${shapes.map(q => `${q.nm} ${(q.straight * 100).toFixed(0)}%·${q.longest.toFixed(0)}m·${q.turn.toFixed(0)}°`).join(' / ')})`);
+  KT.settings.course = 0; KT.toMenu(); KT.switchCourse(0); KT.toMenu();
 }
 
 // ---------- 19. 그 밖 ----------

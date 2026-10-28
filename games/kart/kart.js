@@ -125,10 +125,17 @@ function setDemoPaused(on) {
 // ============================================================
 const TRACK = { halfW: 8, wall: 15 };
 // 직선·원호로 그린 코스 → 컨트롤 포인트 (직선은 14m, 원호는 11m쯤마다). ['L', x, z] = 그 점까지 직선, ['A', cx, cz, r, 시작각, 끝각] = 원호(도)
+//  ['W', x, z, 폭, 굽이 수] = 그 점까지 꼬불꼬불 (좌우로 폭 m까지 S자로 굽이침. 가운데가 가장 크고 양 끝은 앞뒤 길과 같은 방향으로 매끄럽게 이어짐.
+//   가장 급한 곳 곡률 ≤ 폭·π²·(굽이²+1)/길이² 라서 반지름 25m 넘게 하려면 폭 ≤ 0.04·길이²/(π²·(굽이²+1)))
 function pathCps(start, segs) {
   const pts = [], at = start.slice(), rad = d => d * Math.PI / 180;
   for (const sg of segs) {
     if (sg[0] === 'L') { const [, x, z] = sg, n = Math.max(1, Math.round(Math.hypot(x - at[0], z - at[1]) / 14)); for (let i = 0; i < n; i++) pts.push([at[0] + (x - at[0]) * i / n, at[1] + (z - at[1]) * i / n]); at[0] = x; at[1] = z; }
+    else if (sg[0] === 'W') {
+      const [, x, z, amp, waves] = sg, dx = x - at[0], dz = z - at[1], len = Math.hypot(dx, dz), n = Math.max(4, Math.round(len / 8));
+      for (let i = 0; i < n; i++) { const u = i / n, off = amp * Math.sin(waves * Math.PI * u) * Math.sin(Math.PI * u); pts.push([at[0] + dx * u - dz / len * off, at[1] + dz * u + dx / len * off]); }
+      at[0] = x; at[1] = z;
+    }
     else { const [, cx, cz, r, a0, a1] = sg, n = Math.max(2, Math.round(Math.abs(rad(a1 - a0)) * r / 11)); for (let i = 0; i < n; i++) { const a = rad(a0 + (a1 - a0) * i / n); pts.push([cx + r * Math.cos(a), cz + r * Math.sin(a)]); } at[0] = cx + r * Math.cos(rad(a1)); at[1] = cz + r * Math.sin(rad(a1)); }
   }
   return pts.map(([x, z]) => [Math.round(x * 10) / 10, Math.round(z * 10) / 10]);
@@ -161,14 +168,14 @@ const COURSES = [
     zones: [{ s: 150, len: 34, d0: -8.6, d1: -3.5, type: 'mud' }, { s: 380, len: 34, d0: -8.6, d1: -3.5, type: 'mud' }, { s: 516, len: 10, d0: -43, d1: 43, type: 'mud' }] },
   // 도전 코스: 한 바퀴 1.4km 8자. 대각선 다리(2층)가 아래 길 위를 지나감 · 지그재그 머리핀 둘(안쪽엔 용암 웅덩이) · 불기둥 · 용암 강 점프
   { name: '용암 성', en: 'LAVA CASTLE', fact: '길고 어려운 도전 코스 · 2층 다리 · 쿵쿵 돌 · 불기둥 · 용암 강 점프', lapSec: 65, theme: 'lava', song: 'lava', hard: true,
-    cps: pathCps([-40, 0], [['L', 50, 0], ['A', 50, 45, 45, -90, 45], ['L', -60, 218.6], ['A', -38.8, 239.8, 30, -135, -270], ['L', 30, 269.8],
+    cps: pathCps([-40, 0], [['L', 50, 0], ['A', 50, 45, 45, -90, 45], ['W', -60, 218.6, 7, 3], ['A', -38.8, 239.8, 30, -135, -270], ['L', 30, 269.8],
       ['A', 30, 295.8, 26, -90, 90], ['L', -40, 321.8], ['A', -40, 347.8, 26, -90, -270], ['L', 80, 373.8], ['A', 80, 338.8, 35, 90, 0], ['L', 115, 308.1],
-      ['A', 80, 308.1, 35, 0, -45], ['L', -101.8, 76.8], ['A', -70, 45, 45, 135, 270], ['L', -40, 0]]),
-    bumps: [{ s: 326, flat: 34, ramp: 60, h: 7 }],   // 다리: s 326에서 s 1164 길 위를 7m 높이로 지나감 (앞뒤 34m 평평 + 60m 오르막·내리막)
-    ramp: { s: 820, len: 12, h: 2.0 }, panels: [630, 805, 1030], boxRows: [60, 785, 1060],
-    zones: [{ s: 556, len: 40, d0: 5.4, d1: 8.6, type: 'lava' }, { s: 707, len: 40, d0: -8.6, d1: -5.4, type: 'lava' }, { s: 836, len: 10, d0: -36, d1: 36, type: 'lava' }],
-    jets: [{ s: 495, d: -3.6, phase: 0 }, { s: 515, d: 3.6, phase: 1.7 }, { s: 655, d: 0, phase: 0.9 }, { s: 1085, d: -4, phase: 2.4 }, { s: 1105, d: 4, phase: 0.6 }],
-    hazards: [{ type: 'stomp', s: 1212, d: -4, phase: 0 }, { type: 'stomp', s: 1234, d: 0, phase: 1.13 }, { type: 'stomp', s: 1256, d: 4, phase: 2.27 }] },   // 성 앞 쿵쿵 돌 셋
+      ['A', 80, 308.1, 35, 0, -45], ['W', -101.8, 76.8, 11, 5], ['A', -70, 45, 45, 135, 270], ['L', -40, 0]]),   // 다리 대각선은 살짝, 긴 아래 대각선은 S자 굽이 다섯
+    bumps: [{ s: 328, flat: 34, ramp: 61, h: 7 }],   // 다리: s 328에서 s 1170 길 위를 7m 높이로 지나감 (앞뒤 34m 평평 + 61m 오르막·내리막)
+    ramp: { s: 823, len: 12, h: 2.0 }, panels: [633, 808, 1034], boxRows: [60, 788, 1066],
+    zones: [{ s: 559, len: 40, d0: 5.4, d1: 8.6, type: 'lava' }, { s: 710, len: 40, d0: -8.6, d1: -5.4, type: 'lava' }, { s: 839, len: 10, d0: -36, d1: 36, type: 'lava' }],
+    jets: [{ s: 498, d: -3.6, phase: 0 }, { s: 518, d: 3.6, phase: 1.7 }, { s: 658, d: 0, phase: 0.9 }, { s: 1092, d: -4, phase: 2.4 }, { s: 1112, d: 4, phase: 0.6 }],
+    hazards: [{ type: 'stomp', s: 1224, d: -4, phase: 0 }, { type: 'stomp', s: 1247, d: 0, phase: 1.13 }, { type: 'stomp', s: 1270, d: 4, phase: 2.27 }] },   // 성 앞 쿵쿵 돌 셋
   // 도전 코스: 숲 속 꼬임 길. 빙글 도는 고리(왼쪽·오른쪽)를 돌아 오르며 방금 지나온 길 위를 다리로 두 번 건넘 · 고리 안쪽 진흙 웅덩이 · 큰 U턴 · 개울 점프
   { name: '구름다리 숲', en: 'CLOUD BRIDGE FOREST', fact: '길고 어려운 도전 코스 · 빙글 고리 둘 · 흔들 통나무 · 개울 점프', lapSec: 65, theme: 'forest', song: 'forest', hard: true,
     cps: pathCps([-40, 0], [['L', 70, 0], ['A', 70, 40, 40, -90, 0], ['L', 110, 80], ['A', 145, 80, 35, 180, -90], ['L', 55, 45], ['A', 55, 75, 30, -90, -180],
@@ -183,21 +190,22 @@ const COURSES = [
     cps: pathCps([-40, 0], [['L', 80, 0], ['A', 80, 40, 40, -90, 0], ['L', 120, 160], ['A', 80, 160, 40, 0, 90], ['A', 80, 230, 30, -90, -180], ['L', 50, 260],
       ['A', 25, 260, 25, 0, 180], ['L', 0, 230], ['A', -30, 230, 30, 0, -90], ['L', -90, 200], ['A', -90, 160, 40, 90, 180], ['L', -130, 100],
       ['A', -90, 100, 40, 180, 305], ['A', -44.11, 34.47, 40, 125, 55], ['A', 1.77, 100, 40, 235, 270], ['L', 11.77, 60], ['A', 11.77, 90, 30, -90, 0],
-      ['L', 41.77, 100], ['A', 11.77, 100, 30, 0, 90], ['L', -168.23, 130], ['A', -168.23, 90, 40, 90, 180], ['L', -208.23, 40], ['A', -168.23, 40, 40, 180, 270], ['L', -40, 0]]),
-    bumps: [{ s: 1198, flat: 22, ramp: 60, h: 7 }],   // 긴 다리: 감긴 길을 빠져나가며 s 750 바깥 길 위를 7m 높이로
-    ramp: { s: 228, len: 12, h: 2.0 }, panels: [625, 890, 1198], boxRows: [60, 735, 1095],
+      ['L', 41.77, 100], ['A', 11.77, 100, 30, 0, 90], ['W', -168.23, 130, 7, 4], ['A', -168.23, 90, 40, 90, 180], ['L', -208.23, 40], ['A', -168.23, 40, 40, 180, 270],
+      ['W', -84, 0, 5, 2], ['L', -40, 0]]),   // 긴 다리도 굽이굽이, 출발선 앞 직선은 S자로
+    bumps: [{ s: 1202, flat: 23, ramp: 62, h: 7 }],   // 긴 다리: 감긴 길을 빠져나가며 s 749 바깥 길 위를 7m 높이로
+    ramp: { s: 228, len: 12, h: 2.0 }, panels: [625, 890, 1202], boxRows: [60, 735, 1096],
     zones: [{ s: 244, len: 11, d0: -43, d1: 43, type: 'water' }, { s: 462, len: 40, d0: 4.6, d1: 8.6, type: 'water' }, { s: 958, len: 30, d0: 4.6, d1: 8.6, type: 'water' }],
-    hazards: [745, 761, 1310, 1326, 1445, 1461].map((s, i) => ({ type: 'crab', s, phase: (i % 2) * 5 + Math.floor(i / 2) * 1.7 })) },   // 길을 건너는 꽃게 두 마리씩 세 무리 (서로 엇갈려 걸음)
+    hazards: [745, 761, 1316, 1332, 1451, 1467].map((s, i) => ({ type: 'crab', s, phase: (i % 2) * 5 + Math.floor(i / 2) * 1.7 })) },   // 길을 건너는 꽃게 두 마리씩 세 무리 (서로 엇갈려 걸음)
   // 도전 코스: 사탕 롤러코스터. 출발하자마자 높은 다리로 올라가 8자 한가운데를 건너고, 가파른 언덕 셋에선 붕 떠서 트릭 · 머리핀 혀 · 초콜릿 강 점프
   { name: '사탕 롤러코스터', en: 'CANDY COASTER', fact: '길고 어려운 도전 코스 · 언덕에서 붕! 트릭 · 사탕 공 · 8자 다리', lapSec: 68, theme: 'coaster', song: 'coaster', hard: true,
-    cps: pathCps([-40, 0], [['L', 33.43, 0], ['A', 33.43, 40, 40, -90, -45], ['L', 158.28, 108.28], ['A', 186.57, 80, 40, 135, 90], ['L', 206.57, 120],
+    cps: pathCps([-40, 0], [['L', 33.43, 0], ['A', 33.43, 40, 40, -90, -45], ['W', 158.28, 108.28, 8, 2], ['A', 186.57, 80, 40, 135, 90], ['L', 206.57, 120],
       ['A', 206.57, 150, 30, -90, 0], ['L', 236.57, 190], ['A', 261.57, 190, 25, 180, 0], ['L', 286.57, 150], ['A', 316.57, 150, 30, 180, 270], ['L', 326.57, 120],
-      ['A', 326.57, 80, 40, 90, 0], ['L', 366.57, 40], ['A', 326.57, 40, 40, 0, -90], ['L', 186.57, 0], ['A', 186.57, 40, 40, -90, -135], ['L', 61.72, 108.28],
-      ['A', 33.43, 80, 40, 45, 90], ['L', -130, 120], ['A', -130, 80, 40, 90, 180], ['L', -170, 40], ['A', -130, 40, 40, 180, 270], ['L', -40, 0]]),
-    bumps: [{ s: 173, flat: 22, ramp: 60, h: 7 }, { s: 790, flat: 0, ramp: 20, h: 4.5 }, { s: 1105, flat: 0, ramp: 20, h: 4.5 }, { s: 1180, flat: 0, ramp: 20, h: 4.5 }],   // 다리 하나(8자 가운데) + 붕 뜨는 언덕 셋
-    ramp: { s: 828, len: 11, h: 1.8 }, panels: [520, 1000, 1142], boxRows: [60, 640, 1310],
-    zones: [{ s: 395, len: 40, d0: -8.6, d1: -4.6, type: 'mud' }, { s: 843, len: 10, d0: -43, d1: 43, type: 'mud' }],
-    hazards: [[930, 0], [930, 3.14], [975, 1.6], [975, 4.74], [1430, 0.8], [1430, 3.94]].map(([s, phase]) => ({ type: 'gum', s, phase })) },   // 길을 굴러 건너는 사탕 공 (두 개씩 엇갈려)
+      ['A', 326.57, 80, 40, 90, 0], ['L', 366.57, 40], ['A', 326.57, 40, 40, 0, -90], ['L', 186.57, 0], ['A', 186.57, 40, 40, -90, -135], ['W', 61.72, 108.28, 10, 2],
+      ['A', 33.43, 80, 40, 45, 90], ['W', -130, 120, 8, 3], ['A', -130, 80, 40, 90, 180], ['L', -170, 40], ['A', -130, 40, 40, 180, 270], ['L', -40, 0]]),   // 8자 두 대각선은 S자(가운데 엇갈리는 곳은 곧게), 언덕 셋 길도 굽이굽이
+    bumps: [{ s: 174, flat: 22, ramp: 61, h: 7 }, { s: 793, flat: 0, ramp: 20, h: 4.5 }, { s: 1114, flat: 0, ramp: 21, h: 4.5 }, { s: 1191, flat: 0, ramp: 21, h: 4.5 }],   // 다리 하나(8자 가운데) + 붕 뜨는 언덕 셋
+    ramp: { s: 831, len: 11, h: 1.8 }, panels: [523, 1006, 1152], boxRows: [60, 643, 1322],
+    zones: [{ s: 398, len: 40, d0: -8.6, d1: -4.6, type: 'mud' }, { s: 846, len: 10, d0: -43, d1: 43, type: 'mud' }],
+    hazards: [[934, 0], [934, 3.14], [980, 1.6], [980, 4.74], [1442, 0.8], [1442, 3.94]].map(([s, phase]) => ({ type: 'gum', s, phase })) },   // 길을 굴러 건너는 사탕 공 (두 개씩 엇갈려)
   // 아주 큰 도전 코스: 카트라이더처럼 길고 복잡하게. 메사를 빙 도는 길 · ㄹ자 연속 커브 · 나선형 오르막 · 높은 능선길(점프 + 모래 구덩이) · 지그재그 내리막 · 호수를 도는 길
   //  지름길 둘: 메사를 뚫은 광산 굴(모래늪을 이리저리 피하며) · 호수를 가로지르는 점프 (못 넘으면 첨벙)
   { name: '모래 협곡 광산', en: 'CANYON MINE', fact: '아주 큰 도전 코스 · 지름길 둘 · 나선 오르막 · 광산 수레', lapSec: 105, theme: 'canyon', song: 'canyon', hard: true, big: true,
@@ -218,17 +226,18 @@ const COURSES = [
         ramp: { s: 88, len: 10, h: 1.8 }, zones: [{ s: 102, len: 12, d0: -8.5, d1: 8.5, type: 'water' }] },
     ] },
   // 아주 큰 도전 코스: 빌딩 사이 직각 커브 · 거리 둘을 건너는 8m 고가도로 · ㄷ자 블록을 도는 길 (그 가운데를 꿰뚫는 골목 지름길: 기름 웅덩이 슬라롬) · 물바다 점프
-  { name: '빌딩 고가도로', en: 'SKYWAY CITY', fact: '아주 큰 도전 코스 · 고가도로 · 골목 지름길 · 자동차', lapSec: 92, theme: 'city', song: 'city', hard: true, big: true,
-    cps: pathCps([-40, 0], [['L', 60, 0], ['A', 60, 30, 30, -90, 0], ['L', 90, 270], ['A', 120, 270, 30, 180, 90], ['L', 170, 300], ['A', 170, 330, 30, -90, 0],
-      ['A', 230, 330, 30, 180, 90], ['L', 270, 360], ['A', 270, 330, 30, 90, 0], ['A', 330, 330, 30, 180, 270], ['L', 360, 300], ['A', 360, 270, 30, 90, 0],
-      ['L', 390, 210], ['A', 360, 210, 30, 0, -90], ['L', -160, 180], ['A', -160, 210, 30, -90, -180], ['L', -190, 270], ['A', -160, 270, 30, 180, 90],
-      ['L', -130, 300], ['A', -130, 270, 30, 90, 0], ['L', -100, 30], ['A', -70, 30, 30, 180, 270], ['L', -40, 0]]),
-    bumps: [{ s: 1175, flat: 205, ramp: 70, h: 8 }],   // 고가도로: 거리 둘(s 295 · 1735) 위를 8m 높이로
-    ramp: { s: 1680, len: 12, h: 2.0 }, panels: [250, 1050, 1850], boxRows: [60, 300, 1200],
-    zones: [{ s: 1696, len: 12, d0: -8.6, d1: 8.6, type: 'water' }, { s: 395, len: 30, d0: -8.6, d1: -4.6, type: 'oil' }, { s: 1893, len: 30, d0: 4.6, d1: 8.6, type: 'oil' }],
-    hazards: [-4.5, 4.5, 0, 4.5, -4.5, 0].map((d, i) => ({ type: 'car', d, a: 160, b: 1880, phase: i * 1720 / 12 / 6, color: ['#f6c945', '#e5484d', '#5ec8ff', '#7ae0b0', '#ff9ad5', '#ffffff'][i] })),   // 같은 쪽으로 느리게 달리는 자동차 여섯
+  { name: '빌딩 고가도로', en: 'SKYWAY CITY', fact: '아주 큰 도전 코스 · 굽은 고가도로 · 골목 지름길 · 버스·트럭', lapSec: 92, theme: 'city', song: 'city', hard: true, big: true,
+    cps: pathCps([-40, 0], [['L', 60, 0], ['A', 60, 30, 30, -90, 0], ['W', 90, 160, 9, 2], ['L', 90, 200], ['W', 90, 270, 8, 1], ['A', 120, 270, 30, 180, 90], ['L', 170, 300],
+      ['A', 170, 330, 30, -90, 0], ['A', 230, 330, 30, 180, 90], ['L', 270, 360], ['A', 270, 330, 30, 90, 0], ['A', 330, 330, 30, 180, 270], ['L', 360, 300], ['A', 360, 270, 30, 90, 0],
+      ['L', 390, 210], ['A', 360, 210, 30, 0, -90], ['W', 140, 180, 11, 3], ['W', 40, 180, 6, 2], ['W', -60, 180, 7, 2], ['L', -160, 180], ['A', -160, 210, 30, -90, -180],
+      ['L', -190, 270], ['A', -160, 270, 30, 180, 90], ['L', -130, 300], ['A', -130, 270, 30, 90, 0], ['L', -100, 160], ['W', -100, 30, 9, 2], ['A', -70, 30, 30, 180, 270], ['L', -40, 0]]),
+    bumps: [{ s: 1187, flat: 210, ramp: 72, h: 8 }],   // 고가도로: 거리 둘(s 301 · 1755) 위를 8m 높이로
+    ramp: { s: 1698, len: 12, h: 2.0 }, panels: [253, 1059, 1871], boxRows: [60, 304, 1213],
+    zones: [{ s: 1714, len: 12, d0: -8.6, d1: 8.6, type: 'water' }, { s: 401, len: 30, d0: -8.6, d1: -4.6, type: 'oil' }, { s: 1914, len: 30, d0: 4.6, d1: 8.6, type: 'oil' }],
+    hazards: [['bus', -5, '#f6c945'], ['car', 5, '#e5484d'], ['truck', -5, '#ff9a3d'], ['car', 5, '#5ec8ff'], ['bus', 5, '#4cc38a'], ['car', -5, '#ff9ad5'], ['truck', 5, '#e5484d'], ['car', -5, '#ffffff']]
+      .map(([type, d, color], i) => ({ type, d, a: 160, b: 1901, phase: i * 1741 / 12 / 8, color })),   // 같은 쪽으로 느리게 달리는 자동차 넷 · 버스 둘 · 트럭 둘 (양쪽 줄로만, 가운데는 비워 둠)
     cuts: [
-      { name: '골목길', from: 444, to: 732, via: [[190, 300], [255, 302], [320, 300]], half: 4.5, wall: 7.5, style: 'alley', boxes: [145], panels: [165],
+      { name: '골목길', from: 450, to: 738, via: [[190, 300], [255, 302], [320, 300]], half: 4.5, wall: 7.5, style: 'alley', boxes: [145], panels: [165],
         zones: [{ s: 92, len: 14, d0: 0.4, d1: 4.5, type: 'oil' }, { s: 118, len: 14, d0: -4.5, d1: -0.4, type: 'oil' }] },
     ] },
 ];
@@ -236,7 +245,7 @@ const JET = { period: 3.6, warn: 0.7, on: 1.2, r: 2.3 };   // 불기둥: 3.6초�
 // 코스 장애물 (도전 코스 · 아주 큰 맵): 자리가 시간만으로 정해짐 (기억해 둘 상태가 없어서 CPU가 지나갈 무렵의 자리를 미리 알고 피함). 닿으면 빙글
 //  stomp 쿵쿵 돌 (용암 성: 6m 위에서 내려찍고 잠깐 머물렀다 올라감) · swing 흔들 통나무 (구름다리 숲: 7m 줄에 매달려 길을 가로질러 흔들림)
 //  crab 꽃게 (소라 해안: 옆으로 걸어 길을 건넘, 점프로 넘을 수 있음) · gum 사탕 공 (사탕 롤러코스터: 길을 굴러 건넘)
-//  cart 광산 수레 (모래 협곡: 선로로 길을 건너고 양 끝에서 잠깐 쉼) · car 자동차 (빌딩 고가도로: 옆길에서 들어와 같은 쪽으로 느리게 달리다 다시 옆길로)
+//  cart 광산 수레 (모래 협곡: 선로로 길을 건너고 양 끝에서 잠깐 쉼) · car 자동차 · bus 버스 · truck 트럭 (빌딩 고가도로: 옆길에서 들어와 같은 쪽으로 느리게 달리다 다시 옆길로, drive)
 //  ls · ld: 길을 따라 · 길을 가로질러 반 크기 (닿는 범위)
 const HAZ_KIND = {
   stomp: { ls: 2.1, ld: 2.1, period: 3.4 },
@@ -244,7 +253,9 @@ const HAZ_KIND = {
   crab: { ls: 0.6, ld: 0.75, speed: 3, span: 7.5, wait: 0, low: true },
   gum: { ls: 1.35, ld: 1.35, speed: 7, span: 11, wait: 0 },
   cart: { ls: 0.75, ld: 1.15, speed: 9, span: 13, wait: 0.9 },
-  car: { ls: 2.0, ld: 1.0, speed: 12 },
+  car: { ls: 2.0, ld: 1.0, speed: 12, drive: true },
+  bus: { ls: 4.3, ld: 1.3, speed: 12, drive: true },
+  truck: { ls: 3.6, ld: 1.25, speed: 12, drive: true },
 };
 let HAZ = [];
 const HZ = { s: 0, d: 0, y: 0, hot: false, vd: 0, th: 0 };   // hazAt 결과 (돌려 씀)
@@ -259,7 +270,7 @@ function hazAt(z, t, out = HZ) {   // 시각 t의 장애물 자리: s(지름길�
     const w = Math.PI * 2 / K.period, th = 1.15 * Math.sin(u * w);
     out.th = th; out.d = 7 * Math.sin(th); out.y = 8 - 7 * Math.cos(th); out.hot = out.y < 2.3;
     out.vd = 7 * Math.cos(th) * 1.15 * Math.cos(u * w) * w;
-  } else if (z.type === 'car') {
+  } else if (K.drive) {
     const len = wrapS(z.b - z.a), q = ((u * K.speed) % len + len) % len, e = Math.min(q, len - q), side = z.d >= 0 ? 1 : -1;
     out.s = wrapS(z.a + q);
     out.d = e < 14 ? z.d + (side * 13 - z.d) * (1 - e / 14) : z.d;   // 처음·끝 14m: 옆길로 들어오고 나감
@@ -567,7 +578,7 @@ function makeKart(slot, ch, human) {
   return { slot, ch, human, color: human >= 0 ? COLORS[human] : CHARS[ch].body,
     x: 0, y: 0, z: 0, a: 0, v: 0, vl: 0, vy: 0, vyG: 0, air: false, hop: false, rampAir: false, hillAir: false, trick: false, trickT: -9,
     steer: 0, drift: null, driftArm: false, prevDrift: false, prevItem: false, boostT: 0, boostFx: 0, spinT: 0, spinAt: -9, immuneT: 0, panelT: 0,
-    item: null, itemN: 0, item2: null, itemN2: 0, swapAt: -9, prevSwap: false, roulT: 0, roulTick: 0, lap: 0, s: 0, d: 0, seg: -1, prog: 0, place: 1, finished: false, finishT: 0,
+    item: null, itemN: 0, item2: null, itemN2: 0, swapAt: -9, prevSwap: false, swapHint: false, roulT: 0, roulTick: 0, lap: 0, s: 0, d: 0, seg: -1, prog: 0, place: 1, finished: false, finishT: 0,
     cut: -1, cs: 0, cd: 0, cseg: 0,   // 지름길 위면 그 번호와 지름길 위 자리
     lapMax: 0, lapT0: 0, bestLap: 0, newLap: false, newRace: false,
     shieldT: 0, magnetT: 0, magnetTarget: null, paintT: 0, paintAt: -9, boltFx: -9, frozenT: 0,
@@ -632,7 +643,7 @@ function endDrift(k, released) {
 }
 const HIT_MSG = { trap: '미끄덩!', zap: '찌릿!', ball: '통!', bolt: '번쩍!', star: '빙글!', lava: '앗 뜨거!', fire: '앗 뜨거!', rocket: '쾅!', tornado: '휘이잉!', snow: '꽁꽁!', bomb: '꽝!',
   fake: '가짜였어!', horn: '빵빵!', ufo: '끌려가요!', plane: '부웅 쾅!', boomerang: '휙 퍽!', cloud: '번쩍 우르릉!', shrink: '쪼그매졌어!', barricade: '쿵!', pow: '쿵!', water: '뽀글뽀글!', squash: '납작!',
-  stomp: '쿵쿵!', swing: '꽝!', crab: '꼬집!', gum: '통!', cart: '덜컹!', car: '빵!' };
+  stomp: '쿵쿵!', swing: '꽝!', crab: '꼬집!', gum: '통!', cart: '덜컹!', car: '빵!', bus: '빵빵!', truck: '부릉 쾅!' };
 const immune = k => k.starT > 0 || k.ghostT > 0 || k.planeT > 0;   // 반짝 별 · 꼬마 유령 · 꼬마 비행기: 아무것도 안 통함
 // 맞으면 빙글: true. 별·무적이면 그냥 false, 보호막이 대신 터지면 'block'
 function spinOut(k, why) {
@@ -793,9 +804,10 @@ function hazDodge(k, target, road, lim) {
   for (let i = 0; i < HAZ.length; i++) {
     const z = HAZ[i];
     if (z.cut !== road) continue;
-    if (z.type === 'car') {
+    const K = HAZ_KIND[z.type];
+    if (K.drive) {   // 앞(또는 바로 옆)의 느린 차는 옆 줄로 비켜 감 (버스·트럭은 길어서 더 일찍)
       hazAt(z, t); const ds = road >= 0 ? HZ.s - k.cs : sdiff(HZ.s, k.s);
-      if (ds > -3 && ds < 26 && seesHaz(k, i)) blocks.push([HZ.d - 2.9, HZ.d + 2.9]);
+      if (ds > -K.ls - 1.5 && ds < 26 + K.ls && seesHaz(k, i)) blocks.push([HZ.d - K.ld - 1.9, HZ.d + K.ld + 1.9]);
       continue;
     }
     const ds = road >= 0 ? z.cs - k.cs : sdiff(z.s, k.s);
@@ -803,7 +815,7 @@ function hazDodge(k, target, road, lim) {
   }
   if (near >= 0) for (let i = 0; i < HAZ.length; i++) {   // 가장 가까운 장애물과 그 뒤 14m 안의 것: 지나갈 무렵의 자리를 피해서
     const z = HAZ[i];
-    if (z.cut !== road || z.type === 'car' || !seesHaz(k, i)) continue;
+    if (z.cut !== road || HAZ_KIND[z.type].drive || !seesHaz(k, i)) continue;
     const ds = road >= 0 ? z.cs - k.cs : sdiff(z.s, k.s);
     if (ds < nd - 0.01 || ds > nd + 14) continue;
     const K = HAZ_KIND[z.type], ta = t + Math.max(0, ds) / Math.max(8, k.v);
@@ -879,6 +891,7 @@ function driveKart(k, c, h) {
       const it = rollItem(k), n = ITEMS[it].n || 1;
       if (!k.item) { k.item = it; k.itemN = n; } else { k.item2 = it; k.itemN2 = n; }   // 굴리는 동안 첫 칸을 썼으면 첫 칸으로
       if (k.human >= 0) sfx('itemGet'); k.ai.itemAt = T() + rand(0.6, 2.2) + (2 - settings.cpuLevel) * 0.8;
+      if (k.human >= 0 && k.item && k.item2 && !k.swapHint && !game.demo) { k.swapHint = true; showMsg(k.human, '아이템 두 칸!', '#ffd166', `${swapKey(k.human)} = 먼저 쓸 아이템 바꾸기`); }   // 레이스마다 처음 한 번
     }
   }
   let steer = c.steer, gas = c.gas, brake = c.brake;
@@ -1481,7 +1494,7 @@ function updateHazards(t) {
       if (spinOut(k, z.type) !== true) continue;
       const hs = game.stats.haz || (game.stats.haz = {}); hs[z.type] = (hs[z.type] || 0) + 1;   // 테스트·균형 맞추기용
       if (z.type === 'stomp') { k.flatT = 1.6; if (k.human >= 0) sfx('squash'); }   // 쿵쿵 돌에 깔리면 납작
-      else if (z.type === 'swing' || z.type === 'car') {   // 통나무가 흔들리는 쪽 · 자동차 옆으로 튕겨 나감
+      else if (z.type === 'swing' || K.drive) {   // 통나무가 흔들리는 쪽 · 자동차·버스·트럭 옆으로 튕겨 나감
         const p = C ? pathPoint(C.P, HZ.s, 0) : trackPoint(HZ.s, 0), sg = z.type === 'swing' ? Math.sign(HZ.vd) || 1 : Math.sign(k.d - HZ.d) || 1;
         push(k, -p.tz * sg * 11, p.tx * sg * 11);
       }
@@ -1843,7 +1856,7 @@ function countdown(t) {
 // ============================================================
 const keys = new Set();
 const KB = [
-  { left: ['KeyA'], right: ['KeyD'], gas: ['KeyW'], brake: ['KeyS'], drift: ['Space', 'ShiftLeft'], item: ['ControlLeft', 'KeyE'], swap: ['KeyQ'] },
+  { left: ['KeyA'], right: ['KeyD'], gas: ['KeyW'], brake: ['KeyS'], drift: ['Space', 'ShiftLeft'], item: ['ControlLeft', 'KeyE'], swap: ['KeyQ', 'KeyR'] },
   { left: ['ArrowLeft', 'KeyJ'], right: ['ArrowRight', 'KeyL'], gas: ['ArrowUp', 'KeyI'], brake: ['ArrowDown', 'KeyK'], drift: ['ShiftRight', 'Slash', 'KeyU'], item: ['ControlRight', 'Period', 'KeyO'], swap: ['Comma', 'KeyP'] },
 ];
 const GAME_KEYS = new Set(KB.flatMap(m => Object.values(m).flat()));
@@ -2235,6 +2248,12 @@ function updateSelectHints() {
 // ============================================================
 // 메뉴 UI
 // ============================================================
+// 아이템 두 칸 순서 바꾸기 버튼 이름 (그 사람이 쓰는 것으로)
+function swapKey(p) {
+  if (JC.list.some(j => j.ok && j.player === p)) return '스틱 누르기';
+  if (game.padCount > (settings.mode === '1p' ? 0 : p)) return '십자키 ↑↓';
+  return p === 0 ? 'Q · R' : ', · P';
+}
 function inputLabel(pi) {
   const j = JC.list.find(j => j.player === pi);
   if (j) return j.name;
@@ -3024,7 +3043,25 @@ function buildHazards(Sc) {
     car.push({ geo: bx, matrix: partM(x * 0.62, 0.85, 2.01, 0, 0, 0, 0.42, 0.2, 0.04), color: C('#fff6c2') }, { geo: bx, matrix: partM(x * 0.62, 0.85, -2.01, 0, 0, 0, 0.42, 0.2, 0.04), color: C('#ff4d4d') });
   }
   mk('car', car);
-  if (G3.haz.car) HAZ.filter(z => z.type === 'car').forEach((z, i) => G3.haz.car.setColorAt(i, new THREE.Color(z.color || '#ffffff')));
+  // 버스: 긴 몸통(버스마다 색) + 창 띠 + 앞 유리·행선판 + 지붕 냉방기 + 바퀴 넷
+  const bus = [{ geo: bx, matrix: partM(0, 1.65, 0, 0, 0, 0, 2.5, 2.4, 8.6), color: C('#ffffff') }, { geo: bx, matrix: partM(0, 0.55, 0, 0, 0, 0, 2.52, 0.5, 8.62), color: C('#3b3f52') },
+    { geo: bx, matrix: partM(0, 2.05, -0.3, 0, 0, 0, 2.54, 0.8, 7.4), color: C('#56657a') }, { geo: bx, matrix: partM(0, 2.0, 4.31, 0, 0, 0, 2.3, 1.1, 0.06), color: C('#9cc3dd') },
+    { geo: bx, matrix: partM(0, 2.75, 4.32, 0, 0, 0, 1.6, 0.35, 0.06), color: C('#ffe08a') }, { geo: bx, matrix: partM(0, 2.98, -1.5, 0, 0, 0, 1.4, 0.3, 2.4), color: C('#e8edf2') }];
+  for (const x of [-1.15, 1.15]) {
+    for (const z of [-2.9, 2.9]) bus.push({ geo: cy, matrix: partM(x, 0.5, z, 0, 0, Math.PI / 2, 0.5, 0.3, 0.5), color: C('#23252e') });
+    bus.push({ geo: bx, matrix: partM(x * 0.74, 0.9, 4.31, 0, 0, 0, 0.42, 0.22, 0.04), color: C('#fff6c2') }, { geo: bx, matrix: partM(x * 0.82, 1.0, -4.31, 0, 0, 0, 0.36, 0.3, 0.04), color: C('#ff4d4d') });
+  }
+  mk('bus', bus);
+  // 트럭: 운전칸(트럭마다 색) + 짐칸 + 띠 + 바퀴 여섯
+  const truck = [{ geo: bx, matrix: partM(0, 1.5, 2.6, 0, 0, 0, 2.3, 2.0, 1.9), color: C('#ffffff') }, { geo: bx, matrix: partM(0, 2.0, 3.56, 0, 0, 0, 2.1, 0.75, 0.06), color: C('#9cc3dd') },
+    { geo: bx, matrix: partM(0, 1.95, -0.95, 0, 0, 0, 2.45, 2.7, 5.0), color: C('#f2f4f6') }, { geo: bx, matrix: partM(0, 1.4, -0.95, 0, 0, 0, 2.47, 0.35, 4.9), color: C('#ffffff') },
+    { geo: bx, matrix: partM(0, 0.55, 0, 0, 0, 0, 2.2, 0.35, 7.0), color: C('#3b3f52') }];
+  for (const x of [-1.1, 1.1]) {
+    for (const z of [2.6, -0.6, -2.6]) truck.push({ geo: cy, matrix: partM(x, 0.48, z, 0, 0, Math.PI / 2, 0.48, 0.3, 0.48), color: C('#23252e') });
+    truck.push({ geo: bx, matrix: partM(x * 0.73, 0.9, 3.56, 0, 0, 0, 0.4, 0.22, 0.04), color: C('#fff6c2') }, { geo: bx, matrix: partM(x * 0.9, 0.9, -3.47, 0, 0, 0, 0.36, 0.3, 0.04), color: C('#ff4d4d') });
+  }
+  mk('truck', truck);
+  for (const type of ['car', 'bus', 'truck']) if (G3.haz[type]) HAZ.filter(z => z.type === type).forEach((z, i) => G3.haz[type].setColorAt(i, new THREE.Color(z.color || '#ffffff')));
   // 안 움직이는 것: 통나무 틀 · 수레 선로
   for (const z of HAZ) {
     const Cc = z.cut >= 0 ? CUTS[z.cut] : null, at = (s, d) => { const p = Cc ? pathPoint(Cc.P, s, d) : trackPoint(s, d); return { x: p.x, z: p.z, a: Math.atan2(p.tx, p.tz), y: Cc ? cutGround(Cc, s, d) : groundAt(s, d) }; };
@@ -3060,7 +3097,7 @@ function syncHazards(t) {
         K.m.compose(K.v.set(w.x + shake, w.y + HZ.y, w.z), K.q, K.w.set(1, 1, 1));
       } else if (z.type === 'gum') { E.set(0, w.a, -HZ.d / 1.35); K.q.setFromEuler(E); K.m.compose(K.v.set(w.x, w.y + 1.35, w.z), K.q, K.w.set(1, 1, 1)); }   // 구르며 건넘
       else if (z.type === 'crab') { K.e.set(0, w.a, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(w.x, w.y + Math.abs(Math.sin(t * 14 + i)) * 0.08, w.z), K.q, K.w.set(1, 1, 1)); }
-      else { K.e.set(0, w.a, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(w.x, w.y + (z.type === 'car' ? Math.abs(Math.sin(t * 9 + i)) * 0.03 : 0), w.z), K.q, K.w.set(1, 1, 1)); }
+      else { K.e.set(0, w.a, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(w.x, w.y + (HAZ_KIND[z.type].drive ? Math.abs(Math.sin(t * 9 + i)) * 0.03 : 0), w.z), K.q, K.w.set(1, 1, 1)); }
     }
     m.setMatrixAt(i, K.m);
   }
@@ -4543,7 +4580,7 @@ function drawView(g, r, p, cs, two, t) {
   const badge = (x, y, n, rad) => { g.fillStyle = HUD.orange; g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill(); g.textAlign = 'center'; g.font = `900 ${rad * 1.2}px ${FONT}`; g.fillStyle = HUD.cream; g.fillText(`×${n}`, x, y); };
   if (rolling !== 1 && it1 && ITEMS[it1].n) badge(bx + 82 * u, by + 108 * u, k.itemN, 14 * u);   // 남은 개수 배지 (불꽃 대시 ×3 · 줄줄이 함정 · 부메랑)
   if (rolling !== 2 && it2 && ITEMS[it2].n) badge(bx + 138 * u, by + 110 * u, k.itemN2, 10 * u);
-  g.textAlign = 'left'; hudLabel(g, k.roulT > 0 ? 'ITEM ROULETTE' : it2 ? 'ITEM  ⇄' : 'ITEM', bx + 160 * u, by + 65 * u, u);
+  g.textAlign = 'left'; hudLabel(g, k.roulT > 0 ? 'ITEM ROULETTE' : it2 ? `ITEM  ⇄ ${swapKey(p)}` : 'ITEM', bx + 160 * u, by + 65 * u, u);
   g.font = `800 ${24 * u}px ${FONT}`; g.fillStyle = HUD.cream;
   g.fillText(rolling === 1 ? '아이템 고르는 중' : it1 ? itemLabel(it1, k.itemN) : '상자를 지나 보세요', bx + 160 * u, by + 98 * u, 220 * u);
   // 바퀴와 시간: 동일한 카드 안에서 작은 라벨과 큰 숫자로 구분.
@@ -4833,6 +4870,6 @@ window.__KT = { game, karts, settings, T, update, render: renderFrame, startRace
   COURSES, switchCourse, DRIFT, ITEMS, ITEM_KEYS, ATTACK, gp, CUPS, GP_POINTS, resultNext, pathPoint, fmtTime, rockets, tornados, snowballs, bombs, ufos, boomerangs, waters, pows, horns, itemLabel, freezeOut, hitBy, HITCAM, REC, lodFor, rollItem, balls, JET, jetState,
   get JETS() { return JETS; }, get CUTS() { return CUTS; }, get HAZ() { return HAZ; }, hazAt, HZ, HAZ_KIND, get GP_COURSES() { return gp.on ? gpCourses() : (menuCup() || CUPS[0]).courses; },
   get TR() { return TR; }, get L() { return L; }, get RAMP() { return RAMP; }, get PANELS() { return PANELS; }, get ZONES() { return ZONES; },
-  get COURSE() { return COURSE; }, get BOX_ROWS() { return BOX_ROWS; },
+  get COURSE() { return COURSE; }, get BOX_ROWS() { return BOX_ROWS; }, pathCps, loadCourse,
   setClock: f => { realNow = f; } };
 })();
