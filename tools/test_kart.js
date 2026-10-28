@@ -1,5 +1,5 @@
 // 카트 로직 시뮬레이션 테스트: 가짜 DOM으로 스크립트를 돌려 (3D 장면은 WebGL 없이 갱신만)
-// 트랙·주행·드리프트·아이템·점프·바퀴 수·CPU 완주·조이콘 핸들·소리를 확인.  실행: node tools/test_kart.js
+// 트랙·주행·드리프트·아이템·점프·바퀴 수·CPU 완주·조이콘 핸들·소리, 메뉴·입력 막 누르기를 확인.  실행: node tools/test_kart.js
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const root = path.join(__dirname, '..');
 const files = ['shared/vendor/three.min.js', 'shared/store.js', 'shared/audio.js', 'shared/joycon.js', 'shared/characters.js', 'games/kart/kart.js'];
@@ -1387,6 +1387,91 @@ console.log('\n[26] 코스 모양: 긴 직선을 줄이고 꼬불꼬불하게');
   assert(shapes.every(q => q.straight <= 0.41 && q.longest <= 150 && q.turn >= 78),
     `도전 코스·큰 맵: 직선 41% 아래 · 가장 긴 직선 150m 아래 · 100m마다 78° 넘게 꺾임 (${shapes.map(q => `${q.nm} ${(q.straight * 100).toFixed(0)}%·${q.longest.toFixed(0)}m·${q.turn.toFixed(0)}°`).join(' / ')})`);
   KT.settings.course = 0; KT.toMenu(); KT.switchCourse(0); KT.toMenu();
+}
+
+// ---------- 27. 막 누르기 ----------
+console.log('\n[27] 막 누르기');
+{
+  // 키보드·게임패드·조이콘(버튼·기울기·연결/끊기)·메뉴 버튼·설정·아이템·결승선 앞 순간이동을 아무렇게나 섞어 1500번
+  // → 예외 · NaN · 소리 값 · 화면 겹침(메뉴/선택/결과/일시정지) · 멈춘 상태(카운트다운·결승 뒤·둘 다 준비)가 없나
+  let fz = 0x2545f491;
+  const fr = () => { fz = (1103515245 * fz + 12345) >>> 0; return fz / 4294967296; }, pick = a => a[Math.floor(fr() * a.length)];
+  const KEYS = ['KeyA', 'KeyD', 'KeyW', 'KeyS', 'Space', 'ShiftLeft', 'ControlLeft', 'KeyE', 'KeyQ', 'KeyR', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+    'ShiftRight', 'Slash', 'ControlRight', 'Period', 'Comma', 'KeyJ', 'KeyL', 'KeyI', 'KeyK', 'KeyU', 'KeyO', 'KeyP', 'Escape', 'Enter', 'NumpadEnter', 'KeyF', 'Tab', 'KeyZ'];
+  const mR = { ok: true, player: 0, kind: 'R', accel: { x: 0, y: 0, z: 1 }, hold: 0, stick: { x: 2048, y: 2048 } };
+  const mL = { ok: true, player: 1, kind: 'L', accel: { x: 0, y: 0, z: 1 }, hold: 0, stick: { x: 2048, y: 2048 } };
+  const BTNS = Object.values(B).filter(v => typeof v === 'number');
+  const newPad = () => ({ index: 0, id: 'Xbox', connected: true, mapping: 'standard', axes: [0, 0], buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })) });
+  const vis = id => !els[id].classList.contains('hidden'), saved = JSON.parse(JSON.stringify(KT.settings)), held = new Set(), log = [], bad = [], seen = {};
+  let errN = errors.length, nanN = draw.nan, sndN = audioLog.bad.length, same = { key: '', t: 0 }, readyT = 0, simT = 0;
+  const acts = [
+    [9, () => { const k = pick(KEYS); if (held.has(k)) { release(k); held.delete(k); return '뗌 ' + k; } press(k); held.add(k); return '누름 ' + k; }],
+    [4, () => { const k = pick(KEYS); press(k); release(k); held.delete(k); return '톡 ' + k; }],
+    [3, () => { const jc = pick([mR, mL]), m = pick(BTNS); if (!JC.list.includes(jc)) JC.list.push(jc); JC.handlers.buttons(jc.player, m, jc); return `조이콘${jc.kind} ${m}`; }],
+    [2, () => { const jc = pick([mR, mL]), a = (fr() - 0.5) * 1.6; jc.hold = fr() < 0.4 ? 0 : pick(BTNS); jc.accel = { x: Math.sin(a), y: 0, z: Math.cos(a) }; return `조이콘${jc.kind} 쥠 ${jc.hold}`; }],
+    [1, () => { const jc = pick([mR, mL]), i = JC.list.indexOf(jc); if (i >= 0) JC.list.splice(i, 1); else JC.list.push(jc); return `조이콘${jc.kind} ${i >= 0 ? '끊김' : '연결'}`; }],
+    [3, () => {
+      if (!pads.length || fr() < 0.1) { pads = pads.length ? [] : [newPad()]; return '패드 ' + (pads.length ? '연결' : '끊김'); }
+      const b = Math.floor(fr() * 17); pads[0].buttons[b].pressed = !pads[0].buttons[b].pressed; pads[0].axes[0] = fr() < 0.5 ? 0 : (fr() - 0.5) * 2; return '패드 ' + b;
+    }],
+    [2, () => { if (!vis('menu')) return '-'; KT.openSelect(); return '메뉴 → 선택'; }],
+    [1, () => { if (!vis('pause') && !vis('result') && !vis('select')) return '-'; KT.toMenu(); return '→ 메뉴'; }],
+    [1, () => { if (!vis('result')) return '-'; KT.resultNext(); return '결과 → 다시'; }],
+    [2, () => { KT.selMove(fr() < 0.5 ? 0 : 1, fr() < 0.5 ? -1 : 1); return '고르기'; }],
+    [1, () => { KT.selSet(fr() < 0.5 ? 0 : 1, Math.floor(fr() * KT.CHARS.length)); return '캐릭터 누름'; }],
+    [2, () => {   // 메뉴에서만 (화면처럼)
+      if (!vis('menu')) return '-';
+      const w = Math.floor(fr() * 5);
+      if (w === 0) KT.settings.mode = pick(['1p', '2p']);
+      if (w === 1) { KT.settings.gp = 0; KT.settings.course = Math.floor(fr() * KT.COURSES.length); KT.toMenu(); }
+      if (w === 2) { KT.settings.gp = Math.floor(fr() * (KT.CUPS.length + 1)); KT.toMenu(); }
+      if (w === 3) KT.settings.laps = pick([2, 3, 5]);
+      if (w === 4) KT.settings.cpuLevel = Math.floor(fr() * 3);
+      return '설정 ' + w;
+    }],
+    [2, () => {   // 결과 화면까지 빨리: 사람(과 CPU 몇)을 마지막 바퀴 결승선 바로 앞으로
+      if (G.demo || !['race', 'finish'].includes(G.state)) return '-';
+      for (const k of karts) if (!k.finished && (k.human >= 0 || fr() < 0.6)) { k.lap = G.laps; placeK(k, KT.L - 2 - fr() * 6, (fr() - 0.5) * 6, 22); }
+      return '결승선 앞으로';
+    }],
+    [2, () => { if (!karts.length) return '-'; const k = pick(karts); k.item = pick(KT.ITEM_KEYS); k.itemN = KT.ITEMS[k.item].n || 1; KT.useItem(k); return '아이템 ' + k.item; }],
+    [1, () => { G.forceCPU = fr() < 0.5 ? true : null; return '사람 자리 CPU ' + G.forceCPU; }],
+  ];
+  const check = (i, dt) => {
+    const st = G.state, pr = [], m = vis('menu'), s = vis('select'), r = vis('result'), p = vis('pause'), ov = `메뉴${+m} 선택${+s} 결과${+r} 일시${+p}`;
+    if (errors.length > errN) pr.push('예외 ' + errors[errors.length - 1].slice(0, 120));
+    if (draw.nan > nanN) pr.push('HUD NaN ' + draw.nanAt);
+    if (audioLog.bad.length > sndN) pr.push('소리 ' + audioLog.bad[audioLog.bad.length - 1]);
+    errN = errors.length; nanN = draw.nan; sndN = audioLog.bad.length;
+    if (!karts.every(finite)) pr.push('카트 NaN');
+    if (!['select', 'countdown', 'race', 'finish', 'result'].includes(st)) pr.push('상태 ' + st);
+    if (st === 'select' && (!s || m || r || p)) pr.push('선택 화면 겹침 ' + ov);
+    if (st === 'result' && (!r || s || p || m)) pr.push('결과 화면 겹침 ' + ov);
+    if (G.demo && (!m || s || r || p)) pr.push('시범인데 ' + ov);
+    if (!G.demo && m) pr.push('레이스 중 메뉴 ' + ov);
+    if (G.paused !== p || (G.paused && (G.demo || !['countdown', 'race', 'finish'].includes(st)))) pr.push(`일시정지 ${G.paused} ${st} ` + ov);
+    const key = (G.demo ? '시범 ' : '') + st;
+    seen[key] = (seen[key] || 0) + 1;
+    if (same.key !== key) same = { key, t: 0 }; else if (!G.paused) same.t += dt;
+    if (!G.demo && same.t > ({ countdown: 6, finish: 80 }[st] || Infinity)) { pr.push(`${st} ${same.t.toFixed(0)}초째`); same.t = -Infinity; }
+    if (st === 'select' && KT.sel[0].ready && KT.sel[1].ready) { readyT += dt; if (readyT > 3) { pr.push('둘 다 준비인데 출발 안 함'); readyT = -Infinity; } } else readyT = 0;
+    if (pr.length) bad.push(`${i}번째: ${pr.join(' · ')} ← ${log.slice(-6).join(' > ')}`);
+  };
+  KT.settings.gp = 0; KT.settings.laps = 2; KT.toMenu();
+  const total = acts.reduce((a, b) => a + b[0], 0);
+  for (let i = 0; i < 1500; i++) {
+    let w = fr() * total, act = acts[0][1];
+    for (const [n, f] of acts) if ((w -= n) < 0) { act = f; break; }
+    try { log.push(act()); } catch (e) { errors.push('막 누르기 동작: ' + e.message); log.push('동작 예외'); }
+    const dt = fr() < 0.85 ? 0.05 + fr() * 0.6 : 1 + fr() * 7;
+    try { run(dt); } catch (e) { errors.push('막 누르기 갱신: ' + e.message); }
+    simT += dt; check(i, dt);
+  }
+  for (const k of held) release(k);
+  pads = []; JC.list.length = 0; G.forceCPU = null;
+  Object.assign(KT.settings, saved); KT.toMenu();
+  assert(bad.length === 0, `막 누르기 1500번 (게임 시간 ${(simT / 60).toFixed(0)}분): 예외·NaN·소리·화면 겹침·멈춤 없음` + (bad.length ? ` — ${bad.length}번: ${bad.slice(0, 2).join(' / ')}` : ''));
+  assert(['select', 'countdown', 'race', 'finish', 'result', '시범 race'].every(k => seen[k] > 0), `막 누르기가 모든 화면을 거침 (${Object.entries(seen).map(([k, v]) => k + ' ' + v).join(' · ')})`);
 }
 
 // ---------- 19. 그 밖 ----------
