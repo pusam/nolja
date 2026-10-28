@@ -156,6 +156,15 @@ input[type=range], input[type=checkbox] { accent-color: var(--kart-orange-dark);
 .guide-dialog::backdrop { background: #292e2a99; }
 .guide-steps > div > span { color: var(--kart-orange-dark); font: 800 12px Arial, sans-serif; }
 .keyboard-guide { background: #f3efdf; border-radius: 12px; }
+/* 플레이 가이드 아이템 도감 */
+.item-guide { margin: 0 0 22px; }
+.item-guide h3 { font-size: 13px; margin: 0 0 12px; }
+.item-guide h3 span { font-weight: 600; font-size: 11px; color: var(--muted); margin-left: 6px; }
+.item-guide-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); gap: 8px; }
+.item-card { display: flex; align-items: center; gap: 8px; background: #f3efdf; border-radius: 12px; padding: 6px 10px 6px 6px; }
+.item-card canvas { width: 40px; height: 40px; flex: none; }
+.item-card strong { display: block; font-size: 12px; }
+.item-card span { display: block; font-size: 11px; line-height: 1.45; color: var(--muted); }
 .joy-map { margin: 0 0 16px; }
 .keyboard-players kbd + kbd { margin-left: 2px; }
 

@@ -552,13 +552,19 @@ loadCourse(lobbyCourse());
 // ============================================================
 const KART = { R: 1.05, VMAX: 23, ACC: 17, COAST: 4.5, BRAKE: 22, REV: 6, TURN: 1.75, G: 17, BOOST: 1.36 };
 const H = 1 / 120;
-// n: 여러 번 나눠 쓰는 아이템의 개수 · short: 남은 개수와 함께 보일 이름
-const ITEMS = { boost: { name: '불꽃 대시' }, triple: { name: '불꽃 대시 ×3', short: '불꽃 대시', n: 3 }, star: { name: '반짝 별' }, zap: { name: '번개 구슬' }, trap: { name: '물방울 함정' },
-  shield: { name: '방울 보호막' }, magnet: { name: '자석' }, bolt: { name: '천둥 번개' }, ball: { name: '통통 공' }, paint: { name: '물감 폭탄' },
-  rocket: { name: '추적 로켓' }, tornado: { name: '회오리 바람' }, snow: { name: '눈덩이' }, bomb: { name: '꽝 폭탄' }, spring: { name: '통통 스프링' },
-  fake: { name: '가짜 상자' }, trap3: { name: '줄줄이 함정 ×3', short: '줄줄이 함정', n: 3 }, horn: { name: '빵빵 나팔' }, ufo: { name: '외계인 UFO' }, ghost: { name: '꼬마 유령' },
-  plane: { name: '꼬마 비행기' }, boomerang: { name: '부메랑 ×3', short: '부메랑', n: 3 }, cloud: { name: '천둥 먹구름' }, shrink: { name: '작아져라 광선' },
-  barricade: { name: '바리케이드' }, pow: { name: '쿵 블록' }, water: { name: '물풍선 폭탄' } };
+// n: 여러 번 나눠 쓰는 아이템의 개수 · short: 남은 개수와 함께 보일 이름 · desc: 플레이 가이드 아이템 도감의 한 줄 설명
+const ITEMS = { boost: { name: '불꽃 대시', desc: '잠깐 아주 빨라져요' }, triple: { name: '불꽃 대시 ×3', short: '불꽃 대시', n: 3, desc: '세 번 나눠 써요' },
+  star: { name: '반짝 별', desc: '6초 동안 무적 · 부딪힌 친구는 빙글' }, zap: { name: '번개 구슬', desc: '앞 친구를 따라가 맞혀요' }, trap: { name: '물방울 함정', desc: '뒤에 놓으면 밟은 친구가 빙글' },
+  shield: { name: '방울 보호막', desc: '한 번 막아 줘요' }, magnet: { name: '자석', desc: '바로 앞 친구에게 슝 끌려가요' }, bolt: { name: '천둥 번개', desc: '내 앞 친구 모두 빙글' },
+  ball: { name: '통통 공', desc: '곧장 날아가 벽에서 통통 튀어요' }, paint: { name: '물감 폭탄', desc: '앞 친구들 화면에 물감 철퍽' },
+  rocket: { name: '추적 로켓', desc: '1등에게 날아가 꽝' }, tornado: { name: '회오리 바람', desc: '앞 친구들을 쓸고 가요 (셋까지)' }, snow: { name: '눈덩이', desc: '처음 닿은 친구를 꽁꽁' },
+  bomb: { name: '꽝 폭탄', desc: '던지면 떨어진 자리에서 꽝' }, spring: { name: '통통 스프링', desc: '높이 뛰어요 · 공중에서 트릭!' },
+  fake: { name: '가짜 상자', desc: '진짜 상자처럼 생긴 함정 (물음표가 거꾸로)' }, trap3: { name: '줄줄이 함정 ×3', short: '줄줄이 함정', n: 3, desc: '뒤에 달고 다니며 공격을 막아요' },
+  horn: { name: '빵빵 나팔', desc: '둘레 친구 빙글 + 날아오는 것 모두 부숨' }, ufo: { name: '외계인 UFO', desc: '1등을 3초 동안 끌어당겨 느리게' },
+  ghost: { name: '꼬마 유령', desc: '4초 무적 + 앞 친구 아이템을 훔쳐요' }, plane: { name: '꼬마 비행기', desc: '4초 동안 저절로 아주 빠르게' },
+  boomerang: { name: '부메랑 ×3', short: '부메랑', n: 3, desc: '앞으로 날아갔다 돌아와요' }, cloud: { name: '천둥 먹구름', desc: '8초 안에 부딪혀 남에게 넘겨요!' },
+  shrink: { name: '작아져라 광선', desc: '앞 친구들이 쪼그매져요' }, barricade: { name: '바리케이드', desc: '1등 앞을 가로막아요' },
+  pow: { name: '쿵 블록', desc: '떨어질 때 점프하면 피해요' }, water: { name: '물풍선 폭탄', desc: '떨어진 자리 친구를 물방울에 가둬요' } };
 const itemLabel = (it, n) => ITEMS[it].n ? `${ITEMS[it].short} ×${n}` : ITEMS[it].name;
 const DRIFT = [   // 드리프트 불꽃 단계: 모은 양 · 부스트 시간 · 처음 속도 · 이름 · 색
   null,
@@ -1641,19 +1647,6 @@ function aiOnMain(k, h, look) {
     if (ds > -z.len && ds < 30 && z.d1 - z.d0 < 2 * TRACK.halfW && target > z.d0 - m + 0.4 && target < z.d1 + m - 0.4) target = z.d0 + z.d1 > 0 ? z.d0 - m : z.d1 + m;
     if (z.type !== 'ice' && ds > -z.len && ds < 40 && z.d1 - z.d0 < 2 * TRACK.halfW) hotSide = Math.sign(z.d0 + z.d1);
   }
-  // 불기둥: 지나갈 무렵(앞뒤 조금 넉넉히) 솟거나 달아올라 있는 것들을 모두 비켜 가는 줄 중 가장 가까운 줄로 (없으면 가장 가까운 불기둥만)
-  const hotJets = JETS.filter(j => { const ds = sdiff(j.s, k.s), at = t + ds / Math.max(6, k.v); return ds > -3 && ds < 50 && [-0.25, 0, 0.25, 0.5].some(u => jetState(j, at + u) > 0.2); });
-  if (hotJets.length) {
-    let best = null;
-    for (const gap of [JET.r + 1.5, JET.r + 1]) {   // 넉넉히 비켜 갈 줄이 없으면 (불기둥 둘 사이) 조금 좁게
-      const clear = d => hotJets.every(j => Math.abs(d - j.d) >= gap);
-      if (clear(target)) { best = target; break; }
-      for (let d = -TRACK.halfW + 1.6; d <= TRACK.halfW - 1.6; d += 0.2) if (clear(d) && (best === null || Math.abs(d - target) < Math.abs(best - target))) best = d;
-      if (best !== null) break;
-    }
-    const j = hotJets.reduce((a, b) => sdiff(a.s, k.s) < sdiff(b.s, k.s) ? a : b);
-    target = best !== null ? best : j.d + (k.d >= j.d ? JET.r + 2 : -JET.r - 2);
-  }
   const dr = sdiff(RAMP.s, k.s);
   if (dr > -RAMP.len && dr < 35) target = clamp(target, -TRACK.halfW + 3, TRACK.halfW - 3);   // 점프대는 가운데로 타고 넘음 (커브 안쪽으로 붙다 옆면에 걸리지 않게)
   if (k.planeT <= 0) for (const o of karts) {   // 앞의 느린 카트는 비켜 감 (꼬마 비행기는 그냥 들이받음)
@@ -1665,6 +1658,25 @@ function aiOnMain(k, h, look) {
     let best = null, bd = 30;
     for (const o of karts) { if (o === k || o.cut >= 0 || o.finished || o.ghostT > 0) continue; const ds = sdiff(o.s, k.s); if (ds > -6 && Math.abs(ds) < bd) { bd = Math.abs(ds); best = o; } }
     if (best && !(best === k.cloudFrom && t - k.cloudAt < 2.5)) target = best.d;
+  }
+  // 불기둥: 지나갈 무렵(앞뒤 조금 넉넉히) 솟거나 달아올라 있는 것들을 모두 비켜 가는 줄로 (없으면 가장 가까운 불기둥만). 추월·먹구름 뒤에 정해서 그쪽으로 꺾다 닿지 않게
+  // 줄 고르기: 가고 싶은 줄에 가깝게 · 불기둥이 30m 안이면 지금 자리에서 덜 움직이게 · 이미 한쪽에 있으면 불기둥 앞을 가로지르지 않게 (가로지르다 늦으면 닿으니까)
+  const hotJets = JETS.filter(j => { const ds = sdiff(j.s, k.s), at = t + ds / Math.max(6, k.v); return ds > -3 && ds < 50 && [-0.25, 0, 0.25, 0.5].some(u => jetState(j, at + u) > 0.2); });
+  if (hotJets.length) {
+    const w = hotJets.some(j => sdiff(j.s, k.s) < 30) ? 2 : 0.5;
+    const cost = d => Math.abs(d - target) + w * Math.abs(d - k.d) + (hotJets.some(j => Math.abs(k.d - j.d) > 1 && Math.sign(d - j.d) !== Math.sign(k.d - j.d)) ? 6 : 0);
+    let best = null;
+    for (const gap of [JET.r + 1.5, JET.r + 1]) {   // 넉넉히 비켜 갈 줄이 없으면 (불기둥 둘 사이) 조금 좁게
+      const clear = d => hotJets.every(j => Math.abs(d - j.d) >= gap);
+      if (clear(target)) best = target;
+      for (let d = -TRACK.halfW + 1.6; d <= TRACK.halfW - 1.6; d += 0.2) if (clear(d) && (best === null || cost(d) < cost(best))) best = d;
+      if (best !== null) break;
+    }
+    const j = hotJets.reduce((a, b) => sdiff(a.s, k.s) < sdiff(b.s, k.s) ? a : b);
+    target = best !== null ? best : j.d + (k.d >= j.d ? JET.r + 2 : -JET.r - 2);
+    // 길 한쪽에 솟는 불기둥이 40m 안에 있으면 그쪽으로는 드리프트를 시작하지 않음 (커브 안쪽 불기둥이면 드리프트가 파고들어 닿으니까). 양쪽에 있으면 커브 안쪽
+    const sides = hotJets.filter(q => sdiff(q.s, k.s) > 0 && sdiff(q.s, k.s) < 40 && Math.abs(q.d) > 1).map(q => Math.sign(q.d));
+    if (sides.length && !hotSide) { const turn = Math.sign(curvSpan(k.s + 4, k.s + 18, true)); hotSide = sides.includes(turn) ? turn : sides[0]; }
   }
   // 지름길: 갈림길 45~70m 앞에서 이번 바퀴에 탈지 정함. 타기로 했으면 지름길 가운데 선을 따라 들어가고, 안 타면 반대쪽으로 비켜 감
   let fork = null;
@@ -4001,7 +4013,7 @@ function emitKartFx(dt) {
     }
     if (k.cloudT > 0) {   // 천둥 먹구름: 빗방울 + 끝날 무렵 번쩍번쩍
       if (Math.random() < chance * 0.7) spark(k.x + rand(-1, 1), k.y + 2.8, k.z + rand(-1, 1), 0x9fb7d6, 0.22, 0, -9, 0, 0.3, false, 0);
-      if (k.cloudT < 3 && Math.random() < chance * 0.12) for (let y = 0.6; y < 3; y += 0.6) spark(k.x + rand(-0.3, 0.3), k.y + y, k.z + rand(-0.3, 0.3), 0xfff27a, 0.5, 0, 0, 0, 0.12);
+      if (k.cloudT < 3 && Math.random() < chance * 0.12) for (let y = 0.6; y < 3.4; y += 0.6) spark(k.x + rand(-0.3, 0.3), k.y + y, k.z + rand(-0.3, 0.3), 0xfff27a, 0.5, 0, 0, 0, 0.12);
     }
     if (k.planeT > 0 && Math.random() < chance) for (const side of [-2.3, 2.3]) { const [x, y, z] = back(side, -0.2, 0.95 + planeLift(k, T())); spark(x, y, z, 0xeaf6ff, 0.16, -fx * 3, 0, -fz * 3, 0.3, true, 0); }   // 날개 끝 구름 줄
     if (k.tinyT > 0 && Math.random() < chance * 0.3) spark(k.x + rand(-0.6, 0.6), k.y + rand(0.2, 1), k.z + rand(-0.6, 0.6), 0xc4b5fd, 0.3, 0, 1, 0, 0.4);
@@ -4223,7 +4235,7 @@ function syncNewItems(t, show) {
   set(G3.boomMesh, boomerangs, (b, i) => { K.e.set(0, (t - b.t0) * 22, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(b.x, b.y, b.z), K.q, K.w.set(1.3, 1.3, 1.3)); G3.boomMesh.setMatrixAt(i, K.m); });
   set(G3.waterMesh, show ? waters.filter(w => !w.landed) : [], (w, i) => { const sc = 0.65 + Math.sin(t * 20 + i) * 0.04; K.m.compose(K.v.set(w.x, w.y, w.z), K.q.identity(), K.w.set(sc, sc * 1.1, sc)); G3.waterMesh.setMatrixAt(i, K.m); });
   set(G3.domeMesh, show ? waters.filter(w => w.landed) : [], (w, i) => { const fade = clamp((1.6 - (t - w.landed)) / 0.3, 0.05, 1), r = Math.max(0.1, w.r) * fade; K.m.compose(K.v.set(w.x, w.y, w.z), K.q.identity(), K.w.set(r, r * 0.65, r)); G3.domeMesh.setMatrixAt(i, K.m); });
-  set(G3.cloudMesh, show ? karts.filter(k => k.cloudT > 0 && k.mesh) : [], (k, i) => { const sh = k.cloudT < 2 ? Math.sin(t * 40) * 0.08 : 0, sc = 1 + Math.sin(t * 3 + i) * 0.05; K.e.set(0, t * 0.6, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(k.x + sh, k.y + (k.tinyT > 0 ? 2.6 : 3.4), k.z), K.q, K.w.set(sc, sc, sc)); G3.cloudMesh.setMatrixAt(i, K.m); });
+  set(G3.cloudMesh, show ? karts.filter(k => k.cloudT > 0 && k.mesh) : [], (k, i) => { const sh = k.cloudT < 2 ? Math.sin(t * 40) * 0.08 : 0, sc = 0.72 + Math.sin(t * 3 + i) * 0.04; K.e.set(0, t * 0.6, 0); K.q.setFromEuler(K.e); K.m.compose(K.v.set(k.x + sh, k.y + (k.tinyT > 0 ? 2.9 : 3.8), k.z), K.q, K.w.set(sc, sc, sc)); G3.cloudMesh.setMatrixAt(i, K.m); });   // 조금 작고 높게 (든 사람 화면을 덜 가리게)
   set(G3.ghostMesh, show ? karts.filter(k => k.ghostT > 0 && k.mesh) : [], (k, i) => { K.e.set(0, k.a, 0); K.q.setFromEuler(K.e); const sc = (k.tinyT > 0 ? 0.55 : 1) * (1 + Math.sin(t * 6 + i) * 0.04); K.m.compose(K.v.set(k.x, k.y + 0.35 + Math.sin(t * 5) * 0.1, k.z), K.q, K.w.set(1.5 * sc, 1.9 * sc, 2.0 * sc)); G3.ghostMesh.setMatrixAt(i, K.m); });
   const planes = show ? karts.filter(k => k.planeT > 0 && k.mesh) : [];
   set(G3.planeMesh, planes, (k, i) => { K.e.set(0, k.a, Math.sin(t * 3 + i) * 0.06); K.q.setFromEuler(K.e); K.m.compose(K.v.set(k.x, k.y + planeLift(k, t), k.z), K.q, K.w.set(1, 1, 1)); G3.planeMesh.setMatrixAt(i, K.m); });
@@ -4637,10 +4649,19 @@ function drawView(g, r, p, cs, two, t) {
   }
   const pw = pows.find(q => q.targets.includes(k));
   if (pw && !k.finished) {   // 쿵 블록: 위에서 내려오는 블록 + 점프 타이밍
-    const left = pw.at - t, cx0 = r.x + r.w / 2, cy0 = by + 112 * u + Math.max(0, 1 - left / 1.5) * 36 * u, sh = left < 0.5 ? Math.sin(t * 50) * 6 * u : 0;   // 위쪽 버튼 아래에서 내려옴
-    drawItemIcon(g, 'pow', cx0 + sh, cy0, 96 * u);
-    g.textAlign = 'center'; g.font = `900 ${38 * u}px ${FONT}`;
-    outlined(g, left < 0.45 ? '지금 점프!' : '쿵 블록이 떨어져요!', cx0, cy0 + 72 * u, left < 0.45 ? '#86efac' : '#fca5a5', 8 * u);
+    const left = pw.at - t, now = left < 0.45, sh = left < 0.5 ? Math.sin(t * 50) * 6 * u : 0;
+    if (two) {   // 둘이면 가운데에 공유 지도·문구가 있어서 오른쪽 기록 칸 아래에 작게 (먹구름 칸이 있으면 그 아래)
+      const cw = 330 * u, cxr = r.x + r.w - pad - cw, cyr = by + ih + 12 * u + (k.cloudT > 0 ? 70 * u : 0);
+      hudPanel(g, cxr, cyr, cw, 64 * u, u);
+      drawItemIcon(g, 'pow', cxr + 34 * u + sh, cyr + 32 * u, 44 * u);
+      g.textAlign = 'left'; g.font = `900 ${28 * u}px ${FONT}`; g.fillStyle = now ? '#86efac' : '#fca5a5';
+      g.fillText(now ? '지금 점프!' : '쿵 블록! 점프 준비', cxr + 66 * u, cyr + 33 * u, cw - 76 * u);
+    } else {
+      const cx0 = r.x + r.w / 2, cy0 = by + 112 * u + Math.max(0, 1 - left / 1.5) * 36 * u;   // 위쪽 버튼 아래에서 내려옴
+      drawItemIcon(g, 'pow', cx0 + sh, cy0, 96 * u);
+      g.textAlign = 'center'; g.font = `900 ${38 * u}px ${FONT}`;
+      outlined(g, now ? '지금 점프!' : '쿵 블록이 떨어져요!', cx0, cy0 + 72 * u, now ? '#86efac' : '#fca5a5', 8 * u);
+    }
   }
   const hc = game.hitCam[p], hage = hc ? t - hc.t : 99;
   if (hc && hage <= HITCAM) {   // 맞힌 카메라 창: 노란 테두리 + 아래쪽에 '맞혔다! 이름' 이름표 (3D 장면은 그 안에 그려져 있음)
@@ -4782,7 +4803,15 @@ function drawKartArt() {
 // ============================================================
 // 시작
 // ============================================================
+// 플레이 가이드의 아이템 도감: 27가지 그림(아이템 칸과 같은 그림) + 한 줄 설명
+function buildItemGuide() {
+  const box = document.getElementById('itemGuide');
+  if (!box) return;
+  box.innerHTML = ITEM_KEYS.map(it => `<div class="item-card"><canvas width="96" height="96" data-item="${it}" aria-hidden="true"></canvas><div><strong>${itemLabel(it, ITEMS[it].n || 1)}</strong><span>${ITEMS[it].desc}</span></div></div>`).join('');
+  for (const c of box.querySelectorAll ? box.querySelectorAll('canvas[data-item]') : []) { const g = c.getContext('2d'); if (g) drawItemIcon(g, c.dataset.item, 48, 48, 78); }
+}
 function bindMenu() {
+  buildItemGuide();
   document.querySelectorAll('#modeRow button').forEach(b => { b.onclick = () => { settings.mode = b.dataset.mode; assignJoyCons(); syncMenu(); saveSettings(); }; });
   document.querySelectorAll('#lvRow button').forEach(b => { b.onclick = () => { settings.cpuLevel = +b.dataset.lv; syncMenu(); saveSettings(); }; });
   document.querySelectorAll('#lapRow button').forEach(b => { b.onclick = () => { settings.laps = +b.dataset.laps; syncMenu(); saveSettings(); }; });

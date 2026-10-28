@@ -1290,6 +1290,9 @@ console.log('\n[24] 새 아이템 열두 가지 (카트라이더·마리오카�
   me.item = null; me.cloudT = 5; me.ufoT = 1; me.bubbleT = 1; me.ghostT = 1; KT.pows.push({ owner: c1, at: KT.T() + 1, t0: KT.T(), targets: [me], hop: new Map() }); KT.render();
   reset();
   assert(errors.length === 0 && draw.nan === 0, '아이템 칸 그림 27가지와 화면 효과를 그려도 예외·NaN 없음');
+  const guide = els.itemGuide ? els.itemGuide.innerHTML : '';
+  assert((guide.match(/class="item-card"/g) || []).length === 27 && KT.ITEM_KEYS.every(it => KT.ITEMS[it].desc && guide.includes(`data-item="${it}"`) && guide.includes(KT.ITEMS[it].desc)),
+    '플레이 가이드 아이템 도감: 27가지 모두 그림 칸과 한 줄 설명');
   KT.toMenu();
 }
 
