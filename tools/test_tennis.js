@@ -591,6 +591,49 @@ function swingReports({ beta, side, head, roll, peakDps = 1400 }) {
   assert(res && res.d != null && res.d < 0.05, `타이밍 보정 150ms에서도 판정 창 끝(0.9W) 스윙을 받아치고, 맞힌 자리에서 다시 날아감 (${res && res.d != null ? res.d.toFixed(3) + 'm' : JSON.stringify(res)})`);
 }
 
+// 17) 조이콘 자세 (닌텐도 위처럼): P1 조이콘이 가리키는 쪽으로 화면 속 라켓·팔이 그대로 가고, 빠르게 휘두르면 궤적이 남음
+{
+  const SIM = require('./joysim.js'), R = Math.PI / 180, J = ST.joycon;
+  const sm = u => { u = Math.max(0, Math.min(1, u)); return u * u * (3 - 2 * u); };
+  const jc = { ok: true, name: '조이콘 (R)', kind: 'R', player: 0, gyro: 0, armed: true, swinging: false, swingStart: 0, peak: 0, peakT: 0, cool: 0, prevBtn: 0, simple: 0,
+    lastReport: 0, lastPow: 0, lastSwingT: -9, device: { opened: false } };
+  let yaw = 0, pitch = 10;   // 지금 가리키는 쪽 (왼쪽 +, 위 +). 몸짓마다 여기서 이어서 움직임
+  const toward = (y1, p1, dur) => { const y0 = yaw, p0 = pitch; yaw = y1; pitch = p1;
+    return t => { const u = sm(t / dur), y = (y0 + (y1 - y0) * u) * R, p = (p0 + (p1 - p0) * u) * R, top = [Math.cos(p) * Math.cos(y), Math.cos(p) * Math.sin(y), Math.sin(p)];
+      return { top, face: [-Math.sin(p) * Math.cos(y), -Math.sin(p) * Math.sin(y), Math.cos(p)], p: [0.6 * top[0], 0.6 * top[1], 1.4 + 0.6 * top[2]] }; }; };
+  const drive = (motion, dur, each) => {
+    const reps = SIM.reports(motion, dur, { kind: 'R' });
+    let ri = 0, tRep = 0.015, tFrame = 1 / 60, t = 0;
+    while (t < dur - 1e-9) {
+      if (tRep <= tFrame) { now += tRep - t; t = tRep; if (ri < reps.length) J.report(jc, { reportId: 0x30, data: reps[ri++] }); tRep += 0.015; }
+      else { now += tFrame - t; t = tFrame; ST.update(); ST.render(); if (each) each(); tFrame += 1 / 60; }
+    }
+  };
+  ST.toMenu(); ST.settings.mode = '2p'; J.single = false; ST.startMatch();
+  J.list.push(jc);
+  const p1 = ST.players[0], live = () => p1.live && p1.live.root;
+  drive(toward(0, 10, 0.3), 1.2);
+  assert(live() && live().r.z < -0.9, `조이콘을 앞으로 들면 라켓도 앞으로 (몸 기준 ${live() ? live().r.z.toFixed(2) : '-'})`);
+  drive(toward(-90, 10, 0.25), 0.5);
+  const pl = G3.players[0], wp = pl.prop.getWorldPosition(new sandbox.THREE.Vector3());
+  assert(live() && live().r.x > 0.85 && wp.x > p1.x + 0.3, `오른쪽으로 돌리면 라켓이 몸 오른쪽으로 (몸 기준 ${live() ? live().r.x.toFixed(2) : '-'} · 3D 라켓 x ${(wp.x - p1.x).toFixed(2)}m)`);
+  drive(toward(0, 10, 0.25), 0.6); drive(toward(0, 70, 0.3), 0.6);
+  assert(live() && live().r.y > 0.8 && ST.armPose(p1, ST.T(), {}) === p1.live.pose, `위로 들면 라켓도 위로 (${live() ? live().r.y.toFixed(2) : '-'}), 화면 자세는 조이콘 자세 그대로`);
+  drive(toward(-130, 0, 0.4), 0.6);
+  let trail = false;
+  drive(toward(70, 15, 0.22), 0.5, () => { if (pl.swoosh.visible && pl.swoosh.material.opacity > 0.1) trail = true; });
+  assert(trail, '빠르게 휘두르면 라켓 끝 궤적이 남음');
+  ST.settings.lefty[0] = true;
+  drive(toward(-90, 10, 0.4), 0.6);
+  assert(live() && live().r.x < -0.85, '왼손잡이는 거울처럼: 오른쪽으로 돌리면 화면 속(오른손) 라켓은 왼쪽(백핸드 쪽)으로');
+  ST.settings.lefty[0] = false;
+  ST.applyQuality('2d'); drive(toward(0, 10, 0.4), 0.5); ST.applyQuality('mid'); ST.render();
+  assert(draw.nan === 0 && !ST.players[1].live, '2D 그래픽에서도 조이콘 라켓을 그림 · 조이콘 없는 P2는 원래 스윙 그대로');
+  J.list.splice(J.list.indexOf(jc), 1); step(0.1);
+  assert(!p1.live, '조이콘이 빠지면 원래 스윙 동작으로');
+  ST.toMenu();
+}
+
 // 16) 조이콘 자리 (가짜 WebHID): 하나가 끊겨도 남은 조이콘 자리는 그대로 · 못 열면 오류를 알려주고 목록에서 빠짐
 const finishChecks = () => {
   assert(errors.length === 0, '전체 예외 없음' + (errors[0] ? ' — ' + errors[0] : ''));

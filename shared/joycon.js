@@ -19,6 +19,14 @@
  *                     새로 붙은 조이콘은 빈자리로 가고, 하나가 끊겨도 나머지 자리는 그대로
  *  - rumble(player, 세기, ms)  진동
  *  - tilt(player)     가속도 {x,y,z} (단위 g) — 기울이기 조작(레이싱 등)에 사용
+ *  - 자세 (닌텐도 위처럼 화면 속 팔·라켓이 조이콘을 그대로 따라가게)
+ *      jc.q           [w,x,y,z] 조이콘 몸체 → 세상 회전 (세상 z = 위). 가속도를 처음 받기 전엔 null
+ *      jc.w           지금 회전 속도 (몸체 기준 rad/s, 자이로 영점을 뺀 값)
+ *      jc.arm         어깨 → 손 방향 (몸체 기준). 기본은 X축, 크게 휘두를 때 원심력으로 쥔 방법을 알아냄
+ *      armWorld(jc)   어깨 → 손 방향 (세상 기준) · rateWorld(jc) 회전 속도 (세상 기준) · toWorld(jc, v)
+ *
+ * 몸체 축 (SDL과 같은 결론): X = 긴 축, 어깨 버튼·트리거 쪽이 + (왼쪽·오른쪽 조이콘 모두)
+ *                           Z = 앞면 쪽(L) · 뒷면 쪽(R), Y = Z × X. 가속도·자이로는 같은 축 (오른손 법칙)
  *
  * 입력 리포트 0x30: [0]타이머 [1]배터리 [2..4]버튼 [5..10]스틱 [11]진동
  *                  [12..47] IMU 3샘플 (가속도 xyz, 자이로 xyz, int16 LE)
@@ -27,6 +35,7 @@
   'use strict';
   const N = window.Nolja = window.Nolja || {};
   const NINTENDO = 0x057e;
+  const GYRO = 1 / 14.2842, ACC = 1 / 4096;   // 한 눈금 = 0.07도/초 · 0.000244g (SDL 기본값과 같음)
   const now = () => performance.now() / 1000;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -156,19 +165,20 @@
     const t = now();
     for (let k = 0; k < 3; k++) {
       const o = 12 + k * 12;
-      const s = { ax: d.getInt16(o, true) * 0.000244, ay: d.getInt16(o + 2, true) * 0.000244, az: d.getInt16(o + 4, true) * 0.000244,   // g
-        gx: d.getInt16(o + 6, true) * 0.061, gy: d.getInt16(o + 8, true) * 0.061, gz: d.getInt16(o + 10, true) * 0.061 };                // 도/초
+      const s = { ax: d.getInt16(o, true) * ACC, ay: d.getInt16(o + 2, true) * ACC, az: d.getInt16(o + 4, true) * ACC,   // g
+        gx: d.getInt16(o + 6, true) * GYRO, gy: d.getInt16(o + 8, true) * GYRO, gz: d.getInt16(o + 10, true) * GYRO };    // 도/초
       if (k === 2) { jc.accel = { x: s.ax, y: s.ay, z: s.az }; jc.gyroDps = { x: s.gx, y: s.gy, z: s.gz }; }
       J.sample(jc, Math.hypot(s.gx, s.gy, s.gz), t - (2 - k) * 0.005, s);
     }
   };
 
   // 자이로 크기로 스윙 감지: 임계값을 넘으면 시작, 90ms 동안 최고값 = 세기, 최고점 시각 = 타이밍
-  // imu(샘플 하나: 가속도 g · 자이로 도/초)가 있으면 휘두른 방향도 구해서 jc.lastSpin·lastPath에 둠
+  // imu(샘플 하나: 가속도 g · 자이로 도/초)가 있으면 휘두른 방향도 구해서 jc.lastSpin·lastPath에 두고, 자세(jc.q)도 갱신
+  // 문턱값은 예전 눈금(0.061도/초)에서 맞춘 420·170·1080을 실제 도/초로 바꾼 값 (느낌은 그대로)
   J.sample = function (jc, mag, t, imu) {
-    if (imu) track(jc, imu);
+    if (imu) { track(jc, imu); orient(jc, imu); }
     jc.gyro = Math.max(mag, jc.gyro * 0.92);
-    const sens = J.sensitivity, on = 420 / sens, off = 170 / sens;
+    const sens = J.sensitivity, on = 482 / sens, off = 195 / sens;
     const m = jc.motion;
     if (m && m.active) {   // 휘두르는 동작 전체(판정 90ms를 넘어 팔로스루까지) 동안 돈 각도
       m.angle += mag * DT_IMU;
@@ -179,7 +189,7 @@
       if (mag > jc.peak) { jc.peak = mag; jc.peakT = t; }
       if (t - jc.swingStart >= 0.09) {
         jc.swinging = false; jc.cool = t + 0.32;
-        const pow = clamp((jc.peak * sens - 420) / 1080, 0, 1);
+        const pow = clamp((jc.peak * sens - 482) / 1239, 0, 1);
         const dir = swingDir(jc);
         jc.lastPow = pow; jc.lastSpin = dir.spin; jc.lastPath = dir.path; jc.lastSide = dir.side; jc.lastSwingT = now();
         emit('swing', jc.player, pow, jc.peakT, jc);
@@ -252,6 +262,78 @@
     return { spin, path, side };
   }
   J.swingDir = swingDir;
+
+  // ---------- 자세 추적: 자이로를 적분하고, 손이 거의 멈췄을 땐 가속도(중력)로 기울기를 바로잡음 ----------
+  //  가로 방향(어느 쪽이 앞인지)은 중력으로 알 수 없어서 게임이 '가만히 있을 때 가리키는 쪽'을 앞으로 삼음
+  function orient(jc, s) {
+    const an = Math.hypot(s.ax, s.ay, s.az);
+    let q = jc.q;
+    if (!q) {   // 처음: 지금 '위'(가속도) 방향이 세상 z가 되게만 맞춤
+      if (an < 0.6 || an > 1.4) return;
+      const ux = s.ax / an, uy = s.ay / an, uz = s.az / an;
+      q = jc.q = uz < -0.999 ? [0, 1, 0, 0] : [1 + uz, uy, -ux, 0];
+      norm4(q);
+      jc.w = { x: 0, y: 0, z: 0 }; jc.bias = jc.bias || { x: 0, y: 0, z: 0 }; jc.gm = { x: s.gx, y: s.gy, z: s.gz }; jc.calm = 0;
+      if (!jc.arm) jc.arm = { x: 1, y: 0, z: 0 };
+      return;
+    }
+    // 자이로 영점: 거의 가만히(짧은 평균에서 2.5도/초 안 · 1g) 0.25초 넘게 있으면 평균 쪽으로 천천히
+    const b = jc.bias, gm = jc.gm;
+    gm.x += (s.gx - gm.x) * 0.08; gm.y += (s.gy - gm.y) * 0.08; gm.z += (s.gz - gm.z) * 0.08;
+    const quiet = Math.hypot(s.gx - gm.x, s.gy - gm.y, s.gz - gm.z) < 2.5 && Math.abs(an - 1) < 0.06 && Math.hypot(gm.x, gm.y, gm.z) < 10;
+    jc.calm = quiet ? jc.calm + 1 : 0;
+    if (jc.calm > 50) { b.x += (gm.x - b.x) * 0.01; b.y += (gm.y - b.y) * 0.01; b.z += (gm.z - b.z) * 0.01; }
+    const w = jc.w;
+    w.x = (s.gx - b.x) * DEG; w.y = (s.gy - b.y) * DEG; w.z = (s.gz - b.z) * DEG;
+    const wn = Math.hypot(w.x, w.y, w.z);
+    const [qw, qx, qy, qz] = q;
+    const vx = 2 * (qx * qz - qw * qy), vy = 2 * (qy * qz + qw * qx), vz = qw * qw - qx * qx - qy * qy + qz * qz;   // 세상 위 (몸체 기준)
+    let cx = w.x, cy = w.y, cz = w.z;
+    // 중력 보정 (마호니): 잰 위와 추정한 위가 어긋난 만큼 돌려 맞춤. 세게 휘두르는 중엔 원심력 때문에 거의 안 믿음
+    const trust = an > 0.3 ? clamp(1 - Math.abs(an - 1) / 0.25, 0, 1) * (wn < 1.5 ? 1 : wn < 5 ? 0.25 : 0) : 0;
+    if (trust > 0) {
+      const ux = s.ax / an, uy = s.ay / an, uz = s.az / an, k = 1.2 * trust;
+      cx += k * (uy * vz - uz * vy); cy += k * (uz * vx - ux * vz); cz += k * (ux * vy - uy * vx);
+    }
+    const cn = Math.hypot(cx, cy, cz);
+    if (cn > 1e-9) {   // q ← q ⊗ (몸체 기준으로 cn·dt만큼 회전)
+      const h = cn * DT_IMU / 2, sn = Math.sin(h) / cn, dw = Math.cos(h), dx = cx * sn, dy = cy * sn, dz = cz * sn;
+      q[0] = qw * dw - qx * dx - qy * dy - qz * dz;
+      q[1] = qw * dx + qx * dw + qy * dz - qz * dy;
+      q[2] = qw * dy - qx * dz + qy * dw + qz * dx;
+      q[3] = qw * dz + qx * dy - qy * dx + qz * dw;
+      norm4(q);
+    }
+    learnGrip(jc, s, wn, vx, vy, vz);
+  }
+  // 쥔 방법: 크게 휘두르는 동안 (가속도 − 중력) ≈ −ω²·(어깨→손). 4rad/s 넘게 돌 때 모아서 어깨→손 방향을 구함
+  //  지금 방향과 40° 넘게 다른 결과가 두 번 잇달아 비슷하게 나오면 바꿈 (조이콘을 옆으로·거꾸로 쥐어도 팔이 맞게)
+  function learnGrip(jc, s, wn, vx, vy, vz) {
+    const g = jc.grip || (jc.grip = { x: 0, y: 0, z: 0, w: 0, n: 0, cand: null });
+    if (wn > 4) { g.x -= (s.ax - vx) * 9.8; g.y -= (s.ay - vy) * 9.8; g.z -= (s.az - vz) * 9.8; g.w += wn * wn; g.n++; return; }
+    if (wn > 2 || !g.n) return;
+    const enough = g.n >= 24, r = enough ? Math.hypot(g.x, g.y, g.z) / g.w : 0;   // 어깨→손 거리 (m)
+    if (enough && r > 0.22) {
+      const c = { x: g.x / g.w / r, y: g.y / g.w / r, z: g.z / g.w / r }, a = jc.arm;
+      if (c.x * a.x + c.y * a.y + c.z * a.z > 0.77) g.cand = null;   // 지금 아는 방향과 40° 안: 그대로
+      else if (g.cand && c.x * g.cand.x + c.y * g.cand.y + c.z * g.cand.z > 0.87) {
+        const m = { x: c.x + g.cand.x, y: c.y + g.cand.y, z: c.z + g.cand.z }, mn = Math.hypot(m.x, m.y, m.z) || 1;
+        jc.arm = { x: m.x / mn, y: m.y / mn, z: m.z / mn }; g.cand = null;
+      } else g.cand = c;
+    }
+    g.x = g.y = g.z = g.w = 0; g.n = 0;
+  }
+  function norm4(q) { const n = Math.hypot(q[0], q[1], q[2], q[3]) || 1; q[0] /= n; q[1] /= n; q[2] /= n; q[3] /= n; }
+  // 몸체 벡터 → 세상 (z = 위)
+  J.toWorld = function (jc, v, out = {}) {
+    const [w, x, y, z] = jc.q;
+    const tx = 2 * (y * v.z - z * v.y), ty = 2 * (z * v.x - x * v.z), tz = 2 * (x * v.y - y * v.x);
+    out.x = v.x + w * tx + y * tz - z * ty; out.y = v.y + w * ty + z * tx - x * tz; out.z = v.z + w * tz + x * ty - y * tx;
+    return out;
+  };
+  J.armWorld = (jc, out) => J.toWorld(jc, jc.arm || { x: 1, y: 0, z: 0 }, out);
+  J.rateWorld = (jc, out) => J.toWorld(jc, jc.w, out);
+  J.GYRO = GYRO; J.ACC = ACC;
 
   J.tilt = pi => { const j = J.list.find(x => x.player === pi && x.ok); return j ? j.accel : null; };
 

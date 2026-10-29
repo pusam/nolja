@@ -478,8 +478,8 @@ function newGame(t) {
   enterTurn(t, false);
 }
 function enterTurn(t, same) {
-  game.state = 'turn'; game.stateT = t; game.same = same; game.step = 0; game.charge = null; game.cpuPlan = null;
-  ball.st = 'hold'; ball.y = 0;
+  game.state = 'turn'; game.stateT = t; game.same = same; game.step = 0; game.charge = null; game.cpuPlan = null; game.motionThrow = false;
+  ball.st = 'hold'; ball.y = 0; MO.mode = '';
   if (!same) popMonster(game.cur, t);
 }
 function enterAim(t) {
@@ -494,12 +494,14 @@ function startThrow(pow, t = T(), known = true) {
   sfx.whoosh(0.25 + 0.35 * game.pow);
   return true;
 }
-function release(t) {
+// mo: 조이콘 몸짓으로 굴렸을 때 손목 비틀기로 더하는 휘기(spin)와 휘두른 방향으로 더하는 방향(dAng, 도)
+function release(t, mo = null) {
   const p = cur(), human = !isCPU(p);
   const v = speedOf(game.pow) * (1 + gauss() * 0.012);
   // 사람도 매번 똑같진 않게 조금 흔들림: 세게 굴릴수록 더 (빠른 공은 핀을 잘 쓰러뜨리지만 덜 정확). CPU는 계획에 이미 넣음
-  const a = (p.ang + (human ? gauss() * (0.04 + 0.12 * game.pow * game.pow) : 0)) * Math.PI / 180;
-  Object.assign(ball, { x: p.x, z: 0.05, y: 0.06, vx: v * Math.sin(a), vz: v * Math.cos(a), spin: p.spin, st: 'lane', bumper: !!p.bumper, hitT: -1, gutT: -1, pitT: -1, v0: v, bumps: 0 });
+  const a = (p.ang + (mo ? mo.dAng : 0) + (human ? gauss() * (0.04 + 0.12 * game.pow * game.pow) : 0)) * Math.PI / 180;
+  const spin = mo ? clamp(p.spin + mo.spin, -1, 1) : p.spin;
+  Object.assign(ball, { x: p.x, z: 0.05, y: 0.06, vx: v * Math.sin(a), vz: v * Math.cos(a), spin, st: 'lane', bumper: !!p.bumper, hitT: -1, gutT: -1, pitT: -1, v0: v, bumps: 0 });
   game.standing = pins.filter(q => q.st === 'up').map(q => q.i);
   for (const q of pins) q.res = 0.75 + Math.random() * 0.5;   // 핀마다 버티는 힘이 조금씩 다름
   sim.t = 0; sim.acc = 0; sim.settle = 0; sim.sndT = -9;
@@ -943,7 +945,8 @@ function pollJoy() {
     }
     if (game.paused || game.demo) continue;
     if (sy && sy !== pr.sy) stepBy(-sy);   // 스틱 위 = 앞 칸, 아래 = 다음 칸
-    if (trig && !was) chargeStart();       // R·ZR (L·ZL)을 꾹 눌렀다 떼도 굴러감 (휘두르기 어려울 때)
+    if (motionJoy(jc)) { if (trig && !was && game.state === 'aim' && !isCPU(cur())) startMotion(jc, 'grip', T()); }   // R·ZR을 누르는 순간 공을 쥠 (아래 '조이콘 몸짓')
+    else if (trig && !was) chargeStart();  // 자세를 모르는 조이콘: R·ZR (L·ZL)을 꾹 눌렀다 떼면 굴러감
     else if (!trig && was) chargeEnd();
   }
   joyAxis = clamp(joyAxis, -1, 1);
@@ -967,20 +970,128 @@ function onJoyButtons(m) {
   else if (m & (B.X | B.UP)) stepBy(-1);
   else if (m & (B.B | B.DOWN)) stepBy(1);
 }
-function onSwingStart() {   // 휘두르기 시작하자마자 팔을 뒤로 뺌 (세기는 0.09초 뒤 'swing'에서)
-  if (selectOpen() || menuOpen() || resultOpen() || game.paused || game.demo) return;
+// 자세를 모르는 조이콘(가속도가 아직 안 옴)만: 휘두르기 시작하자마자 팔을 뒤로 뺌 (세기는 0.09초 뒤 'swing'에서)
+function onSwingStart(jc) {
+  if (selectOpen() || menuOpen() || resultOpen() || game.paused || game.demo || motionJoy(jc)) return;
   if (game.state === 'aim' && !isCPU(cur())) startThrow(0.5, T(), false);
 }
-function onSwing(pow) {
+function onSwing(pow, jc) {
   if (selectOpen()) { selReady(); return; }
-  if (menuOpen() || resultOpen() || game.paused || game.demo) return;
+  if (menuOpen() || resultOpen() || game.paused || game.demo || motionJoy(jc)) return;
   if (game.state === 'throw' && !game.powKnown) { game.pow = clamp(pow, 0, 1); game.powKnown = true; return; }
   if (game.state === 'aim' && !isCPU(cur())) startThrow(pow, T(), true);
 }
-JC.on('swingstart', () => onSwingStart());
-JC.on('swing', (pi, pow) => onSwing(pow));
+JC.on('swingstart', (pi, t, jc) => onSwingStart(jc));
+JC.on('swing', (pi, pow, t, jc) => onSwing(pow, jc));
 JC.on('buttons', (pi, m) => onJoyButtons(m));
 JC.on('change', () => renderSlots());
+
+// ============================================================
+// 조이콘 몸짓 — 닌텐도 위 볼링처럼 화면 속 팔이 내 팔을 그대로 따라감
+//  · R·ZR(왼쪽 조이콘은 L·ZL)을 누른 채 뒤로 → 앞으로 휘두르다 버튼을 놓으면 그 순간 공이 나감
+//  · 버튼 없이 휘둘러도: 뒤로 크게 뺐다가 앞으로 맨 아래를 지날 때 저절로 나감
+//  · 놓는 순간 팔이 도는 빠르기 = 공 빠르기 · 손목 비틀기 = 휘기(조준한 휘기에 더함) · 휘두른 쪽 = 방향(조금)
+//  · 뒤로 빼는 중에 놓으면 공이 뒤로 툭 떨어지고 다시 (점수엔 안 들어감)
+//  팔 각도 th: 어깨→손(jc.arm)이 아래에서 앞쪽으로 돈 각도 (0 아래 · + 앞 · - 뒤, 라디안)
+//  앞: 조이콘을 가만히 앞으로 들고 있을 때 가리키는 가로 방향 (조준하며 스틱을 만질 때 저절로 맞춰짐)
+// ============================================================
+const MO = { jc: null, mode: '', t0: -9, th: 0, prev: 0, lo: 0, hi: 0, hist: [], relT: -9, last: null };
+const MV = { A: { x: 0, y: 0, z: 0 }, W: { x: 0, y: 0, z: 0 } };
+const motionJoy = jc => !!(jc && jc.ok && jc.q);
+function armState(jc) {
+  const A = JC.armWorld(jc, MV.A), W = JC.rateWorld(jc, MV.W), h = jc.bwH || (jc.bwH = { x: 1, y: 0 });
+  const vx = W.y * A.z - W.z * A.y, vy = W.z * A.x - W.x * A.z;   // 손이 움직이는 방향 (ω × 팔)
+  return {
+    th: Math.atan2(A.x * h.x + A.y * h.y, -A.z),
+    rate: W.x * h.y - W.y * h.x,                                   // 오른쪽 축 기준 회전: + 앞으로 휘두름
+    twist: W.x * A.x + W.y * A.y + W.z * A.z,                      // 팔 축 기준: 팔이 아래일 때 + = 위에서 볼 때 시계
+    dir: Math.atan2(vx * h.y - vy * h.x, vx * h.x + vy * h.y),     // 손이 나가는 쪽: + 오른쪽
+    vx, vy,
+  };
+}
+// 뒤로 빼는 손이 가는 쪽의 반대를 '앞'으로 다시 맞춤: 조준할 때 조이콘을 비스듬히 들고 있었어도 휘두르는 면을 기준으로
+function alignToBackswing(jc, s) {
+  const vh = Math.hypot(s.vx, s.vy), h = jc.bwH;
+  if (s.rate > -1.5 || vh < 0.6 || s.th < -1.2) return;
+  h.x += (-s.vx / vh - h.x) * 0.35; h.y += (-s.vy / vh - h.y) * 0.35;
+  const n = Math.hypot(h.x, h.y) || 1; h.x /= n; h.y /= n;
+}
+function trackHeading(jc, dt) {
+  const A = JC.armWorld(jc, MV.A), W = JC.rateWorld(jc, MV.W), flat = Math.hypot(A.x, A.y);
+  if (flat < 0.55 || Math.hypot(W.x, W.y, W.z) > 1) return;   // 거의 아래·위를 가리키거나 움직이는 중이면 그대로
+  const h = jc.bwH;
+  if (!h) { jc.bwH = { x: A.x / flat, y: A.y / flat }; return; }
+  const k = Math.min(1, dt / 0.4);
+  h.x += (A.x / flat - h.x) * k; h.y += (A.y / flat - h.y) * k;
+  const n = Math.hypot(h.x, h.y) || 1; h.x /= n; h.y /= n;
+}
+function startMotion(jc, mode, t) {
+  if (game.state !== 'aim' || game.paused) return;
+  if (mode === 'grip') {   // 쥐는 순간 조이콘을 앞으로 들고 있으면 그쪽이 앞
+    const A = JC.armWorld(jc, MV.A), flat = Math.hypot(A.x, A.y);
+    if (flat > 0.45) jc.bwH = { x: A.x / flat, y: A.y / flat };
+  }
+  const s = armState(jc);
+  Object.assign(MO, { jc, mode, t0: t, th: s.th, prev: s.th, lo: s.th, hi: s.th, hist: [], last: null });
+  game.state = 'throw'; game.stateT = t; game.throwT = t; game.charge = null; game.powKnown = false; game.motionThrow = true;
+}
+function endMotion(t, msg) {   // 굴리지 않고 조준으로
+  MO.mode = ''; game.motionThrow = false; game.state = 'aim'; game.stateT = t;
+  if (msg) showToast(msg);
+}
+function motionStep(t, dt) {
+  for (const jc of JC.list) if (motionJoy(jc) && !(MO.mode && jc === MO.jc)) trackHeading(jc, dt);
+  const p = cur(), st = game.state;
+  if (!p || isCPU(p) || game.demo || game.paused) { MO.mode = ''; return; }
+  if (st === 'aim') {   // 버튼 없이 뒤로 크게 빼면 시작
+    for (const jc of JC.list) {
+      if (!motionJoy(jc)) continue;
+      const s = armState(jc);
+      if (s.th < -0.55 && s.rate < -2) { startMotion(jc, 'auto', t); break; }
+    }
+  } else if (st === 'throw' && MO.mode) stepMotion(t);
+  else if (game.motionThrow && (st === 'roll' || st === 'result') && t - MO.relT < 0.9 && motionJoy(MO.jc)) MO.th = armState(MO.jc).th;   // 팔로스루도 그대로
+}
+function stepMotion(t) {
+  const jc = MO.jc;
+  if (!motionJoy(jc)) { endMotion(t, ''); return; }
+  let s = armState(jc);
+  if (MO.hi - s.th < 2.2 && s.rate < -1.5) { alignToBackswing(jc, s); s = armState(jc); }   // 앞으로 휘두르기 전까지
+  MO.prev = MO.th; MO.th = s.th; MO.lo = Math.min(MO.lo, s.th); MO.hi = Math.max(MO.hi, s.th);
+  MO.hist.push({ t, rate: s.rate, twist: s.twist });
+  while (MO.hist.length && t - MO.hist[0].t > 0.25) MO.hist.shift();
+  const trig = !!((jc.hold || 0) & (B.SHOULDER | B.TRIGGER));
+  if (MO.mode === 'auto' && trig) MO.mode = 'grip';
+  if (MO.mode === 'grip') {
+    if (trig) { if (t - MO.t0 > 10) endMotion(t, ''); return; }
+    if (MO.hi - MO.lo < 0.45) { endMotion(t, '공을 쥔 채 뒤로 휘둘렀다가, 앞으로 휘두르면서 놓아요'); return; }
+    if (s.th < 0.35 && recentRate(t, s) < 0.6) { dropBall(t, s.th < -0.3); return; }   // 앞으로 휘두르는 중이 아니면 손에서 툭
+    releaseMotion(t, s);
+    return;
+  }
+  if (MO.lo < -0.7 && MO.prev < 0.17 && s.th >= 0.17 && s.rate > 1.2) { releaseMotion(t, s); return; }   // 앞으로 맨 아래(+10°)를 지남
+  if (t - MO.t0 > 2.5) endMotion(t, '');
+}
+const recentRate = (t, s) => MO.hist.reduce((a, h) => (t - h.t <= 0.12 ? Math.max(a, h.rate) : a), s.rate);   // 0.12초 안에 앞으로 가장 빨리 돈 빠르기
+function releaseMotion(t, s) {
+  const recent = MO.hist.filter(h => t - h.t <= 0.12);
+  const twist = recent.reduce((a, h) => a + h.twist, s.twist) / (recent.length + 1);
+  const dps = recentRate(t, s) * 180 / Math.PI * settings.sensitivity;
+  const pow = clamp((dps - 100) / 400, 0, 1);                                                       // 초당 100° → 가장 느림, 500° → 가장 빠름
+  const spin = Math.abs(twist) < 1.2 ? 0 : clamp((twist - Math.sign(twist) * 1.2) / 4.8, -1, 1);    // 초당 70° 안쪽은 그냥 흔들림, 340°면 가장 많이 휨
+  const dirDeg = s.dir * 180 / Math.PI, dAng = Math.abs(dirDeg) < 3 ? 0 : clamp((dirDeg - Math.sign(dirDeg) * 3) * 0.12, -1.5, 1.5);
+  game.pow = pow; game.powKnown = true;
+  MO.last = { pow, spin, dAng, dps, th: s.th }; MO.mode = ''; MO.relT = t;
+  release(t, { spin, dAng });
+}
+function dropBall(t, behind) {   // 뒤로 빼는 중이거나 멈춰서 놓음 → 공이 손에서 툭 (다시 해요)
+  const H = G3.hold, p = cur();
+  game.drop = { x: H ? H.x : p.x - 0.04, y: H ? H.y : 0.45, z: H ? H.z : 0.55, back: behind ? 0.45 : 0.12, t0: t };
+  ball.st = 'drop'; MO.mode = ''; game.motionThrow = false;
+  game.state = 'oops'; game.stateT = t;
+  sfx.drop(); sfx.groan(); rumbleHuman(0.4, 120);
+  showMsg(behind ? '앗, 공이 뒤로!' : '앗, 공을 떨어뜨렸어요!', '#ffd84d', '앞으로 휘두르면서 버튼을 놓아요');
+}
 
 // ============================================================
 // 메뉴 UI
@@ -1000,7 +1111,9 @@ function updateSlotMeters() {
   const g = JC.list.reduce((a, j) => Math.max(a, j.gyro || 0), 0);
   m.style.width = Math.min(100, g / 18) + '%';
   const last = JC.list.reduce((a, j) => j.lastSwingT > a.t ? { t: j.lastSwingT, pow: j.lastPow } : a, { t: -9, pow: 0 });
-  s.textContent = realNow() - last.t < 1.6 ? `휘둘렀어요! 세기 ${Math.round(last.pow * 100)}% · 시속 ${Math.round(speedOf(last.pow) * 3.6)}km` : (JC.list.length ? '휘둘러 보세요' : '');
+  const mj = JC.list.find(motionJoy);   // 자세를 아는 조이콘: 팔 각도를 그대로 보여 줌 (내리면 0°, 앞으로 들면 +, 뒤로 빼면 −)
+  s.textContent = realNow() - last.t < 1.6 ? `휘둘렀어요! 세기 ${Math.round(last.pow * 100)}%`
+    : mj ? `팔 각도 ${Math.round(armState(mj).th * 180 / Math.PI)}° (아래 0 · 앞 + · 뒤 −)` : (JC.list.length ? '휘둘러 보세요' : '');
 }
 function showWarn(text) { const w = $('hidWarn'); w.textContent = text; w.classList.toggle('hidden', !text); }
 function bestText() {
@@ -1422,6 +1535,11 @@ function bowlerPose(t) {
     const p = cur(), sway = game.charge ? 0.5 * chargePow() : 0;   // 힘 모으는 동안 팔을 뒤로
     return sway ? { dR: armDir(lerp(0.9, -1.1, sway)), dL: nrm(-0.8, -0.3, 0), twist: 0, lean: -0.1 * sway, nod: 0 } : Object.assign(holding, { twist: (p ? p.ang : 0) * 0.04 });
   }
+  if (game.motionThrow && (st === 'throw' || ((st === 'roll' || st === 'result') && t - MO.relT < 0.9))) {   // 조이콘: 내 팔 각도 그대로
+    const th = clamp(MO.th, -2.3, 2.7), low = clamp(1 - Math.abs(th) / 1.4, 0, 1);
+    return { dR: armDir(th), dL: nrm(-0.85, -0.2, 0.15), twist: 0, lean: -0.3 * low, nod: 0.15 * low };
+  }
+  if (st === 'oops') return { dR: nrm(0.45, 0.75, -0.25), dL: nrm(-0.45, 0.75, -0.25), twist: 0, lean: 0.08, nod: -0.12 };   // 앗!
   if (st === 'throw' || ((st === 'roll' || st === 'result') && tt < THROW.dur + 0.7)) {
     let phi;
     if (tt < 0.2) phi = lerp(0.85, -1.25, smooth(tt / 0.2));
@@ -1471,9 +1589,11 @@ function syncMonsters(t) {
       lift = win ? Math.abs(Math.sin(t * 6.5)) * 0.18 : ready ? Math.abs(Math.sin(t * 5 + i)) * 0.04 : now ? Math.abs(Math.sin(t * 8)) * 0.03 : 0;
     } else if (i === game.cur) {
       show = true; x = p.x - 0.2; z = 0.36;
+      if (game.motionThrow && (st === 'throw' || st === 'roll' || st === 'result')) z -= 0.2 * smooth((t - game.throwT) / 0.9);   // 휘두르며 앞으로 걸어 나감
       pose = bowlerPose(t);
       if ((st === 'result' || st === 'sweep') && game.msg && game.msg.big) lift = Math.abs(Math.sin(t * 7)) * 0.12;
     }
+    if (show && i === game.cur && (st === 'roll' || st === 'result' || st === 'sweep') && G3.camPos && G3.camPos.z < z + 1.1) show = false;   // 공을 따라가는 카메라가 선수를 지나감
     m.root.visible = m.blob.visible = show;
     if (!show) return;
     const pu = t - m.popT, pop = pu >= 0 && pu < 0.8 ? 1 + 0.22 * Math.exp(-7 * pu) * Math.sin(18 * pu) : 1;
@@ -1481,7 +1601,8 @@ function syncMonsters(t) {
     m.root.rotation.y = face;
     m.root.scale.set(MON * ch.w * pop, MON * ch.h * pop, MON * ch.w * pop);
     m.blob.position.set(x, 0.006, z); m.blob.scale.setScalar(MON * ch.w);
-    const step = st === 'throw' ? smooth((t - game.throwT) / THROW.release) : (st === 'roll' && t - game.throwT < THROW.dur + 0.7) ? 1 : 0;
+    const step = st === 'throw' ? smooth((t - game.throwT) / (game.motionThrow ? 0.6 : THROW.release))
+      : (st === 'roll' && (game.motionThrow ? t - MO.relT < 0.9 : t - game.throwT < THROW.dur + 0.7)) ? 1 : 0;
     m.legs[0].rotation.x = -0.55 * step; m.legs[1].rotation.x = 0.35 * step;   // 왼발 앞으로 내딛고 오른발은 뒤로
     applyPose(m, pose);
     if (i === game.cur && st !== 'select' && st !== 'end') {
@@ -1549,6 +1670,11 @@ function syncBall(t, dt) {
   let vis = false;
   if (ball.st === 'hold') {
     if (G3.holdPos && p) { vis = true; m.position.copy(G3.holdPos); G3.relPos = G3.relPos || new THREE.Vector3(); G3.relPos.copy(G3.holdPos); }
+  } else if (ball.st === 'drop') {   // 뒤로 떨어뜨린 공: 툭 떨어져 몇 번 튀고 뒤로 조금 굴러감
+    const D = game.drop, u = t - D.t0, fall = Math.sqrt(2 * Math.max(0.01, D.y - BALL_R) / 9.8);
+    const y = u < fall ? D.y - 4.9 * u * u : BALL_R + 0.08 * Math.abs(Math.sin((u - fall) * 10)) * Math.exp(-(u - fall) * 5);
+    m.position.set(D.x, y, D.z + D.back * (1 - Math.exp(-2 * u)));
+    vis = true;
   } else {
     vis = ball.st !== 'pit' || ball.y > -0.4;
     m.position.set(ball.x, BALL_R + ball.y, -ball.z);
@@ -1602,13 +1728,15 @@ function camGoal(t) {
     const lookY = 0.62 + (fr ? (fr.center - 0.5) * 2 * dist * tan : 0);
     K.goalPos.set(0, lookY + 0.2, 1.1 - dist); K.goalLook.set(0, lookY, 1.1);
   }
+  else if (st === 'roll' && ball.st === 'lane' && ball.z <= 3.2) aimCam(p);   // 처음 3m는 선수 뒤에서 그대로 (팔로스루가 보이게)
   else if (st === 'roll' && ball.st !== 'pit' && ball.z < 15.6) {
     const bz = Math.max(ball.z, 0);
     K.goalPos.set(ball.x * 0.7, 0.95 - 0.2 * smooth(bz / 15), -(bz - 2.7)); K.goalLook.set(ball.x * 0.5, 0.12, -Math.min(bz + 5.5, 18.75));
   } else if (st === 'roll' || st === 'result' || st === 'sweep') { K.goalPos.set(0, 0.8, -15.3); K.goalLook.set(0, 0.14, -18.75); fov = 38; }
-  else { const x = p ? p.x : 0; K.goalPos.set(x - 0.62, 1.62, 3.3); K.goalLook.set(x * 0.4 - 0.08, 0.02, -12); }   // 선수 왼쪽 뒤에서 (몬스터가 레인을 가리지 않게)
+  else aimCam(p);
   return fov;
 }
+function aimCam(p) { const K = K3, x = p ? p.x : 0; K.goalPos.set(x - 0.62, 1.62, 3.3); K.goalLook.set(x * 0.4 - 0.08, 0.02, -12); }   // 선수 왼쪽 뒤에서 (몬스터가 레인을 가리지 않게)
 function syncCamera(t, dt) {
   const K = k3(), cam = G3.camera, fov = camGoal(t);
   const fast = game.state === 'roll' ? 9 : 4.5, k = G3.camSnap ? 1 : 1 - Math.exp(-dt * fast);
@@ -1627,7 +1755,7 @@ function sync3D() {
 // HUD (점수판 · 핀 지도 · 조준 안내 · 문구) — 가상 1920x1080 좌표
 // ============================================================
 function outlined(g, text, x, y, fill, lw = 8) { g.lineJoin = 'round'; g.lineWidth = lw; g.strokeStyle = 'rgba(25,16,52,0.85)'; g.strokeText(text, x, y); g.fillStyle = fill; g.fillText(text, x, y); }
-const PLAYING = ['turn', 'aim', 'throw', 'roll', 'result', 'sweep'];
+const PLAYING = ['turn', 'aim', 'throw', 'oops', 'roll', 'result', 'sweep'];
 function drawBoard(g) {
   const F = game.F, ps = game.players, n = ps.length;
   if (!n) return;
@@ -1688,6 +1816,7 @@ const posText = x => Math.abs(x) < 0.015 ? '가운데' : `${x < 0 ? '왼쪽' : '
 const angText = a => Math.abs(a) < 0.08 ? '똑바로' : `${a < 0 ? '왼쪽' : '오른쪽'}으로 ${Math.abs(a).toFixed(1)}°`;
 const spinText = s => Math.abs(s) < 0.05 ? '안 휨' : `${s < 0 ? '왼쪽' : '오른쪽'}으로 ${Math.round(Math.abs(s) * 100)}%`;
 function hintText() {
+  if (JC.list.some(motionJoy)) return '스틱 ↕ 고르기 · ↔ 바꾸기 · R(ZR)을 누른 채 뒤로 → 앞으로 휘두르며 놓아요 · 손목을 비틀면 휘어요';
   if (JC.list.some(j => j.ok)) return '스틱 ↕ 고르기 · ↔ 바꾸기 · 조이콘을 아래에서 앞으로 휘두르면 굴러가요 (R·ZR을 꾹 눌렀다 떼도 돼요)';
   if (game.padCount) return '스틱·방향 버튼 ↕ 고르기 · ↔ 바꾸기 · A를 꾹 눌렀다 떼면 굴러가요 · Y 범퍼';
   return '↑↓ 고르기 · ←→ 바꾸기 · Space를 꾹 눌렀다 떼면 굴러가요 · A 살살 · S 보통 · D 세게 · B 범퍼';
@@ -1713,8 +1842,11 @@ function drawAimPanel(g, t) {
     g.fillStyle = p.color; circ(g, gx + gw * u, gy, 11);
     g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.beginPath(); g.arc(gx + gw * u, gy, 11, 0, Math.PI * 2); g.stroke();
   }
-  g.fillStyle = '#ffffff'; g.font = `700 19px ${FONT}`;
-  g.fillText(cpu ? `${labelOf(p)} ${nameOf(p)}가 조준하는 중…` : hintText(), X + W / 2, Y + 132);
+  const hint = cpu ? `${labelOf(p)} ${nameOf(p)}가 조준하는 중…` : hintText();
+  let fs = 19;   // 칸보다 길면 글자를 줄여서 맞춤
+  g.font = `700 ${fs}px ${FONT}`;
+  while (fs > 13 && g.measureText(hint).width > W - 36) g.font = `700 ${--fs}px ${FONT}`;
+  g.fillStyle = '#ffffff'; g.fillText(hint, X + W / 2, Y + 132);
   if (game.charge) {   // 힘 막대
     const v = chargePow(), mx = X + W + 18, my = Y, mh = H;
     g.fillStyle = 'rgba(24,18,52,0.8)'; rr(g, mx, my, 46, mh, 14); g.fill();
@@ -1751,10 +1883,16 @@ function drawMsg(g, t) {
   g.restore();
 }
 function drawSpeed(g, t) {
+  if (game.state === 'throw' && MO.mode) {   // 조이콘으로 휘두르는 중: 다음에 할 일
+    const back = MO.lo < -0.5, text = MO.mode === 'grip' ? (back ? '앞으로 휘두르면서 버튼을 놓아요!' : '뒤로 휘둘러요') : (back ? '앞으로!' : '');
+    if (text) { g.save(); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `900 40px ${FONT}`; outlined(g, text, VW / 2, VH - 70, '#ffd84d', 8); g.restore(); }
+    return;
+  }
   if (game.state !== 'roll' || t - game.releaseT > 2.6) return;
   g.save(); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `900 40px ${FONT}`;
   const spin = Math.abs(ball.spin) > 0.05 ? (ball.spin < 0 ? ' · 왼쪽으로 휘는 공' : ' · 오른쪽으로 휘는 공') : '';
-  outlined(g, `시속 ${game.speedKmh}km${spin}`, VW / 2, VH - 70, '#ffffff', 8);
+  const wrist = MO.last && MO.relT === game.releaseT && Math.abs(MO.last.spin) > 0.05 ? ' (손목)' : '';
+  outlined(g, `시속 ${game.speedKmh}km${spin}${wrist}`, VW / 2, VH - 70, '#ffffff', 8);
   g.restore();
 }
 function drawToast(g) {
@@ -1801,9 +1939,11 @@ function update() {
   if (game.paused) return;
   const st = game.state;
   if (st === 'select') { if (sel.startAt && t >= sel.startAt) startMatch(); return; }
+  motionStep(t, dt);
   if (st === 'turn') { if (t - game.stateT > (game.same ? 0.75 : 1.5)) enterAim(t); }
   else if (st === 'aim') { aimInput(dt); if (isCPU(cur())) cpuAim(t); }
-  else if (st === 'throw') { if (t - game.stateT >= THROW.release) release(t); }
+  else if (st === 'throw') { if (!game.motionThrow && t - game.stateT >= THROW.release) release(t); }
+  else if (st === 'oops') { if (t - game.stateT > 1.3) { ball.st = 'hold'; game.state = 'aim'; game.stateT = t; } }
   else if (st === 'roll') updateRoll(dt, t);
   else if (st === 'result') { simulate(dt); if (t - game.stateT > 1.7) startSweep(t); }
   else if (st === 'sweep') { if (t - game.stateT > SWEEP_DUR) afterSweep(t); }
@@ -1925,5 +2065,5 @@ window.__BW = { game, settings, pins, ball, sim, sel, LANE, PIN, SPOTS, BALL_R, 
   startMatch, toMenu, openSelect, startDemo, selMove, selReady, selUnready, selBumper, selPick, startThrow, release, finishBall,
   physicsStep, simulate, resetRack, predictPath, solveAngle, planCPU, speedOf, laneStep, frameTotals, frameMarks, totalOf, frameDone, needRack, isSplit,
   pinsSettled, onSwing, onSwingStart, onJoyButtons, nudge, stepBy, chargeStart, chargeEnd, chargePow, toggleBumperNow, pause, resume, isCPU, cur,
-  gfx, G3, Q, applyQuality, autoStep, joycon: JC, setDemoPaused, setClock: f => { realNow = f; } };
+  gfx, G3, Q, applyQuality, autoStep, joycon: JC, setDemoPaused, setClock: f => { realNow = f; }, MO, armState, motionJoy, bowlerPose };
 })();

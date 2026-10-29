@@ -365,6 +365,83 @@ assert(BW.sel.cards[0].ready, '고르기: 휘두르면 준비');
 JC.list.splice(JC.list.indexOf(jc), 1);
 BW.toMenu();
 
+// ---------- 7b. 조이콘 몸짓 (닌텐도 위처럼): 가짜 조이콘이 보낸 가속도·자이로로 팔이 따라가고 굴러감 ----------
+console.log('\n[7b] 조이콘 몸짓 (가짜 IMU)');
+{
+  const SIM = require('./joysim.js');
+  const smoothT = u => { u = Math.max(0, Math.min(1, u)); return u * u * (3 - 2 * u); };
+  const mk = kind => ({ ok: true, name: `조이콘 (${kind})`, kind, player: 0, stick: { x: 2048, y: 2048 }, hold: 0, gyro: 0, armed: true, swinging: false, swingStart: 0,
+    peak: 0, peakT: 0, cool: 0, prevBtn: 0, simple: 0, lastReport: 0, lastPow: 0, lastSwingT: -9, device: { opened: false } });
+  // 몸짓 하나: 110°(팔로스루)에서 가슴 앞 80°로 → 0.6초 가만히(앞 방향 잡힘) → 뒤로 → 앞으로 fwd초 → 110°. 끝과 시작이 같아 끊김 없이 이어짐
+  function swingPlan(o = {}) {
+    const fd = o.fwd || 0.6, bk = o.back == null ? -75 : o.back, tB = 1.1, tF = tB + 0.6, tE = tF + fd;
+    const th = t => t < 0.5 ? 110 - 30 * smoothT(t / 0.5) : t < tB ? 80 : t < tF ? 80 + (bk - 80) * smoothT((t - tB) / 0.6) : t < tE ? bk + (110 - bk) * smoothT((t - tF) / fd) : 110;
+    const at = deg => { let lo = tF, hi = tE; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (th(m) < deg) lo = m; else hi = m; } return (lo + hi) / 2; };   // 앞으로 휘두르며 deg를 지나는 때
+    return { th, tB, tF, tE, dur: tE + 0.6, at };
+  }
+  // 리포트(0.015초마다)와 게임 프레임(1/60초)을 실제 시간 순서대로 섞어서 넣음
+  function drive(jc, motion, dur, each) {
+    const reps = SIM.reports(motion, dur, { kind: jc.kind });
+    let ri = 0, tRep = 0.015, tFrame = 1 / 60, t = 0, frame = 0;
+    while (t < dur - 1e-9) {
+      if (tRep <= tFrame) { now += tRep - t; t = tRep; if (ri < reps.length) JC.report(jc, { reportId: 0x30, data: reps[ri++] }); tRep += 0.015; }
+      else { now += tFrame - t; t = tFrame; BW.update(); if (frame++ % 3 === 0) BW.render(); if (each) each(t); tFrame += 1 / 60; }
+    }
+  }
+  const waitAim = () => runUntil(() => G.state === 'aim', 16, false);
+  const jcR = mk('R');
+  JC.list.push(jcR);
+  startGame([{ cpu: -1 }], 10);
+  waitAim();
+  const throwOne = (jc, o = {}) => {   // 한 번 굴려 보고 결과를 돌려줌
+    const P = swingPlan(o), relT = o.relAt != null ? o.relAt(P) : P.at(10);
+    const zr = o.auto ? () => false : t => t >= 0.8 && t < relT;
+    let minArm = 9, sawThrow = false, maxBack = 0;
+    drive(jc, SIM.bowl(P.th, { zr, twist: o.twist, yaw: o.yaw }), P.dur, () => {
+      if (G.state === 'throw') { sawThrow = true; const d = BW.bowlerPose(BW.T()).dR; maxBack = Math.max(maxBack, d.z); minArm = Math.min(minArm, BW.MO.th); }
+    });
+    return { state: G.state, sawThrow, maxBack, minArm: minArm * 180 / Math.PI, last: BW.MO.last, spin: ball.spin, v0: ball.v0, kmh: G.speedKmh, ang: Math.atan2(ball.vx, ball.vz) * 180 / Math.PI, P };
+  };
+  const r1 = throwOne(jcR);
+  assert(r1.sawThrow && r1.minArm < -65 && r1.minArm > -85, `R을 누르면 공을 쥐고, 화면 속 팔이 뒤로 ${r1.minArm.toFixed(0)}°까지 따라감 (실제 -75°)`);
+  assert(r1.maxBack > 0.9, '뒤로 뺄 때 몬스터 팔이 몸 뒤쪽을 가리킴');
+  assert(r1.state === 'roll' || r1.state === 'result', `앞으로 휘두르며 R을 놓으면 그때 굴러감 (지금 ${r1.state})`);
+  assert(r1.last && Math.abs(r1.kmh - BW.speedOf(r1.last.pow) * 3.6) < 2.5, `팔이 도는 빠르기 초당 ${r1.last ? r1.last.dps.toFixed(0) : '-'}° → 세기 ${r1.last ? Math.round(r1.last.pow * 100) : '-'}% · 시속 ${r1.kmh}km`);
+  assert(r1.last && Math.abs(r1.last.spin) < 0.05 && Math.abs(r1.last.dAng) < 0.05, '손목을 안 비틀고 똑바로 휘두르면 휘기·방향 그대로');
+  waitAim();
+  const slow = throwOne(jcR, { fwd: 1.0 }); waitAim();
+  const fast = throwOne(jcR, { fwd: 0.35 }); waitAim();
+  assert(slow.last && fast.last && slow.last.pow < r1.last.pow && r1.last.pow < fast.last.pow && fast.kmh > slow.kmh + 4, `천천히 휘두르면 느리게(시속 ${slow.kmh}km), 빠르게 휘두르면 빠르게(시속 ${fast.kmh}km)`);
+  const back = t => 1 - smoothT((t - 2.2) / 0.4);   // 놓은 뒤엔 천천히 되돌림 (다음 몸짓과 끊김 없이)
+  const ccw = throwOne(jcR, { twist: t => 85 * smoothT((t - swingPlan().at(-30)) / 0.18) * back(t) }); waitAim();
+  const cw = throwOne(jcR, { twist: t => -85 * smoothT((t - swingPlan().at(-30)) / 0.18) * back(t) }); waitAim();
+  assert(ccw.last && ccw.last.spin < -0.3 && ccw.spin < -0.3, `놓을 때 손목을 위에서 볼 때 반시계로 비틀면 왼쪽으로 휨 (휘기 ${ccw.last ? ccw.last.spin.toFixed(2) : '-'})`);
+  assert(cw.last && cw.last.spin > 0.3 && cw.spin > 0.3, `시계 방향으로 비틀면 오른쪽으로 휨 (휘기 ${cw.last ? cw.last.spin.toFixed(2) : '-'})`);
+  const right = throwOne(jcR, { yaw: t => -16 * smoothT((t - 1.4) / 0.4) * back(t) }); waitAim();
+  const left = throwOne(jcR, { yaw: t => 16 * smoothT((t - 1.4) / 0.4) * back(t) }); waitAim();
+  assert(right.last && left.last && right.last.dAng > 0.4 && left.last.dAng < -0.4, `오른쪽으로 비껴 휘두르면 오른쪽(${right.last ? right.last.dAng.toFixed(2) : '-'}°), 왼쪽이면 왼쪽(${left.last ? left.last.dAng.toFixed(2) : '-'}°)으로`);
+  // 조준할 때 조이콘을 오른쪽으로 40° 비스듬히 들고 있다가 R을 누르고, 휘두르기는 똑바로 → 휘두르는 면을 기준으로 봐서 똑바로 감
+  const skew = throwOne(jcR, { yaw: t => -40 * (1 - smoothT((t - 0.85) / 0.3)) }); waitAim();
+  assert(skew.last && Math.abs(skew.last.dAng) < 0.3 && skew.minArm < -60, `조이콘을 비스듬히 들고 R을 눌러도 똑바로 휘두르면 똑바로 (방향 ${skew.last ? skew.last.dAng.toFixed(2) : '-'}° · 팔 ${skew.minArm.toFixed(0)}°)`);
+  const auto = throwOne(jcR, { auto: true }); waitAim();
+  assert(auto.sawThrow && (auto.state === 'roll' || auto.state === 'result') && auto.last && Math.abs(auto.last.th * 180 / Math.PI - 10) < 15, `버튼 없이 휘둘러도 앞으로 맨 아래를 지날 때 저절로 굴러감 (놓은 팔 각도 ${auto.last ? (auto.last.th * 180 / Math.PI).toFixed(0) : '-'}°)`);
+  const before = G.players[0].frames.flat().length;
+  const oops = throwOne(jcR, { relAt: P => P.tB + 0.5 });   // 뒤로 빼는 중(-63°)에 놓음
+  assert(oops.state === 'oops' && ball.st === 'drop', '뒤로 빼는 중에 R을 놓으면 공이 뒤로 툭 떨어짐');
+  run(1.5);
+  assert(G.state === 'aim' && ball.st === 'hold' && G.players[0].frames.flat().length === before, '잠시 뒤 다시 조준 (점수엔 안 들어감)');
+  const still = { th: t => (t < 0.5 ? 110 - 30 * smoothT(t / 0.5) : t < 1.6 ? 80 : 80 + 30 * smoothT((t - 1.6) / 0.4)), zr: t => t > 0.7 && t < 1.4 };
+  drive(jcR, SIM.bowl(still.th, { zr: still.zr }), 2.2);
+  assert(G.state === 'aim' && G.players[0].frames.flat().length === before && BW.gfx.toast, 'R을 눌렀다가 휘두르지 않고 놓으면 그냥 다시 조준 (안내 문구)');
+  JC.list.splice(JC.list.indexOf(jcR), 1);
+  const jcL = mk('L');
+  JC.list.push(jcL);
+  const rl = throwOne(jcL);
+  assert(rl.sawThrow && rl.minArm < -65 && (rl.state === 'roll' || rl.state === 'result') && rl.last && rl.last.pow > 0.2, `왼쪽 조이콘(ZL)도 똑같이: 팔 ${rl.minArm.toFixed(0)}°까지 · 시속 ${rl.kmh}km`);
+  JC.list.splice(JC.list.indexOf(jcL), 1);
+  BW.toMenu();
+}
+
 // ---------- 8. 게임패드 ----------
 console.log('\n[8] 게임패드');
 const pad = { index: 0, connected: true, id: 'Xbox Wireless Controller', mapping: 'standard', axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })) };
@@ -428,7 +505,7 @@ assert(!G3.guide.visible, '휘두르면 길 띠는 사라짐');
 let worst = 0, camBad = false;
 run(6, () => { const c = G3.camera.position; if (![c.x, c.y, c.z].every(Number.isFinite)) camBad = true; for (const m of G3.pinMeshes) worst = Math.max(worst, Math.abs(m.position.y)); });
 assert(!camBad && worst < 1.5, `카메라·핀 위치 유한함 (핀 높이 최대 ${worst.toFixed(2)}m)`);
-assert(G3.mons.filter(m => m.root.visible).length === 1, '경기 중엔 치는 사람 몬스터만 보임');
+assert(G3.mons.every((m, i) => !m.root.visible || i === G.cur), '경기 중엔 치는 사람 몬스터만 보임 (공을 따라가는 카메라가 지나가면 그 사람도 숨김)');
 BW.openSelect(); BW.render();
 assert(G3.mons.every(m => m.root.visible) && !G3.ball.visible, '고르기 화면: 몬스터들이 줄 서고 공은 숨김');
 const xs = G3.mons.map(m => m.root.position.x);

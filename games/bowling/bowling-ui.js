@@ -64,7 +64,7 @@
   const updateSlots = joycon.handlers.change;
   function updateConnection() {
     const count = joycon.list.length;
-    $('connectionStatus').textContent = count ? `조이콘 ${count}개 연결됨 · 공을 굴리듯 가볍게 휘둘러 보세요.` : '키보드만으로도 바로 플레이할 수 있어요.';
+    $('connectionStatus').textContent = count ? `조이콘 ${count}개 연결됨 · R을 누른 채 팔을 뒤로 뺐다가 앞으로 휘두르며 놓아요.` : '키보드만으로도 바로 플레이할 수 있어요.';
     if (count) $('controllerDetails').open = true;
   }
   joycon.on('change', () => { if (updateSlots) updateSlots(); updateConnection(); });

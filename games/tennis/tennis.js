@@ -717,6 +717,7 @@ function update() {
   const dt = clamp(t - lastT, 0, 0.1); lastT = t;   // 느린 컴퓨터(10fps)에서도 이동 속도가 실제 시간과 같게
   pollGamepads();
   syncSound();
+  for (const p of players) updateLive(p, dt, t);   // 일시정지 중에도 라켓은 손을 따라감
   if (game.paused || demoPauseAt !== null) return;
   followMotion(t);
   for (const p of players) {
@@ -1353,6 +1354,7 @@ function drawPlayer2D(g, p) {
   const shY = sh.y + 0.03 * s;
   g.strokeStyle = skin; g.lineWidth = 0.16 * s;
   g.beginPath(); g.moveTo(sh.x - hand * 0.25 * s, shY); g.lineTo(sh.x - hand * 0.36 * s, shY + (won ? -0.22 : 0.16) * s); g.stroke();
+  if (p.live) { drawLiveRacket2D(g, p, sh.x + hand * 0.26 * s, shY, hand, s, accent); drawTag(g, p, proj(p.x, p.y, (1.92 + bob) * ch.h), t); return; }
   const k = (t - p.swingT) / SWING_DUR, swinging = k >= 0 && k < 1;
   const prep = !swinging && prepFor(p, t);
   const side = hand * ((swinging ? p.anim === 'backhand' : prep && prep.anim === 'backhand') ? -1 : 1);   // 백핸드는 몸 반대쪽으로
@@ -1374,6 +1376,21 @@ function drawPlayer2D(g, p) {
   g.beginPath(); g.ellipse(0, 0, 0.12 * s, 0.16 * s, 0, 0, Math.PI * 2); g.fill(); g.stroke();
   g.restore();
   drawTag(g, p, proj(p.x, p.y, (1.92 + bob) * ch.h), t);
+}
+
+// 조이콘을 든 사람: 팔·라켓을 몸 기준 방향 그대로 화면에 비춰 그림 (앞뒤로 향하면 짧게 보임)
+function drawLiveRacket2D(g, p, shX, shY, hand, s, accent) {
+  const R = p.live.root, hx = shX + hand * R.dR.x * 0.36 * s, hy = shY - R.dR.y * 0.36 * s;
+  g.beginPath(); g.moveTo(shX, shY); g.lineTo(hx, hy); g.stroke();
+  let ux = hand * R.r.x, uy = -R.r.y;
+  const ul = Math.hypot(ux, uy), k = clamp(ul, 0.35, 1);
+  if (ul > 1e-3) { ux /= ul; uy /= ul; } else { ux = 0; uy = -1; }
+  g.strokeStyle = '#1f2937'; g.lineWidth = 0.045 * s;
+  g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx + ux * 0.3 * s * k, hy + uy * 0.3 * s * k); g.stroke();
+  g.save(); g.translate(hx + ux * 0.5 * s * k, hy + uy * 0.5 * s * k); g.rotate(Math.atan2(uy, ux) + Math.PI / 2);
+  g.fillStyle = 'rgba(255,255,255,0.28)'; g.strokeStyle = accent; g.lineWidth = 0.04 * s;
+  g.beginPath(); g.ellipse(0, 0, 0.12 * s, 0.16 * s * k, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.restore();
 }
 
 function drawBall2D(g, b) {
@@ -1731,7 +1748,38 @@ function prepFor(p, t) {
   const u = smooth((0.95 - (s.hit.t - t)) / 0.5);
   return u > 0 ? { u, anim: s.hit.z > 1.85 ? 'smash' : s.side === 'bh' ? 'backhand' : 'drive' } : null;
 }
+// ---------- 조이콘을 든 사람: 라켓이 조이콘을 그대로 따라감 (닌텐도 위처럼) ----------
+//  라켓 방향 = 조이콘의 어깨→손 방향(jc.arm, 보통은 어깨 버튼 쪽 끝). 앞 = 조이콘이 조용할 때 가리키는 가로 방향 (천천히 따라감)
+//  팔은 라켓 쪽으로 뻗되 조금 아래로, 서브 토스·스매시를 기다릴 땐 머리 위로. 상체는 라켓이 옆으로 갈수록 그쪽으로 틂
+//  왼손잡이와, 카메라를 보고 선 화면(캐릭터 고르기·결과)은 거울처럼 좌우를 바꿈
+const LV = { A: { x: 0, y: 0, z: 0 }, W: { x: 0, y: 0, z: 0 } };
+const liveJoy = p => (isCPU(p.i) ? null : JC.list.find(j => j.ok && j.q && j.player === p.i) || null);
+function updateLive(p, dt, t) {
+  const jc = liveJoy(p);
+  if (!jc) { p.live = null; return; }
+  const L = p.live || (p.live = { yaw: null, ov: 0, speed: 0, pose: null, root: null });
+  const A = JC.armWorld(jc, LV.A), W = JC.rateWorld(jc, LV.W), wn = Math.hypot(W.x, W.y, W.z), flat = Math.hypot(A.x, A.y), yaw = Math.atan2(A.y, A.x);
+  if (L.yaw === null) L.yaw = flat > 0.2 ? yaw : 0;
+  else if (flat > 0.35 && wn < 1.5) {
+    let d = yaw - L.yaw; d -= Math.round(d / (2 * Math.PI)) * 2 * Math.PI;
+    L.yaw += d * Math.min(1, dt / (Math.abs(d) < 0.9 ? 1.6 : 6));   // 옆을 오래 가리키면 아주 천천히만 (몸을 돌려 섰을 때)
+  }
+  const c = Math.cos(L.yaw), s = Math.sin(L.yaw), mirror = settings.lefty[p.i] !== (game.state === 'select' || game.state === 'matchEnd');
+  const rx = (A.x * s - A.y * c) * (mirror ? -1 : 1), ry = A.z, rz = -(A.x * c + A.y * s);   // 몸 기준: x 오른쪽 · y 위 · z 뒤
+  const serving = game.state === 'serve' && game.server === p.i && game.serveStage === 'toss', prep = prepFor(p, t);
+  L.ov += ((serving || (prep && prep.anim === 'smash') ? 1 : 0) - L.ov) * Math.min(1, dt * 6);
+  const ov = L.ov, reach = lerp(0.9, 0.7, ov);
+  const ax = rx * reach + 0.15, ay = lerp(-0.55 + 0.3 * ry, 0.35 + 0.6 * Math.max(ry, 0), ov), az = rz * reach;
+  const twist = -0.55 * Math.sin(Math.atan2(rx, -rz)) * Math.min(1, Math.hypot(rx, rz) * 1.5) * (1 - 0.6 * ov);
+  const cw = Math.cos(twist), sw = Math.sin(twist), tor = (x, y, z) => new THREE.Vector3(x * cw - z * sw, y, x * sw + z * cw).normalize();   // 몸 → 틀어진 상체 기준
+  const face = Math.hypot(rx, rz) > 0.05 ? tor(rz, 0, -rx) : new THREE.Vector3(0, 0, -1);   // 라켓 면은 세워서 (공 오는 쪽을 봄)
+  L.pose = { dR: tor(ax, ay, az), dL: serving ? swingPose('toss', 1).dL : tor(-0.4 + 0.2 * rx, -0.62, -0.42 - 0.2 * rz), r: tor(rx, ry, rz), n: face, twist, lean: 0, nod: 0 };
+  const al = Math.hypot(ax, ay, az) || 1;
+  L.root = { dR: { x: ax / al, y: ay / al, z: az / al }, r: { x: rx, y: ry, z: rz } };
+  L.speed = wn;
+}
 function armPose(p, t, f) {
+  if (p.live) return p.live.pose;
   const k = (t - p.swingT) / SWING_DUR;
   if (k >= 0 && k < 1) return swingPose(p.anim, k, p.swingSpin, p.swingLive);
   let base = NC.poses.ready();
@@ -1768,10 +1816,10 @@ function syncPlayer3D(p, t) {
   NC.placeLimb(pl.armL, SH.L, pose.dL);
   NC.placeProp(pl.prop, pose);
   pl.blob.position.set(p.x, 0.012, -p.y); pl.blob.scale.setScalar(ch.w);
-  // 스윙 궤적 (라켓 끝이 지나간 자리)
-  const k = (t - p.swingT) / SWING_DUR;
+  // 스윙 궤적 (라켓 끝이 지나간 자리). 조이콘을 든 사람은 실제로 빠르게 휘두르는 동안
+  const k = (t - p.swingT) / SWING_DUR, fade = p.live ? clamp((p.live.speed - 6) / 8, 0, 1) : clamp(1 - k, 0, 1);
   pl.root.updateMatrixWorld(true);
-  if (k >= 0 && k < 1) pl.hist.push({ tip: pl.prop.localToWorld(new THREE.Vector3(0, 0.55, 0)), thr: pl.prop.localToWorld(new THREE.Vector3(0, 0.24, 0)), t });
+  if (p.live ? fade > 0 : k >= 0 && k < 1) pl.hist.push({ tip: pl.prop.localToWorld(new THREE.Vector3(0, 0.55, 0)), thr: pl.prop.localToWorld(new THREE.Vector3(0, 0.24, 0)), t });
   while (pl.hist.length && (t - pl.hist[0].t > 0.11 || pl.hist.length > pl.N)) pl.hist.shift();
   const n = pl.hist.length;
   pl.swoosh.visible = n >= 2;
@@ -1780,7 +1828,7 @@ function syncPlayer3D(p, t) {
     for (let j = 0; j < n; j++) { const h = pl.hist[j], o = j * 6; arr[o] = h.tip.x; arr[o + 1] = h.tip.y; arr[o + 2] = h.tip.z; arr[o + 3] = h.thr.x; arr[o + 4] = h.thr.y; arr[o + 5] = h.thr.z; }
     pl.swoosh.geometry.attributes.position.needsUpdate = true;
     pl.swoosh.geometry.setDrawRange(0, (n - 1) * 6);
-    pl.swoosh.material.opacity = 0.42 * clamp(1 - k, 0, 1);
+    pl.swoosh.material.opacity = 0.42 * fade;
   }
 }
 
@@ -2017,5 +2065,5 @@ requestAnimationFrame(frame);
 // 테스트용 훅
 window.__ST = { game, players, settings, T, update, render: renderFrame, startMatch, toMenu, openSelect, selMove, selReady, selSet, sel,
   doSwing, emitSwing, startServe, isCPU, ballPos, planShot, spinLabel, handSide, scoreCall, TOSS, C, gfx, G3, Q, applyQuality, parts, CHARS, autoStep, joycon: JC, setDemoPaused,
-  setClock: f => { realNow = f; } };
+  setClock: f => { realNow = f; }, armPose, liveJoy };
 })();
