@@ -1,0 +1,35 @@
+/* Bowling stage, the 1–4 player cards and the result list; the lobby, roster and dialogs come from shared/lobby.css. */
+#laneStage { position: fixed; inset: 0; overflow: hidden; background: #171330; }
+#gl, #hud { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#hud { pointer-events: none; }
+.court-preview #laneStage { position: absolute; inset: 0; }
+.lane-preview { background: #241c47; }
+.bowl-art[hidden] { display: none; }
+#countRow.hidden, #cpuRow.hidden { display: none; }
+
+/* 캐릭터 고르기: 사람 수만큼 카드 (1~5장) */
+#select .bw-selbottom { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+.bw-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.bw-card { padding: 14px 16px; }
+.bw-card .nm { font-size: 20px; }
+.bw-card .row { flex-wrap: wrap; gap: 6px; }
+.bw-card .row > button { padding: 7px 10px; }
+.bw-card .row > button:last-child { padding: 7px 16px; }
+.bw-card .bw-bump { font-size: 12px; }
+.bw-card .bw-bump.on { background: #25b37f; border-color: #25b37f; color: white; }
+.bw-card.bw-now { border-color: #8176db; box-shadow: 0 0 0 3px #8176db38, 0 8px 35px #49345f24; }
+#select .selmid { display: flex; align-items: center; justify-content: center; gap: 16px; }
+#select .selmsg { max-width: none; }
+.tile { position: relative; }
+.tile .bw-dots { position: absolute; top: 7px; left: 7px; display: flex; gap: 3px; }
+.tile .bw-dots i { display: block; width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fffefa; box-shadow: 0 1px 3px #4b3b5c40; }
+
+/* 결과 */
+.bw-record { margin-top: 6px; font-size: 15px; font-weight: 800; color: #d9822b; }
+.bw-record.hidden { display: none; }
+.bw-rank { list-style: none; margin: 14px auto 0; padding: 0; max-width: 520px; text-align: left; }
+.bw-rank li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 10px; padding: 9px 14px; margin-bottom: 6px; border-radius: 14px; background: #f6f2fb; }
+.bw-rank li.win { background: #fff4d6; box-shadow: 0 0 0 2px #ffd84d inset; }
+.bw-rank li b { font-size: 15px; color: #514764; }
+.bw-rank li strong { font-size: 20px; color: #514764; }
+.bw-rank li > span:last-child { grid-column: 2 / 4; font-size: 12px; color: #88838b; }

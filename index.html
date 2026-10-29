@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#173d30">
-<meta name="description" content="우리 집이 플레이 그라운드가 되는 시간. 조이콘이나 키보드로 함께 즐기는 놀자 게임 클럽 (몬스터 테니스 · 몬스터 카트).">
+<meta name="description" content="우리 집이 플레이 그라운드가 되는 시간. 조이콘이나 키보드로 함께 즐기는 놀자 게임 클럽 (몬스터 테니스 · 몬스터 카트 · 몬스터 볼링).">
 <title>놀자 · 몬스터 게임 클럽</title>
 <link rel="stylesheet" href="shared/home.css?v=20261027c">
 </head>
@@ -57,10 +57,10 @@
           </div>
           <span class="hero-number" aria-hidden="true">NO. 01</span>
         </a>
-        <div class="coming-heading"><span>MORE GAMES</span><p>몬스터 카트가 새로 열렸어요. 다음 경기도 준비 중!</p></div>
+        <div class="coming-heading"><span>MORE GAMES</span><p>몬스터 볼링이 새로 열렸어요. 다음 경기도 준비 중!</p></div>
         <div class="coming-games">
-          <a class="ch soon playable racing" data-i="1" href="games/kart/index.html" aria-label="몬스터 카트 시작하기. 조이콘을 핸들처럼 기울여 달리는 1~2인 카트 레이스"><div class="soon-icon"><svg aria-hidden="true"><use href="#i-racing"/></svg></div><div class="soon-copy"><h2>몬스터 카트</h2><p>조이콘을 핸들처럼, 짜릿하게 추월.</p></div><span class="soon-label">NEW · 달리기</span></a>
-          <article class="ch soon bowling" data-i="2" aria-label="볼링, 준비 중"><div class="soon-icon"><svg aria-hidden="true"><use href="#i-bowling"/></svg></div><div class="soon-copy"><h2>볼링</h2><p>스트라이크의 기분 좋은 한 방.</p></div><span class="soon-label">준비 중</span></article>
+          <a class="ch soon playable racing" data-i="1" href="games/kart/index.html" aria-label="몬스터 카트 시작하기. 조이콘을 핸들처럼 기울여 달리는 1~2인 카트 레이스"><div class="soon-icon"><svg aria-hidden="true"><use href="#i-racing"/></svg></div><div class="soon-copy"><h2>몬스터 카트</h2><p>조이콘을 핸들처럼, 짜릿하게 추월.</p></div><span class="soon-label">달리기</span></a>
+          <a class="ch soon playable bowling" data-i="2" href="games/bowling/index.html" aria-label="몬스터 볼링 시작하기. 조이콘을 아래에서 앞으로 휘둘러 굴리는 1~4인 볼링"><div class="soon-icon"><svg aria-hidden="true"><use href="#i-bowling"/></svg></div><div class="soon-copy"><h2>몬스터 볼링</h2><p>휘둘러 굴려서, 와르르 스트라이크.</p></div><span class="soon-label">NEW · 볼링</span></a>
           <article class="ch soon baseball" data-i="3" aria-label="야구, 준비 중"><div class="soon-icon"><svg aria-hidden="true"><use href="#i-baseball"/></svg></div><div class="soon-copy"><h2>야구</h2><p>담장 너머로, 시원한 홈런.</p></div><span class="soon-label">준비 중</span></article>
         </div>
       </div>
@@ -78,7 +78,7 @@
 <script>
 (() => {
   'use strict';
-  const GAMES = [{ name: '몬스터 테니스', href: 'games/tennis/index.html' }, { name: '몬스터 카트', href: 'games/kart/index.html' }, { name: '볼링', soon: true }, { name: '야구', soon: true }];
+  const GAMES = [{ name: '몬스터 테니스', href: 'games/tennis/index.html' }, { name: '몬스터 카트', href: 'games/kart/index.html' }, { name: '몬스터 볼링', href: 'games/bowling/index.html' }, { name: '야구', soon: true }];
   const plaza = document.getElementById('plaza');
   const characters = window.Nolja.characters.CHARS;
   plaza.setAttribute('aria-label', `함께할 수 있는 ${characters.length}명의 캐릭터`);

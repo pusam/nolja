@@ -6,8 +6,8 @@
  *  - 효과음: hit(세기, { spin, perfect, wrong, kind }) · bounce(속도 m/s) · net() · whoosh(세기) · toss() · squeak()
  *            point() · tick() · ready()
  *  - 관중:   ambience(켜기) 웅성거림 · applause(세기 0~1) 박수 · ooh() 감탄 · groan() 아쉬움 · cheer(초) 함성
- *            nature(종류) 카트 코스 주변 소리 'meadow' 새·산들바람 · 'beach' 파도·갈매기 · 'snow' 바람·풍경 · 'candy' 반짝반짝 · 'lava' 용암 부글부글·우르릉 · 'canyon' 협곡 바람·매·곡괭이 · 'city' 도시 차 소리·경적 (null이면 끔)
- *  - 음악:   music(켜기, 곡) 곡 'menu' 밝은 배경 음악 · 'race' 신나는 레이스 곡 · 코스 곡 'beach' 'snow' 'candy' 'lava' 'forest' 'coast' 'coaster' 'canyon' 'city' 'aurora' 'jungle' (계속 반복) · tempo(배) 빠르기
+ *            nature(종류) 카트 코스 주변 소리 'meadow' 새·산들바람 · 'beach' 파도·갈매기 · 'snow' 바람·풍경 · 'candy' 반짝반짝 · 'lava' 용암 부글부글·우르릉 · 'canyon' 협곡 바람·매·곡괭이 · 'city' 도시 차 소리·경적 · 'alley' 볼링장 (null이면 끔)
+ *  - 음악:   music(켜기, 곡) 곡 'menu' 밝은 배경 음악 · 'race' 신나는 레이스 곡 · 코스 곡 'beach' 'snow' 'candy' 'lava' 'forest' 'coast' 'coaster' 'canyon' 'city' 'aurora' 'jungle' · 볼링 'bowling' (계속 반복) · tempo(배) 빠르기
  *            jingle(크게) 이겼을 때 짧은 축하
  *  - 카트:   engine(id, 속도 0~1.4, 부스트 0~1, 드리프트 0~1) 엔진·타이어 소리 (계속, engine(id, null)이면 끔) · enginesOff()
  *            countdown(숫자, 0이면 출발) · boost() · spark(단계) · itemBox() · roulette() · itemGet() · zap() · crash()
@@ -16,6 +16,8 @@
  *                    rocket() 로켓 · whirl() 회오리 · freeze() 꽁꽁 · boom() 꽝 · throw() 휙 · spring() 스프링
  *                    horn() 나팔 · ufo() UFO · ghost() 유령 · steal() 훔침 · plane() 비행기 · boomerang() 부메랑 · cloud() 먹구름
  *                    shrink() 작아짐 · squash() 납작 · wood() 바리케이드 · powWarn() 쿵 블록 경고 · thud() 쿵 · bubble() 물방울
+ *  - 볼링:   roll(빠르기 m/s, 도랑) 공 굴러가는 소리 (계속, roll(null)이면 끔) · pin(세기) 핀 "딱" · pinCrash(세기) "와장창"
+ *            bumper(세기) 범퍼 "퉁" · gutter() 도랑 "덜컹" · ballDrop() 공 내려놓기 "쿵" · sweep() 핀 정리 기계
  * ============================================================ */
 (function () {
   'use strict';
@@ -218,6 +220,7 @@
       else if (kind === 'lava') { bed(140, 0.9, 0.05, 'lowpass', 0.07, 0.02); bed(700, 1.2, 0.006, 'bandpass', 0.3, 0.004); }   // 낮게 우르릉 + 지글지글
       else if (kind === 'canyon') { bed(320, 1.1, 0.026, 'bandpass', 0.07, 0.014, 0.05, 140); bed(1300, 3, 0.006, 'bandpass', 0.17, 0.004, 0.09, 500); }   // 협곡을 지나는 마른 바람
       else if (kind === 'city') { bed(180, 0.8, 0.03, 'lowpass', 0.05, 0.008); bed(900, 1.5, 0.004, 'bandpass', 0.11, 0.002); }   // 멀리 웅웅 도시 차 소리
+      else if (kind === 'alley') { bed(560, 1.6, 0.012, 'bandpass', 0.15, 0.006); bed(130, 0.8, 0.02, 'lowpass', 0.06, 0.006); }   // 볼링장 웅성거림 + 낮게 웅웅
       nat.timer = setInterval(() => this.naturePump(), 120);
     },
     naturePump() {
@@ -254,6 +257,13 @@
         if (Math.random() < 0.35) { const f = rnd(2300, 2700); this.tone(t + rnd(0.3, 2), f, f * 0.62, 0.7, 0.02, 'sine', out, 0.05); }
         if (Math.random() < 0.4) for (let i = 0, k = 2 + Math.floor(Math.random() * 2); i < k; i++) { const t0 = t + 1 + i * rnd(0.5, 0.7); this.tone(t0, 2900, 2600, 0.12, 0.012, 'triangle', out, 0.002); this.noise(t0, 0.03, 5000, 3, 0.01, out); }
         n.next = t + rnd(6, 10);
+      } else if (n.kind === 'alley') {   // 옆 레인에서 공이 "우르르" 굴러가 핀이 "와르르" (멀리서 작게), 가끔 박수
+        const t0 = t + rnd(0, 1.5), roll = rnd(1.6, 2.6);
+        { const f = this.noise(t0, roll, 160, 1.2, 0.022, out, 'lowpass'); f.frequency.linearRampToValueAtTime(260, t0 + roll); }
+        for (let i = 0, k = 4 + Math.floor(Math.random() * 7); i < k; i++) { const dt = roll + Math.pow(Math.random(), 1.5) * 0.45, f = rnd(900, 1700); this.tone(t0 + dt, f, f * 0.9, 0.06, rnd(0.006, 0.016), 'triangle', out); }
+        this.noise(t0 + roll, 0.4, 900, 0.7, 0.014, out, 'lowpass');
+        if (Math.random() < 0.25) { const c = this.ctx, src = c.createBufferSource(), g = c.createGain(); src.buffer = this.clapBuf; g.gain.value = 0.05; src.connect(g).connect(out); src.start(t0 + roll + 0.5, Math.random() * 2); src.stop(t0 + roll + 1.6); }
+        n.next = t + rnd(3.5, 7);
       } else if (n.kind === 'meadow') {   // 새가 "짹짹" 두세 번 (가끔 "삐요" 내려오는 소리)
         const f0 = rnd(2600, 3400), k = 2 + Math.floor(Math.random() * 3);
         for (let i = 0; i < k; i++) this.tone(t + i * rnd(0.09, 0.14), f0 * rnd(0.95, 1.05), f0 * 1.3, 0.06, 0.026, 'sine', out);
@@ -377,6 +387,13 @@
         if (s % 4 === 2) for (const n of chord.keys) { this.tone(t, mtof(n), mtof(n), 0.09, 0.03, 'sine', out); this.tone(t, mtof(n) * 4, mtof(n) * 4, 0.03, 0.006, 'sine', out); }
         if (s % 2 === 1) this.tone(t, 620, 420, 0.04, 0.03, 'sine', out);
         this.noise(t, 0.03, 7000, 1, s % 2 ? 0.01 : 0.017, out, 'highpass');
+      } else if (song.style === 'disco') {   // 볼링장 디스코: 쿵쿵 네 박 킥 · 옥타브로 튀는 베이스 · 엇박 열린 하이햇 "츠" · 손뼉 · 짧게 끊는 현악 "짠"
+        if (s % 4 === 0) this.tone(t, 125, 45, 0.14, 0.24, 'sine', out);
+        if (s % 2 === 0) { const n = chord.bass - (s % 4 ? 0 : 12); this.tone(t, mtof(n), mtof(n), q * 0.3, 0.17, 'triangle', out, 0.004); }
+        if (s % 4 === 2) this.noise(t, 0.09, 8500, 0.8, 0.035, out, 'highpass');
+        if (s === 4 || s === 12) { this.noise(t, 0.08, 1500, 1.2, 0.06, out); this.noise(t + 0.01, 0.07, 2400, 1.5, 0.035, out); }
+        if (s === 6 || s === 14) for (const n of chord.keys) this.tone(t, mtof(n + 12), mtof(n + 12), 0.08, 0.02, 'sawtooth', out, 0.004);
+        if (s % 2 === 1) this.noise(t, 0.02, 10000, 0.7, 0.012, out, 'highpass');
       } else {
         if (s % 4 === 0) this.tone(t, mtof(chord.bass - 12) * (s === 8 ? 1.5 : 1), mtof(chord.bass - 12), q * 0.9, 0.22, 'triangle', out, 0.01);
         if (s % 4 === 2) for (const n of chord.keys) this.tone(t, mtof(n), mtof(n), 0.16, 0.045, 'triangle', out);   // 엇박 코드 "짠"
@@ -433,6 +450,11 @@
           this.tone(t, f, f, d, 0.08, 'sine', out, 0.004);
           this.tone(t, f * 2, f * 2, d * 0.6, 0.02, 'sine', out, 0.004);
           this.tone(t, f * 4.01, f * 4.01, 0.12, 0.01, 'sine', out, 0.002);
+        } else if (song.style === 'disco') {   // 전자 피아노: 톡 치고 울리는 사인 + 맑은 배음
+          const d = Math.min(0.45, len * q / 4 + 0.1);
+          this.tone(t, f, f, d, 0.08, 'sine', out, 0.003);
+          this.tone(t, f * 2, f * 2, d * 0.5, 0.025, 'triangle', out, 0.003);
+          this.tone(t, f * 3.98, f * 3.98, 0.05, 0.008, 'sine', out, 0.002);
         } else if (song.style === 'jungle') {   // 팬플루트: 살짝 아래에서 불어 올라가는 사인 + 숨소리 + 한 옥타브 위 톡
           const d = Math.min(0.5, len * q / 4 + 0.08);
           this.tone(t, f * 0.985, f, d, 0.08, 'sine', out, 0.03);
@@ -707,6 +729,83 @@
       f.frequency.exponentialRampToValueAtTime(260, t + 0.25);
       this.tone(t, 420, 110, 0.18, 0.1);
     },
+
+    // ---------- 볼링 ----------
+    // 공 굴러가는 "우르르르": 낮게 거른 잡음 + 나무 판 울림 + 아주 낮은 웅웅. 빠를수록 크고 밝게, 도랑이면 통 울리는 소리
+    // 매 프레임 불러도 값은 0.06초마다만 바꿈. roll(null)이면 끔
+    roll(speed, gutter = false) {
+      if (!this.ctx) return;
+      const c = this.ctx, t = c.currentTime;
+      let r = this.rl;
+      if (speed == null || !Number.isFinite(speed) || !this.live()) {   // 끄기 (소리를 못 내는 동안에도 꺼 둠)
+        if (r) {
+          this.rl = null;
+          r.out.gain.cancelScheduledValues(t); r.out.gain.setValueAtTime(Math.max(0.0001, r.out.gain.value), t); r.out.gain.linearRampToValueAtTime(0.0001, t + 0.25);
+          for (const n of r.nodes) n.stop(t + 0.3);
+        }
+        return;
+      }
+      if (!r) {
+        const out = c.createGain(); out.gain.value = 0.0001; out.connect(this.bus.sfx);
+        const src = c.createBufferSource(); src.buffer = this.buf; src.loop = true;
+        const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 300; lp.Q.value = 0.7;
+        const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 150; bp.Q.value = 4;
+        src.connect(lp).connect(out); src.connect(bp).connect(out);
+        const o = c.createOscillator(), og = c.createGain(); o.type = 'sine'; o.frequency.value = 45; og.gain.value = 0.35; o.connect(og).connect(out);
+        src.start(t, Math.random() * 0.5); o.start(t);
+        r = this.rl = { out, lp, bp, o, nodes: [src, o], at: -1 };
+      }
+      if (t - r.at < 0.06) return;
+      r.at = t;
+      const k = clamp(speed / 9, 0, 1);
+      r.lp.frequency.setTargetAtTime(gutter ? 520 : 220 + 420 * k, t, 0.08);
+      r.bp.frequency.setTargetAtTime(gutter ? 430 : 120 + 90 * k, t, 0.1);
+      r.o.frequency.setTargetAtTime(gutter ? 72 : 38 + 22 * k, t, 0.1);
+      r.out.gain.setTargetAtTime(speed < 0.2 ? 0.0001 : gutter ? 0.2 : 0.12 + 0.2 * k, t, 0.08);
+    },
+    pin(p = 0.5) {   // 핀이 공·핀과 부딪힘 "딱": 단단한 나무 "톡" + 짧은 잡음 (세기 0~1)
+      if (!this.live()) return;
+      const t = this.ctx.currentTime, f = rnd(1100, 1700), k = clamp(p, 0.05, 1);
+      this.tone(t, f, f * 0.92, 0.05 + 0.05 * k, 0.04 + 0.12 * k, 'triangle');
+      this.tone(t, f * 2.7, f * 2.5, 0.03, 0.015 + 0.04 * k, 'sine');
+      this.noise(t, 0.03 + 0.04 * k, rnd(2400, 3600), 1.4, 0.05 + 0.15 * k);
+    },
+    pinCrash(n = 10) {   // 공이 핀에 닿아 "와장창": 짧은 나무 소리를 여러 번 흩뿌림 + 낮은 쿵 (n = 세기 1~10)
+      if (!this.live()) return;
+      const t = this.ctx.currentTime, k = clamp(n / 10, 0.1, 1), cnt = Math.round(5 + 11 * k);
+      for (let i = 0; i < cnt; i++) {
+        const dt = Math.pow(Math.random(), 1.6) * (0.3 + 0.4 * k), f = rnd(900, 1900);
+        this.tone(t + dt, f, f * 0.9, 0.07, 0.04 + 0.07 * k * Math.random(), 'triangle');
+        this.noise(t + dt, 0.05, rnd(1800, 4200), 1.2, 0.04 + 0.1 * k * Math.random());
+      }
+      this.noise(t, 0.35 + 0.3 * k, 700, 0.6, 0.12 * k, null, 'lowpass');
+      this.tone(t, 95, 40, 0.22, 0.2 * k, 'sine');
+    },
+    bumper(p = 0.5) {   // 범퍼에 "퉁": 고무 막이에 튕기는 낮은 소리
+      if (!this.live()) return;
+      const t = this.ctx.currentTime, k = clamp(p, 0.2, 1);
+      this.tone(t, 220, 120, 0.14, 0.12 + 0.1 * k, 'sine');
+      this.noise(t, 0.06, 500, 1, 0.05 * k, null, 'lowpass');
+    },
+    gutter() {   // 도랑에 빠짐 "덜컹"
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      this.tone(t, 160, 70, 0.18, 0.2, 'triangle');
+      this.noise(t, 0.12, 900, 1.5, 0.08);
+    },
+    ballDrop() {   // 공을 레인에 내려놓음 "쿵"
+      if (!this.live()) return;
+      const t = this.ctx.currentTime;
+      this.tone(t, 110, 48, 0.16, 0.22, 'sine');
+      this.noise(t, 0.05, 400, 1, 0.06, null, 'lowpass');
+    },
+    sweep() {   // 핀 정리 기계 "위잉 · 철컥": 모터 소리가 올라갔다 내려오고 쇠 막대 소리
+      if (!this.live()) return;
+      const t = this.ctx.currentTime, f = this.noise(t, 1.5, 300, 3, 0.04);
+      f.frequency.linearRampToValueAtTime(520, t + 0.7); f.frequency.linearRampToValueAtTime(260, t + 1.5);
+      this.tone(t, 70, 90, 1.4, 0.04, 'sawtooth');
+      for (const dt of [0.42, 1.05, 1.4]) { this.tone(t + dt, 640, 520, 0.06, 0.05, 'square'); this.noise(t + dt, 0.04, 3000, 2, 0.04); }
+    },
   };
   if (saved && typeof saved === 'object') for (const k of ['music', 'sfx', 'crowd']) if (Number.isFinite(saved[k])) A.vol[k] = clamp(saved[k], 0, 1);
 
@@ -920,8 +1019,24 @@
     [[0, 83, 2], [2, 79, 2], [4, 74, 4], [8, 79, 2], [10, 83, 2], [12, 86, 4]],
     [[0, 85, 2], [2, 81, 2], [4, 76, 2], [6, 81, 2], [8, 85, 4], [12, 88, 4]],
   ];
+  // 몬스터 볼링: 122bpm · C-Am-F-G-C-Em-F-G7. 볼링장 디스코 위로 전자 피아노
+  const BOWLING_CHORDS = [
+    { bass: 36, keys: [60, 64, 67] }, { bass: 33, keys: [60, 64, 69] }, { bass: 41, keys: [60, 65, 69] }, { bass: 43, keys: [62, 67, 71] },
+    { bass: 36, keys: [60, 64, 67] }, { bass: 40, keys: [59, 64, 67] }, { bass: 41, keys: [60, 65, 69] }, { bass: 43, keys: [62, 65, 71] },
+  ];
+  const BOWLING_MELODY = [
+    [[0, 72, 2], [2, 76, 2], [4, 79, 3], [7, 76, 1], [8, 77, 2], [10, 76, 2], [12, 74, 4]],
+    [[0, 72, 2], [2, 69, 2], [4, 72, 4], [8, 76, 2], [10, 74, 2], [12, 72, 4]],
+    [[0, 77, 2], [2, 76, 2], [4, 77, 2], [6, 81, 2], [8, 84, 4], [12, 81, 4]],
+    [[0, 79, 3], [3, 77, 1], [4, 76, 2], [6, 74, 2], [8, 71, 4], [12, 74, 4]],
+    [[0, 72, 2], [2, 76, 2], [4, 79, 2], [6, 84, 2], [8, 83, 2], [10, 79, 2], [12, 76, 4]],
+    [[0, 79, 2], [2, 76, 2], [4, 71, 4], [8, 76, 2], [10, 79, 2], [12, 83, 4]],
+    [[0, 81, 2], [2, 77, 2], [4, 72, 2], [6, 77, 2], [8, 81, 2], [10, 84, 2], [12, 81, 4]],
+    [[0, 79, 2], [2, 77, 2], [4, 74, 2], [6, 71, 2], [8, 74, 2], [10, 77, 2], [12, 79, 2], [14, 83, 2]],
+  ];
   const SONGS = {
     menu: { bpm: 112, style: 'pop', chords: CHORDS, melody: MELODY },
+    bowling: { bpm: 122, style: 'disco', chords: BOWLING_CHORDS, melody: BOWLING_MELODY },
     race: { bpm: 148, style: 'drive', chords: RACE_CHORDS, melody: RACE_MELODY },
     beach: { bpm: 132, style: 'surf', chords: BEACH_CHORDS, melody: BEACH_MELODY },
     snow: { bpm: 144, style: 'sleigh', chords: SNOW_CHORDS, melody: SNOW_MELODY },
