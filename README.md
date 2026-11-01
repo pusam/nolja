@@ -2,7 +2,7 @@
 
 거실 TV에서 조이콘 들고 같이 노는 게임 모음. 브라우저(PC 크롬·엣지)에서 돌아가고, 조이콘은 WebHID로 직접 읽음.
 
-- 바로 하기: https://pusam.github.io/nolja/
+- 바로 하기: https://pusam.github.io/nolja/ (집 미니PC: https://nolja.dhkim-lab.duckdns.org — 같은 게임)
 - 게임
   - 🎾 테니스: 조이콘을 라켓처럼 휘둘러서 치는 2인 대결 · 화면 속 라켓이 손에 든 조이콘을 그대로 따라감 · 몬스터 캐릭터 16종 · 3D
   - 🏎️ 카트: 조이콘을 핸들처럼 기울여 달리는 1~2인 + CPU 레이스 · 2인은 화면 위아래로 나눔 · 코스 12개 (기본 넷 + 2층 다리·꼬부랑길 도전 코스 넷 + 지름길이 숨은 아주 큰 맵 둘 + 길이 위아래로 엇갈리는 복잡한 맵 둘) · 그랑프리 컵 셋 · 드리프트·아이템 27가지·점프대 · 도전 코스엔 움직이는 장애물
@@ -153,8 +153,17 @@ tools/test_kart.js    카트 로직 시뮬레이션 테스트 (node tools/test_k
 tools/test_bowling.js 볼링 로직 시뮬레이션 테스트 (node tools/test_bowling.js)
 tools/test_motion.js  조이콘 자세 추적 테스트 (node tools/test_motion.js)
 tools/joysim.js       가짜 조이콘: 몸짓(자세·손 위치)으로 진짜 조이콘이 보낼 가속도·자이로 리포트를 만듦 (테스트·화면 확인용)
+tools/minipc-sync.sh  미니PC 동기화: 서버 크론이 5분마다 main을 받아 nginx 정적 폴더에 풀어 둠
 start-game.bat      오프라인 실행기
 ```
+
+## 미니PC에 올리기
+
+집 미니PC(my-platform 서버)에서도 같은 게임이 https://nolja.dhkim-lab.duckdns.org 로 열림. 조이콘 연결(WebHID)은 HTTPS에서만 되니 `http://<집 IP>`로는 안 됨.
+
+- my-platform의 공용 nginx와 인증서를 같이 씀 (설정은 my-platform 저장소 `nginx/nolja.conf`, 인증서는 그 배포가 발급)
+- 서버 크론이 5분마다 이 저장소 main을 받아 `index.html`·`games/`·`shared/`만 `~/my-platform/nginx/nolja-dist`에 풀어 둠 (`tools/minipc-sync.sh` = 서버 `~/nolja/sync.sh`). 그래서 main에 push하면 GitHub Pages와 미니PC가 둘 다 몇 분 안에 바뀜. 바뀐 기록은 서버 `~/nolja/sync.log`
+- 처음 설치 (서버 dev 계정): `git clone --bare https://github.com/pusam/nolja.git ~/nolja/repo.git` → `tools/minipc-sync.sh`를 `~/nolja/sync.sh`로 복사 → `sh ~/nolja/sync.sh` → 크론에 `*/5 * * * * sh /home/dev/nolja/sync.sh >>/home/dev/nolja/sync.log 2>&1`
 
 ## 새 게임 추가
 
