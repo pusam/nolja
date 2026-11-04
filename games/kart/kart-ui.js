@@ -33,12 +33,14 @@
   // Browse the growing course collection in small, readable groups.
   const courseRow = $('courseRow');
   const courseButtons = [...courseRow.querySelectorAll('button')];
-  const courseGroup = button => button.dataset.gp ? 'gp' : Number(button.dataset.course) < 4 ? 'basic' : Number(button.dataset.course) < 8 ? 'challenge' : 'adventure';
+  const groupOfCourse = i => i < 4 ? 'basic' : i < 8 ? 'challenge' : i < 12 ? 'adventure' : 'legend';
+  const courseGroup = button => button.dataset.gp ? 'gp' : groupOfCourse(Number(button.dataset.course));
   const courseGroups = [
     { id: 'basic', label: '기본', hint: '처음이라면 가볍게, 편안한 코스 4개' },
     { id: 'challenge', label: '도전', hint: '장애물과 다리를 넘는 긴 코스 4개' },
     { id: 'adventure', label: '모험', hint: '숨은 지름길을 탐험하는 모험 코스 4개' },
-    { id: 'gp', label: '그랑프리', hint: '코스 4개를 연달아 달리는 컵 대회 3개' }
+    { id: 'legend', label: '전설', hint: '장애물이 가득한 가장 어려운 코스 4개' },
+    { id: 'gp', label: '그랑프리', hint: '코스 4개를 연달아 달리는 컵 대회 4개' }
   ];
   const courseFilters = document.createElement('div');
   courseFilters.className = 'course-filters';
@@ -49,10 +51,10 @@
   const currentCourse = document.createElement('p');
   currentCourse.className = 'course-current';
   currentCourse.innerHTML = '<span>현재 선택</span><strong></strong>';
-  let activeCourseGroup = game.settings.gp ? 'gp' : game.settings.course < 4 ? 'basic' : game.settings.course < 8 ? 'challenge' : 'adventure';
+  let activeCourseGroup = game.settings.gp ? 'gp' : groupOfCourse(game.settings.course);
   function showCourseGroup(groupId) {
     activeCourseGroup = groupId;
-    courseButtons.forEach(button => { button.hidden = courseGroup(button) !== groupId; });
+    courseButtons.forEach(button => { button.hidden = !button.dataset.random && courseGroup(button) !== groupId; });
     courseFilters.querySelectorAll('button').forEach(button => {
       button.classList.toggle('on', button.dataset.group === groupId);
       button.setAttribute('aria-pressed', String(button.dataset.group === groupId));
@@ -81,7 +83,7 @@
     const laps = document.querySelector('#lapRow button.on');
     const level = document.querySelector('#lvRow button.on');
     const cup = game.settings.gp ? game.CUPS[game.settings.gp - 1] : null;
-    const course = cup || game.COURSES[game.settings.course];
+    const course = game.settings.random ? { name: '랜덤 코스' } : cup || game.COURSES[game.settings.course];
     if (!mode || !laps || !level) return;
     currentCourse.querySelector('strong').textContent = course ? course.name : '';
     const summary = `${course ? course.name + ' · ' : ''}${mode.dataset.mode === '2p' ? '2인' : '1인'} + CPU · ${laps.dataset.laps}바퀴 · ${['쉬움', '보통', '어려움'][Number(level.dataset.lv)]}`;

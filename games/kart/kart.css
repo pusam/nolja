@@ -483,7 +483,7 @@ input[type=range], input[type=checkbox] { accent-color: var(--kart-orange-dark);
 }
 
 /* A small course browser keeps all 15 choices close to the start action. */
-.course-filters { clear: both; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; background: #eeece1; border-radius: 11px; padding: 4px; }
+.course-filters { clear: both; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; background: #eeece1; border-radius: 11px; padding: 4px; }
 .course-filters button { min-width: 0; min-height: 44px; border: 0; border-radius: 8px; padding: 7px 3px; font-size: 12px; color: #616756; }
 .course-filters button.on { background: var(--kart-ink); color: var(--paper); box-shadow: 0 2px 5px #2c302b16; }
 .course-filters button:hover:not(.on) { background: #fffef8b3; }
@@ -492,6 +492,9 @@ input[type=range], input[type=checkbox] { accent-color: var(--kart-orange-dark);
 .course-current > span { color: #686d5e; font-size: 11px; }
 .course-options.is-filtered { min-height: 136px; align-content: start; gap: 12px 8px; }
 .course-options.is-filtered > [hidden], .course-options.is-filtered > .course-sub { display: none; }
+.course-options .random-course { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; text-align: left; }
+.course-options .random-course .icon { width: 20px; height: 20px; flex: 0 0 20px; }
+.course-options .random-course span { margin: 0; }
 .lobby .course-options button { min-height: 62px; padding: 10px; }
 .lobby .course-options button strong { font-size: 13px; }
 .lobby .course-options button span { font-size: 11px; line-height: 1.5; }

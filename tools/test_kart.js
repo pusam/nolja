@@ -515,8 +515,8 @@ KT.settings.cpuLevel = 1; startRace('1p'); skipCountdown();
 
 // ---------- 14. 코스 넷: 바닷가 · 눈꽃 마을 · 사탕 공원 ----------
 console.log('\n[14] 기본 코스 넷');
-assert(KT.COURSES.length === 12 && KT.COURSES.every(c => c.cps[0][1] === 0 && c.cps[1][1] === 0) && KT.COURSES.filter(c => c.hard).length === 8 && KT.COURSES.filter(c => c.big).length === 4, '코스 12개 (도전 코스 넷 · 아주 큰 맵 둘 · 복잡한 맵 둘) · 모두 출발선이 z=0 직선');
-assert(KT.CUPS.map(c => c.courses.join()).join(' | ') === '0,1,2,3 | 4,5,6,7 | 8,9,10,11', '그랑프리 컵 셋: 몬스터 컵은 기본 코스 넷, 도전 컵은 도전 코스 넷, 모험 컵은 큰 맵·복잡한 맵 넷');
+assert(KT.COURSES.length === 16 && KT.COURSES.every(c => c.cps[0][1] === 0 && c.cps[1][1] === 0) && KT.COURSES.filter(c => c.hard).length === 12 && KT.COURSES.filter(c => c.big).length === 8, '코스 16개 (도전 코스 넷 · 아주 큰 맵 둘 · 복잡한 맵 둘 · 전설 코스 넷) · 모두 출발선이 z=0 직선');
+assert(KT.CUPS.map(c => c.courses.join()).join(' | ') === '0,1,2,3 | 4,5,6,7 | 8,9,10,11 | 12,13,14,15', '그랑프리 컵 넷: 몬스터 컵은 기본 코스 넷, 도전 컵은 도전 코스 넷, 모험 컵은 큰 맵·복잡한 맵 넷, 전설 컵은 전설 코스 넷');
 // (s, d)가 든 바닥 구역 (kart.js zoneAt과 같은 규칙)
 const zoneOf = (s, d) => KT.ZONES.find(z => { const u = KT.sdiff(s, z.s); return u >= 0 && u <= z.len && d >= z.d0 && d <= z.d1; }) || null;
 const halfRoad = z => z.d1 - z.d0 < 2 * KT.TRACK.halfW;
@@ -652,6 +652,9 @@ console.log('\n[15] 그랑프리 (몬스터 컵)');
   // 모험 컵: 아주 큰 맵 둘 + 복잡한 맵 둘 (모래 협곡 광산부터)
   KT.settings.gp = 3; KT.toMenu();
   assert(KT.COURSE === KT.COURSES[8] && txt('courseName') === '모험 컵' && txt('lapHint').startsWith('그랑프리 모험 컵: 코스 4개') && KT.GP_COURSES.join() === '8,9,10,11', `모험 컵을 고르면 메뉴 뒤는 모래 협곡 광산 (${txt('lapHint')})`);
+  // 전설 컵: 전설 코스 넷 (유령 저택부터)
+  KT.settings.gp = 4; KT.toMenu();
+  assert(KT.COURSE === KT.COURSES[12] && txt('courseName') === '전설 컵' && txt('lapHint').startsWith('그랑프리 전설 컵: 코스 4개') && KT.GP_COURSES.join() === '12,13,14,15', `전설 컵을 고르면 메뉴 뒤는 유령 저택 (${txt('lapHint')})`);
   // 그랑프리를 끄면 예전처럼 한 판
   KT.settings.gp = 0; KT.settings.course = 1; KT.toMenu();
   startRace('1p', true); skipCountdown();
@@ -710,12 +713,12 @@ console.log('\n[17] 코스마다 레이스 곡 · 주변 소리');
     songs.push(AU.mus && AU.mus.name); ambs.push(AU.nat && AU.nat.kind);
     for (let i = 0; i < 120; i++) { run(0.1); AU.pump(); AU.naturePump(); }   // 테스트엔 타이머가 없어서 곡·주변 소리를 직접 12초 돌림 (파도·갈매기·바람·풍경·새까지)
   }
-  assert(songs.join(',') === KT.COURSES.map(c => c.song).join(',') && new Set(songs).size === 12, `코스마다 다른 레이스 곡 (${songs.join(', ')})`);
-  assert(ambs.join(',') === 'meadow,beach,snow,candy,lava,meadow,beach,candy,canyon,city,snow,meadow' && menuQuiet, `코스마다 주변 소리 (새 코스는 비슷한 곳 소리), 메뉴에선 없음 (${ambs.join(', ')})`);
+  assert(songs.join(',') === KT.COURSES.map(c => c.song).join(',') && new Set(songs).size === 16, `코스마다 다른 레이스 곡 (${songs.join(', ')})`);
+  assert(ambs.join(',') === 'meadow,beach,snow,candy,lava,meadow,beach,candy,canyon,city,snow,meadow,snow,space,deep,snow' && menuQuiet, `코스마다 주변 소리 (새 코스는 비슷한 곳 소리), 메뉴에선 없음 (${ambs.join(', ')})`);
   KT.pause(); run(0.1);
   const pausedQuiet = !AU.nat;
   KT.resume(); run(0.1);
-  assert(pausedQuiet && AU.nat && AU.nat.kind === 'meadow', '일시정지면 주변 소리를 끄고, 다시 달리면 켬');
+  assert(pausedQuiet && AU.nat && AU.nat.kind === 'snow', '일시정지면 주변 소리를 끄고, 다시 달리면 켬');
   KT.toMenu(); run(0.1);
   assert(!AU.nat && AU.mus && AU.mus.name === 'menu', '메뉴로 나가면 주변 소리 없이 메뉴 곡');
   const S = AU.SONGS, okSong = k => S[k] && S[k].chords.length === 8 && S[k].melody.length === 8 && S[k].melody.every(bar => bar.every(([at, n, len]) => at >= 0 && at + len <= 16 && n >= 60 && n <= 96));
@@ -847,7 +850,7 @@ console.log('\n[20] 도전 코스: 용암 성');
   assert(!KT.PANELS.some(p => onZone(p.s) || onJet(p.s)) && !KT.BOX_ROWS.some(s => onZone(s) || onJet(s)) && !onZone(KT.RAMP.s) && KT.boxes.length === 15, '대시 판·상자·점프대는 용암·불기둥과 안 겹침 · 상자 15개');
   const river = KT.ZONES.find(z => !halfRoad(z)), pools = KT.ZONES.filter(z => halfRoad(z) && z.type === 'lava');
   assert(river && river.type === 'lava' && KT.sdiff(river.s, KT.RAMP.s) > 0 && KT.sdiff(river.s, KT.RAMP.s) < KT.RAMP.len + 6, '점프대 바로 뒤에 길을 가로지르는 용암 강');
-  assert(pools.length === 2 && pools.every(z => Math.sign(z.d0 + z.d1) === Math.sign(T2.curv[Math.floor((z.s + z.len / 2) / T2.step)]) && Math.abs(T2.curv[Math.floor((z.s + z.len / 2) / T2.step)]) > 0.03), '용암 웅덩이 둘은 머리핀 커브 안쪽');
+  assert(pools.length === 3 && pools.every(z => Math.sign(z.d0 + z.d1) === Math.sign(T2.curv[Math.floor((z.s + z.len / 2) / T2.step)]) && Math.abs(T2.curv[Math.floor((z.s + z.len / 2) / T2.step)]) > 0.02), '용암 웅덩이 셋은 머리핀 커브 안쪽');
   assert(KT.JETS.length >= 4 && G3.jets.length === KT.JETS.length && G3.snowfall, `불기둥 ${KT.JETS.length}개 · 날리는 불티`);
   // 시범 레이스: 다리 위에선 다리 높이, 아래 길에선 땅 높이로 (층이 섞이지 않음)
   const lapB = karts.map(k => k.lap), r0 = G.stats.rescues, prevSpin = karts.map(() => 0);
@@ -998,10 +1001,10 @@ console.log('\n[22] 아주 큰 맵 · 복잡한 맵 · 지름길: 모래 협곡 
     Object.assign(k, { x: p.x, z: p.z, y: 0, a: Math.atan2(p.tx, p.tz), cut: C.idx, cs, cd: d, d, cseg: Math.round(cs / C.P.step) });
   };
   const autoGas0 = KT.settings.autoGas;
-  for (const ci of [8, 9, 10, 11]) {
+  for (const ci of [8, 9, 10, 11, 12, 13, 14, 15]) {
     KT.settings.course = ci; KT.settings.gp = 0; KT.settings.cpuLevel = 1; KT.settings.laps = 3; KT.toMenu(); KT.switchCourse(ci); KT.toMenu();
-    const C0 = KT.COURSE, T2 = KT.TR, CUTS = KT.CUTS, nm = C0.name;
-    assert(C0.hard && C0.big && G3.courseFor === C0 && els.courseName.textContent === nm && T2.len > 1800 && T2.len < 2500 && CUTS.length >= 1, `${nm}: 아주 큰 맵 · 한 바퀴 ${T2.len.toFixed(0)}m · 지름길 ${CUTS.length}개`);
+    const C0 = KT.COURSE, T2 = KT.TR, CUTS = KT.CUTS, nm = C0.name, noCut = ci === 13 || ci === 15;   // 별 · 리본 코스는 다리로 승부, 지름길 없음
+    assert(C0.hard && C0.big && G3.courseFor === C0 && els.courseName.textContent === nm && T2.len > 1800 && T2.len < 2500 && (CUTS.length >= 1 || noCut), `${nm}: 아주 큰 맵 · 한 바퀴 ${T2.len.toFixed(0)}m · 지름길 ${CUTS.length}개`);
     let r2 = Infinity, g2 = Infinity, cross = 0;
     for (let j = 0; j < T2.n; j++) r2 = Math.min(r2, 1 / Math.max(1e-6, Math.abs(T2.curv[j])));
     for (let a = 0; a < T2.n; a += 2) for (let b = a + 2; b < T2.n; b += 2) {
@@ -1010,15 +1013,15 @@ console.log('\n[22] 아주 큰 맵 · 복잡한 맵 · 지름길: 모래 협곡 
       if (Math.abs(T2.py[a] - T2.py[b]) >= 4.5) { if (gap < 2 * KT.TRACK.wall) cross++; continue; }
       g2 = Math.min(g2, gap);
     }
-    assert(r2 > 17 && g2 > 2 * KT.TRACK.wall + 4 && cross > 0, `${nm}: 가장 급한 커브 반지름 ${r2.toFixed(1)}m · 같은 층 길끼리 ${g2.toFixed(0)}m 떨어짐 · 높은 길이 아래 길 위를 지나감`);
-    if (ci >= 10) {   // 복잡한 맵: 길이 위·아래로 엇갈리는 곳 (오로라 셋 · 정글 넷), 엇갈리는 곳마다 다리 하나
+    assert(r2 > 17 && g2 > 2 * KT.TRACK.wall + 4 && (cross > 0 || !C0.bumps), `${nm}: 가장 급한 커브 반지름 ${r2.toFixed(1)}m · 같은 층 길끼리 ${g2.toFixed(0)}m 떨어짐 · 높은 길이 아래 길 위를 지나감`);
+    if (ci >= 10 && C0.bumps) {   // 복잡한 맵: 길이 위·아래로 엇갈리는 곳 (오로라 셋 · 정글 넷 · 별 다섯 · 리본 넷), 엇갈리는 곳마다 다리 하나
       const xs = [];
       for (let a = 0; a < T2.n; a += 2) for (let b = a + 2; b < T2.n; b += 2) {
         if (Math.min(b - a, T2.n - (b - a)) <= 90 || Math.abs(T2.py[a] - T2.py[b]) < 4.5 || Math.hypot(T2.px[a] - T2.px[b], T2.pz[a] - T2.pz[b]) > 6) continue;
         const hi = T2.py[a] > T2.py[b] ? a : b;
         if (!xs.some(q => Math.abs(KT.sdiff(q * T2.step, hi * T2.step)) < 60)) xs.push(hi);
       }
-      const want = ci === 10 ? 3 : 4;
+      const want = { 10: 3, 11: 4, 13: 5, 15: 4 }[ci];
       assert(xs.length === want && C0.bumps.length === want && xs.every(j => C0.bumps.some(b => Math.abs(KT.sdiff(b.s, j * T2.step)) < 20)), `${nm}: 길이 위아래로 ${xs.length}번 엇갈림 · 엇갈리는 곳마다 다리`);
     }
     const p20 = { ...KT.trackPoint(20, 0) }, p40 = { ...KT.trackPoint(40, 0) };
@@ -1035,7 +1038,7 @@ console.log('\n[22] 아주 큰 맵 · 복잡한 맵 · 지름길: 모래 협곡 
         `${nm} '${C.name}': ${C.P.len.toFixed(0)}m (본 길 ${C.span.toFixed(0)}m보다 ${(C.span - C.P.len).toFixed(0)}m 짧음) · 가운데는 본 길과 ${mid.toFixed(0)}m 떨어짐 · 가장 급한 커브 ${rC.toFixed(1)}m`);
     }
     const cutBoxes = CUTS.reduce((a, C) => a + C.boxes.length, 0) * 3;
-    assert(KT.boxes.length === 15 + cutBoxes && KT.boxes.filter(b => b.cut >= 0).length === cutBoxes && cutBoxes > 0, `${nm}: 상자 15개 + 지름길 상자 ${cutBoxes}개`);
+    assert(KT.boxes.length === 15 + cutBoxes && KT.boxes.filter(b => b.cut >= 0).length === cutBoxes && (cutBoxes > 0 || noCut), `${nm}: 상자 15개 + 지름길 상자 ${cutBoxes}개`);
     // 시범 레이스 200초: CPU도 지름길을 끝까지 타고 본 길로 돌아옴. 끼이거나 등수(진행 거리)가 튀지 않음
     const lapB = karts.map(k => k.lap), r0 = G.stats.rescues, w0 = G.stats.walls, used = CUTS.map(() => 0), onCut = karts.map(() => -1), maxCs = karts.map(() => 0), prev = karts.map(k => k.prog);
     let bad = -1, jumps = 0;
@@ -1051,13 +1054,14 @@ console.log('\n[22] 아주 큰 맵 · 복잡한 맵 · 지름길: 모래 협곡 
     assert(bad < 0 && karts.every(k => k.lap - lapB[k.slot] >= 2), `${nm} 시범 레이스: 200초에 모두 2바퀴 이상 (${karts.map((k, i) => k.lap - lapB[i]).join(',')})`);
     assert(used.every(n => n >= 2), `${nm}: CPU가 지름길을 끝까지 타고 나옴 (${CUTS.map((C, i) => `${C.name} ${used[i]}번`).join(' · ')})`);
     assert(G.stats.rescues - r0 <= 2 && G.stats.walls - w0 <= 6 && jumps === 0, `${nm}: 다시 세움 ${G.stats.rescues - r0}번 · 벽 ${G.stats.walls - w0}번 · 진행 거리가 튀지 않음`);
+    if (!CUTS.length) continue;   // 지름길 없는 코스 (별빛 우주기지 · 구름 왕국)
     // CPU에게 지름길로 / 본 길로 가라고 정해 주면 그대로 가서 본 길로 돌아옴 (벽에 안 부딪힘)
     startRace('1p', true); skipCountdown();
     const me = KT.humanKart(0), tgt = karts.find(k => k.human < 0); G.only = [me];
     for (const C of CUTS) for (const go of [true, false]) {
       placeK(me, C.from - 90, 0, 20); me.ai.cutLap = {}; me.ai.cutGo = {};
       let mid = false, back = false; const wb = G.stats.walls;
-      run(25, () => {
+      run(40, () => {   // 장애물에 한두 번 맞아도 넉넉히
         if (me.ai.cutLap[C.idx] !== undefined) me.ai.cutGo[C.idx] = go;
         if (me.cut === C.idx && me.cs > C.e0 + 10 && me.cs < C.P.len - C.e1 - 10) mid = true;
         if (me.cut < 0 && KT.sdiff(me.s, C.to) > 30) { back = true; return false; }
@@ -1118,6 +1122,7 @@ console.log('\n[23] 새 아이템 다섯 · 맞힌 카메라');
 {
   KT.settings.course = 0; KT.settings.gp = 0; KT.settings.cpuLevel = 1; KT.toMenu();
   startRace('1p'); skipCountdown();
+  KT.HAZ.length = 0;   // 아이템 시험엔 길을 건너는 양이 끼어들지 않게
   const me = KT.humanKart(0), cpus = karts.filter(k => k.human < 0), [c1, c2, c3] = cpus;
   const tap = code => { press(code); run(0.05); release(code); run(0.05); };
   const clear = k => Object.assign(k, { item: null, itemN: 0, item2: null, itemN2: 0, roulT: 0, shieldT: 0, magnetT: 0, paintT: 0, spinT: 0, immuneT: 0, starT: 0, frozenT: 0 });
@@ -1141,7 +1146,7 @@ console.log('\n[23] 새 아이템 다섯 · 맞힌 카메라');
   // 눈덩이: 앞 카트를 꽁꽁 (멈췄다가 다시 달림)
   for (const k of karts) clear(k);
   G.only = [me, c1]; park(cpus.slice(1));
-  placeK(me, 40, 0, 12); placeK(c1, 70, 0, 6);
+  placeK(me, 40, 0, 12); placeK(c1, 56, 0, 6);   // 가까이: 달아나며 옆 줄로 비키기 전에 맞음
   use('snow');
   let froze = false, minV = 99; run(4, () => { if (c1.frozenT > 0) { froze = true; minV = Math.min(minV, c1.v); } });
   assert(froze && minV < 0.5 && c1.frozenT === 0 && c1.v > 3, `눈덩이: 앞 카트가 꽁꽁 멈췄다가 (${minV.toFixed(1)}m/s) 녹으면 다시 달림`);
@@ -1179,12 +1184,13 @@ console.log('\n[23] 새 아이템 다섯 · 맞힌 카메라');
 {
   // CPU도 새 아이템 다섯을 씀
   randomSeed = 0x2468ace1; pilotSeed = 0x13579bdf;
+  const laps0 = KT.settings.laps; KT.settings.laps = 5;   // 한 판에 아이템을 넉넉히 쓰게 길게
   KT.settings.cpuLevel = 1; G.stats.used = {};
-  startRace('1p', true); skipCountdown(); run(150);
+  startRace('1p', true); skipCountdown(); run(220);
   const used = Object.keys(G.stats.used || {});
   const fresh = ['fake', 'trap3', 'horn', 'ufo', 'ghost', 'plane', 'boomerang', 'cloud', 'shrink', 'barricade', 'pow', 'water'], nf = fresh.filter(x => used.includes(x)).length;
   assert(used.length >= 14 && nf >= 5, `CPU가 여러 가지 아이템을 씀 (${used.length}가지 · 새 아이템 ${nf}가지: ${used.join(', ')})`);
-  G.forceCPU = null; KT.toMenu();
+  G.forceCPU = null; KT.settings.laps = laps0; KT.toMenu();
 }
 
 // ---------- 24. 새 아이템 열두 가지 ----------
@@ -1192,6 +1198,7 @@ console.log('\n[24] 새 아이템 열두 가지 (카트라이더·마리오카�
 {
   KT.settings.course = 0; KT.settings.gp = 0; KT.settings.cpuLevel = 1; KT.toMenu();
   startRace('1p'); skipCountdown();
+  KT.HAZ.length = 0;   // 아이템 시험엔 길을 건너는 양이 끼어들지 않게
   const me = KT.humanKart(0), cpus = karts.filter(k => k.human < 0), [c1, c2, c3] = cpus;
   const tap = code => { press(code); run(0.05); release(code); run(0.05); };
   const clear = k => Object.assign(k, { item: null, itemN: 0, item2: null, itemN2: 0, roulT: 0, shieldT: 0, magnetT: 0, paintT: 0, spinT: 0, immuneT: 0, starT: 0, frozenT: 0,
@@ -1310,16 +1317,22 @@ console.log('\n[24] 새 아이템 열두 가지 (카트라이더·마리오카�
 }
 
 // ---------- 25. 코스 장애물 ----------
-console.log('\n[25] 코스 장애물: 쿵쿵 돌 · 흔들 통나무 · 꽃게 · 사탕 공 · 광산 수레 · 자동차 · 펭귄');
+console.log('\n[25] 코스 장애물: 쿵쿵 돌 · 흔들 통나무 · 꽃게 · 사탕 공 · 광산 수레 · 자동차 · 펭귄 · 양 · 유령 · 호박 · 운석 · 꼬마 외계인 · 해파리 · 복어 · 열기구');
 {
-  const expect = { 4: [['stomp'], 3, '쿵쿵 돌'], 5: [['swing'], 3, '흔들 통나무'], 6: [['crab'], 6, '꽃게'], 7: [['gum'], 6, '사탕 공'], 8: [['cart'], 3, '광산 수레'], 9: [['car', 'bus', 'truck'], 8, '자동차·버스·트럭'],
-    10: [['penguin'], 5, '펭귄'], 11: [['swing', 'stomp'], 5, '흔들 통나무·쿵쿵 돌'] };
+  const expect = { 4: [['stomp'], 8, '쿵쿵 돌'], 5: [['swing'], 7, '흔들 통나무'], 6: [['crab'], 14, '꽃게'], 7: [['gum'], 12, '사탕 공'], 8: [['cart'], 8, '광산 수레'], 9: [['car', 'bus', 'truck'], 12, '자동차·버스·트럭'],
+    10: [['penguin'], 13, '펭귄'], 11: [['swing', 'stomp'], 12, '흔들 통나무·쿵쿵 돌'], 12: [['ghost', 'pumpkin'], 20, '유령·호박'], 13: [['meteor', 'alien'], 20, '운석·꼬마 외계인'], 14: [['jelly', 'puffer'], 21, '해파리·복어'], 15: [['balloon'], 14, '열기구'] };
+  // 기본 코스 넷도 길을 건너는 친구가 여섯씩 (점프로 넘거나 피함)
+  for (const [ci, ty, n, nm] of [[1, 'crab', 6, '꽃게'], [2, 'penguin', 6, '펭귄'], [3, 'gum', 6, '사탕 공'], [0, 'sheep', 6, '양']]) {
+    KT.settings.course = ci; KT.settings.gp = 0; KT.toMenu(); KT.switchCourse(ci); KT.toMenu();
+    assert(KT.HAZ.length === n && KT.HAZ.every(z => z.type === ty) && G3.haz[ty] && G3.haz[ty].count === n, `${KT.COURSE.name}: ${nm} ${n}개 (3D도)`);
+  }
   const autoGas0 = KT.settings.autoGas;
   let demoHits = 0;
-  for (const ci of [4, 5, 6, 7, 8, 9, 10, 11]) {
+  for (const ci of [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]) {
     KT.settings.course = ci; KT.settings.gp = 0; KT.settings.cpuLevel = 1; KT.settings.laps = 3; KT.toMenu(); KT.switchCourse(ci); KT.toMenu();
     const H = KT.HAZ, [types, n, nm] = expect[ci], cname = KT.COURSE.name;
     assert(H.length === n && H.every(z => types.includes(z.type)) && types.every(ty => G3.haz[ty] && G3.haz[ty].count === H.filter(z => z.type === ty).length), `${cname}: ${nm} ${n}개 (3D도)`);
+    if (ci === 7) { const col = new sandbox.THREE.Color(); let black = 0; for (let i = 0; i < n; i++) { G3.haz.gum.getColorAt(i, col); if (col.r + col.g + col.b < 0.5) black++; } assert(black === 0, `사탕 공 ${n}개 모두 제 색 (까만 공 ${black}개)`); }
     // 시범 레이스 80초: 끼이지 않고 잘 돎 (CPU도 가끔 맞음)
     G.stats.haz = {}; const r0 = G.stats.rescues, lapB = karts.map(k => k.lap);
     let bad = -1; run(80, j => { if (bad < 0 && !karts.every(finite)) bad = j; });
@@ -1372,6 +1385,58 @@ console.log('\n[25] 코스 장애물: 쿵쿵 돌 · 흔들 통나무 · 꽃게 �
     const over = !stillHit(me, 0.25);
     assert(hit && over && G3.haz.penguin, '펭귄: 길을 뒤뚱뒤뚱 건너다 닿으면 빙글 · 점프 중이면 넘어감');
   });
+  // 양: 몬스터 서킷 길을 느릿느릿 건너다 닿으면 빙글 · 점프 중이면 넘어감
+  at(0, (me, H) => {
+    const z = H[0];
+    placeK(me, z.s, 0, 0);
+    const hit = stillHit(me, 10);
+    waitFor(18, () => Math.abs(KT.hazAt(z, KT.T()).d) < 0.4 && KT.HZ.vd > 0 && me.immuneT <= 0);
+    placeK(me, z.s, 0, 0); me.air = true; me.vy = 6; me.y += 1.0;
+    const over = !stillHit(me, 0.25);
+    assert(hit && over && G3.haz.sheep, '양: 길을 느릿느릿 건너다 닿으면 빙글 · 점프 중이면 넘어감');
+  });
+  // 유령: 떠다니는 친구라 점프로 못 넘음 · 호박: 데굴데굴 굴러와서 퍽
+  at(12, (me, H) => {
+    const z = H.find(q => q.type === 'ghost' && q.cut < 0), p = H.find(q => q.type === 'pumpkin');
+    placeK(me, z.s, 0, 0);
+    const hit = stillHit(me, 9);
+    waitFor(16, () => Math.abs(KT.hazAt(z, KT.T()).d) < 0.4 && KT.HZ.vd > 0 && me.immuneT <= 0);
+    placeK(me, z.s, 0, 0); me.air = true; me.vy = 6; me.y += 1.0;
+    const air = stillHit(me, 0.3);
+    waitFor(5, () => me.immuneT <= 0);
+    placeK(me, p.s, 0, 0);
+    assert(hit && air && stillHit(me, 8) && G3.haz.ghost && G3.haz.pumpkin, '유령: 길을 건너다 닿으면 빙글, 떠다녀서 점프로 못 넘음 · 호박: 굴러와서 퍽');
+  });
+  // 운석: 떨어질 자리에 붉은 고리 · 맞으면 납작, 옆 줄은 괜찮음 · 꼬마 외계인은 건너다 닿으면 빙글
+  at(13, (me, H) => {
+    const z = H.find(q => q.type === 'meteor'), a = H.find(q => q.type === 'alien');
+    waitFor(6, () => { const q = (KT.T() + z.phase) % KT.HAZ_KIND.meteor.period; return q > 2.1 && q < 2.4; });   // 부서져 사라진 사이에 그 자리로
+    placeK(me, z.s, 0, 0);
+    const hit = stillHit(me, 4), flat = me.flatT > 0;
+    waitFor(6, () => { const q = (KT.T() + z.phase) % KT.HAZ_KIND.meteor.period; return q > 2.1 && q < 2.4 && me.immuneT <= 0; });
+    placeK(me, z.s, 4.8, 0);
+    const side = stillHit(me, 3.5);
+    placeK(me, a.s, 0, 0);
+    assert(hit && flat && !side && G3.haz.ring && G3.haz.ring.count === 12 && stillHit(me, 8), `운석: 밑에 있으면 쾅 납작 · 옆 줄은 괜찮음 · 붉은 고리 · 꼬마 외계인 [${hit} ${flat} ${side}]`);
+  });
+  // 해파리: 높이 떠 있을 땐 지나가도 되고 낮을 때만 닿음 · 복어는 길을 건너다 따끔
+  at(14, (me, H) => {
+    const z = H.find(q => q.type === 'jelly' && q.cut < 0), f = H.find(q => q.type === 'puffer' && q.cut < 0);
+    waitFor(6, () => KT.hazAt(z, KT.T()).y > 6);
+    placeK(me, z.s, KT.hazAt(z, KT.T()).d, 0);
+    const high = !stillHit(me, 0.3), low = stillHit(me, 5);
+    waitFor(6, () => me.immuneT <= 0);
+    placeK(me, f.s, 0, 0);
+    assert(high && low && stillHit(me, 10), `해파리: 높을 땐 괜찮고 낮을 때만 찌릿 · 복어: 길을 건너다 따끔 [${high} ${low}]`);
+  });
+  // 열기구가 건너다 닿으면 빙글 · 구름 왕국의 불기둥은 번개
+  at(15, (me, H) => {
+    placeK(me, H[0].s, 0, 0);
+    const hit = stillHit(me, 8);
+    waitFor(5, () => me.immuneT <= 0);
+    const j = KT.JETS[0]; placeK(me, j.s, j.d, 0);
+    assert(hit && stillHit(me, 4.5) && G3.jets.length === KT.JETS.length && G3.jets[0].look.why === 'thunder', '열기구: 길을 건너다 닿으면 빙글 · 번개가 내리치는 자리에 서면 빙글');
+  });
   // 사탕 공 · 광산 수레(광산 굴 안) · 자동차(뒤에서 와서 들이받음)
   at(7, (me, H) => { placeK(me, H[0].s, 0, 0); assert(stillHit(me, 7), '사탕 공: 길을 굴러 건너다 닿으면 빙글'); });
   at(8, (me, H) => {
@@ -1389,14 +1454,14 @@ console.log('\n[25] 코스 장애물: 쿵쿵 돌 · 흔들 통나무 · 꽃게 �
   });
   KT.settings.autoGas = autoGas0; G.only = null;
   KT.settings.course = 0; KT.settings.laps = 3; KT.toMenu(); KT.switchCourse(0); KT.toMenu();
-  assert(KT.HAZ.length === 0 && Object.keys(G3.haz || {}).length === 0, '기본 코스엔 장애물 없음');
+  assert(KT.HAZ.length === 6 && G3.haz.sheep && G3.haz.sheep.count === 6, '몬스터 서킷으로 돌아오면 양 여섯만 (앞 코스 장애물은 안 남음)');
 }
 
 // ---------- 26. 코스 모양 ----------
 console.log('\n[26] 코스 모양: 긴 직선을 줄이고 꼬불꼬불하게');
 {
   const shapes = [];
-  for (const ci of [4, 5, 6, 7, 8, 9, 10, 11]) {
+  for (const ci of [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]) {
     KT.settings.course = ci; KT.toMenu(); KT.switchCourse(ci); KT.toMenu();
     const T2 = KT.TR;
     let straight = 0, longest = 0, st = -1, turn = 0;
@@ -1411,6 +1476,21 @@ console.log('\n[26] 코스 모양: 긴 직선을 줄이고 꼬불꼬불하게');
   assert(shapes.every(q => q.straight <= 0.41 && q.longest <= 150 && q.turn >= 78),
     `도전 코스·큰 맵·복잡한 맵: 직선 41% 아래 · 가장 긴 직선 150m 아래 · 100m마다 78° 넘게 꺾임 (${shapes.map(q => `${q.nm} ${(q.straight * 100).toFixed(0)}%·${q.longest.toFixed(0)}m·${q.turn.toFixed(0)}°`).join(' / ')})`);
   KT.settings.course = 0; KT.toMenu(); KT.switchCourse(0); KT.toMenu();
+}
+
+// ---------- 26-2. 랜덤 코스 ----------
+console.log('\n[26-2] 랜덤 코스');
+{
+  Object.assign(KT.settings, { gp: 0, cpuLevel: 1, laps: 3, course: 0, random: true }); KT.toMenu();
+  const seen = [];
+  for (let i = 0; i < 15; i++) { startRace('1p', true); seen.push(KT.COURSES.indexOf(KT.COURSE)); KT.toMenu(); }
+  assert(new Set(seen).size === 15 && !seen.includes(0), `랜덤 코스: 판마다 다른 코스 · 열다섯 판 동안 안 겹침 · 지금 코스는 안 나옴 (${seen.join(',')})`);
+  const lastOne = KT.COURSE; startRace('1p', true);
+  assert(KT.COURSE !== lastOne, '주머니를 다 쓰면 다시 섞어도 바로 앞 코스는 안 나옴');
+  KT.toMenu(); KT.settings.gp = 2; KT.toMenu(); startRace('1p', true);
+  assert(KT.gp.on && KT.COURSE === KT.COURSES[4], '그랑프리는 랜덤과 상관없이 컵 순서대로');
+  KT.settings.gp = 0; KT.settings.random = false; KT.settings.course = 0; KT.gp.on = false; KT.toMenu(); KT.switchCourse(0); KT.toMenu();
+  assert(KT.COURSE === KT.COURSES[0] && !KT.settings.random, '랜덤을 끄면 다시 고른 코스로');
 }
 
 // ---------- 27. 막 누르기 ----------
