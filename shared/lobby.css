@@ -1,4 +1,4 @@
-/* Nolja game lobby (shared by tennis and kart) — soft paper, lavender, and a little sunshine.
+/* Nolja game lobby — soft paper, lavender, and a little sunshine.
    Each game keeps only its stage (3D canvas) styles in its own css. */
 :root {
   --cream: #faf8f2;
@@ -6,17 +6,17 @@
   --forest: #33423f;
   --forest-soft: #f0edf9;
   --lime: #f5d879;
-  --lavender: #8176db;
-  --lavender-dark: #5f54b2;
+  --lavender: #7161c9;
+  --lavender-dark: #5745ab;
   --peach: #f2a6ba;
   --ink: #34413f;
-  --muted: #747772;
+  --muted: #666b65;
   --line: #e6e3dc;
   --panel: #fffefa;
   --fg: #34413f;
-  --accent: #8176db;
-  --p1: #6e8de0;
-  --p2: #d982a0;
+  --accent: var(--lavender);
+  --p1: #4569bc;
+  --p2: #b7527a;
   color-scheme: light;
 }
 html, body { background: var(--forest); color: var(--ink); word-break: keep-all; }
@@ -117,12 +117,12 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .win-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; clear: both; }
 .win-options button { border: 1px solid #e6e2e8; display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 51px; font: 600 20px Arial, sans-serif; border-radius: 12px; }
 .win-options button span { font-size: 11px; font-weight: 400; color: var(--muted); }
-.win-options button.on { background: #8176db; color: white; border-color: #8176db; }
+.win-options button.on { background: var(--lavender); color: white; border-color: var(--lavender); }
 .win-options button.on span { color: #f5f1ff; }
 .field-hint { font-size: 11px; color: #8a8880; margin: 11px 0 0; }
 .start-area { margin-top: auto; padding-top: 30px; text-align: center; }
-.start-button.primary { display: flex; align-items: center; justify-content: center; gap: 19px; width: 100%; min-height: 56px; font-size: 15px; font-weight: 750; background: #8176db; color: white; border-radius: 14px; box-shadow: 0 5px 0 #6b61c2; margin-bottom: 5px; }
-.start-button.primary:hover { background: #7569cf; box-shadow: 0 5px 0 #6257b8, 0 8px 18px #8176db20; }
+.start-button.primary { display: flex; align-items: center; justify-content: center; gap: 19px; width: 100%; min-height: 56px; font-size: 15px; font-weight: 750; background: var(--lavender); color: white; border-radius: 14px; box-shadow: 0 4px 0 var(--lavender-dark), 0 8px 20px #5745ab14; margin-bottom: 5px; }
+.start-button.primary:hover { background: var(--lavender-dark); box-shadow: 0 4px 0 #46378c, 0 8px 20px #5745ab24; }
 .start-button .icon { width: 19px; height: 19px; }
 .start-hint { display: block; font-size: 10px; color: #939087; margin-top: 14px; }
 .start-hint kbd { font-size: 9px; padding: 2px 5px; margin-right: 4px; }
@@ -166,7 +166,7 @@ input[type=checkbox] { accent-color: var(--lavender); height: 17px; width: 17px;
 .club-footer .text-button { font-size: 11px; }
 .footer-signoff { margin-left: auto; font: 8px Arial, sans-serif; letter-spacing: 1.5px; }
 
-.guide-dialog { width: min(640px, calc(100% - 32px)); max-height: calc(100dvh - 40px); overflow: auto; border: 1px solid var(--line); border-radius: 26px; background: var(--paper); color: var(--ink); padding: 32px; box-shadow: 0 25px 100px #302c4c40; }
+.guide-dialog { --dialog-padding: 32px; width: min(640px, calc(100% - 32px)); max-height: calc(100dvh - 40px); overflow: auto; border: 1px solid var(--line); border-radius: 26px; background: var(--paper); color: var(--ink); padding: var(--dialog-padding); box-shadow: 0 25px 100px #302c4c40; }
 .guide-dialog::backdrop { background: #39344d99; backdrop-filter: blur(5px); }
 .dialog-heading { display: flex; justify-content: space-between; gap: 20px; align-items: center; }
 .dialog-heading h2 { font-size: 27px; letter-spacing: -1px; margin: 10px 0; }
@@ -385,7 +385,7 @@ input[type=checkbox] { accent-color: var(--lavender); height: 17px; width: 17px;
   .selcard .row > button { padding: 6px 8px; min-width: 36px; min-height: 44px; font-size: 12px; }
   .selcard .row > button:last-child { padding: 6px 10px; }
   .selcard .small { font-size: 9px; line-height: 1.7; margin-top: 8px; }
-  .guide-dialog { padding: 23px; }
+  .guide-dialog { --dialog-padding: 23px; padding: var(--dialog-padding); }
   .dialog-heading h2 { font-size: 23px; }
   .guide-steps { grid-template-columns: 1fr; gap: 17px; margin: 22px 0; }
   .guide-steps h3 { display: inline; margin-left: 9px; }
@@ -424,4 +424,103 @@ input[type=checkbox] { accent-color: var(--lavender); height: 17px; width: 17px;
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
+
+/* Keep the playful artwork, with a clearer reading and interaction layer. */
+.lobby.overlay {
+  background: radial-gradient(ellipse at 8% 0, #eee8fa66, transparent 42%), var(--cream);
+  scrollbar-color: #c5bed4 var(--cream);
+  scroll-padding-bottom: 24px;
+}
+.lobby .page-heading h1, .dialog-heading h2 { text-wrap: balance; }
+.lobby .game-feature { box-shadow: 0 10px 36px #42345908; }
+.lobby .match-setup { box-shadow: 0 10px 36px #42345908; }
+.lobby .feature-intro > p { font-size: 13px; line-height: 1.8; color: #635d73; }
+.lobby .feature-note { font-size: 11px; color: #675586; background: #ffffff80; }
+.lobby .feature-perks { flex-wrap: wrap; justify-content: flex-start; gap: 12px 20px; font-size: 12px; color: #60665e; }
+.lobby .feature-perks > span { flex-basis: auto; }
+.lobby .setup-heading .eyebrow { color: #71638d; font-size: 10px; }
+.lobby .setup-group legend { font-size: 14px; }
+.lobby .step-number { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 8px; background: #eeE8f8; color: var(--lavender-dark); font-size: 11px; }
+.lobby .mode-options strong { font-size: 15px; }
+.lobby .mode-options button > span { font-size: 12px; white-space: normal; line-height: 1.55; color: #696372; }
+.lobby .mode-options button.on { border-color: var(--lavender); background: #f0ebfb; box-shadow: inset 0 0 0 1px var(--lavender); }
+.lobby .mode-options button.on .choice-dot { border-color: var(--lavender); }
+.lobby .level-options { gap: 8px; flex-wrap: wrap; }
+.lobby .level-options > span { font-size: 12px; color: #615969; }
+.lobby .level-options .row { padding: 3px; background: #f3f0f7; border-radius: 11px; gap: 3px; }
+.lobby .level-options button { min-height: 44px; font-size: 12px; padding: 7px 11px; color: #696173; }
+.lobby .level-options button.on { background: var(--paper); color: var(--lavender-dark); box-shadow: 0 2px 5px #43345e13; }
+.lobby .level-options[aria-disabled=true] { opacity: .65; }
+.lobby .win-options button span { font-size: 12px; }
+.lobby .field-hint, .lobby .start-hint { font-size: 12px; line-height: 1.7; color: #66685f; }
+.lobby .start-button.primary { min-height: 56px; font-size: 16px; }
+.lobby .start-button.primary:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--lavender-dark); }
+.lobby .connection-card { background: #fffefa; box-shadow: 0 5px 24px #42345904; }
+.lobby .connection-copy { min-width: 0; }
+.lobby .connection-copy h2 { font-size: 15px; line-height: 1.5; }
+.lobby .connection-copy p { font-size: 12px; line-height: 1.7; }
+.lobby .connection-card.is-connected { border-color: #a9c6b1; }
+.lobby .connection-card.is-connected .connection-icon { background: #e5f1e7; color: #41704c; }
+.lobby .connect-button { font-size: 13px; }
+.lobby .connection-actions .text-button { font-size: 12px; }
+.lobby .secondary-grid { gap: 16px; margin-top: 16px; align-items: start; }
+.lobby .club-details { border: 1px solid var(--line); border-radius: 16px; background: #fffefa99; }
+.lobby .club-details summary { min-height: 56px; padding: 10px 17px; font-size: 13px; color: var(--ink); }
+.lobby .club-details summary:hover { background: #f3eef866; border-radius: 16px; }
+.lobby .club-details[open] summary { border-bottom: 1px solid var(--line); }
+.lobby .details-content { padding: 18px; }
+.lobby .details-content .small, .lobby .gfx-info { font-size: 12px; line-height: 1.8; }
+.lobby .setting-title { font-size: 13px; }
+.lobby label.set { min-height: 44px; font-size: 13px; gap: 10px; }
+.lobby label.set span { font-size: 12px; font-variant-numeric: tabular-nums; }
+.lobby input[type=range] { min-height: 44px; }
+.lobby input[type=checkbox] { width: 20px; height: 20px; flex-shrink: 0; }
+.lobby .seg button { min-height: 44px; }
+.preview-toggle { min-width: 44px; min-height: 44px; }
+.guide-dialog { overscroll-behavior: contain; scrollbar-width: thin; }
+.guide-dialog .dialog-heading { position: sticky; top: calc(-1 * var(--dialog-padding)); z-index: 2; background: var(--paper); margin: calc(-1 * var(--dialog-padding)) calc(-1 * var(--dialog-padding)) 10px; padding: var(--dialog-padding) var(--dialog-padding) 12px; border-bottom: 1px solid var(--line); }
+.guide-dialog { scroll-padding-top: 110px; }
+.guide-dialog .guide-steps h3, .guide-dialog .keyboard-guide h3 { font-size: 14px; }
+.guide-dialog .guide-steps p { font-size: 13px; }
+.guide-dialog .keyboard-players, .guide-dialog .keyboard-guide > p { font-size: 12px; line-height: 1.9; }
+.overlay.sel { overscroll-behavior: contain; }
+.selection-subtitle { color: #71627f; }
+.tile .character-type { color: #71607e; }
+.tile:focus-visible { outline-offset: 2px; }
+.selcard .row > button { min-width: 44px; min-height: 44px; }
+.game-toolbar button { min-height: 44px; }
+.setup-fields { min-width: 0; }
+.setup-jump { display: none; }
+.lobby .match-setup { scroll-margin-top: 16px; }
+
+/* The action has its own row, so scrolling options never pass underneath it. */
+@media (min-width: 701px) and (max-height: 850px) {
+  .lobby .match-setup { max-height: calc(100dvh - 180px); min-height: 0; }
+  .lobby .setup-heading { flex-shrink: 0; }
+  .lobby .setup-fields { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #c5bed4 transparent; padding: 4px 8px 8px; margin: 0 -8px; scroll-padding-block: 12px; }
+  .lobby .setup-fields .setup-group { flex-shrink: 0; }
+  .lobby .start-area { flex: 0 0 auto; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+}
+
+@media (min-width: 1600px) {
+  .lobby .feature-intro > p { font-size: 15px; }
+  .lobby .mode-options strong { font-size: 17px; }
+  .lobby .mode-options button > span { font-size: 13px; }
+  .lobby .setup-group legend { font-size: 15px; }
+  .lobby .connection-copy p { font-size: 13px; }
+}
+@media (max-width: 700px) {
+  .lobby .setup-jump { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 56px; padding: 12px 17px; margin: -4px 0 18px; background: var(--paper); border: 1px solid var(--lavender); border-radius: 14px; color: var(--lavender-dark); font-size: 14px; box-shadow: 0 4px 14px #42345908; }
+  .lobby .setup-jump:hover { background: var(--forest-soft); }
+  .lobby .setup-jump .icon { width: 19px; height: 19px; transform: rotate(90deg); }
+  .lobby .feature-perks { gap: 10px 14px; font-size: 11px; }
+  .lobby .feature-intro > p { font-size: 12px; }
+  .lobby .setup-heading h2 { font-size: 27px; }
+  .lobby .connection-actions { justify-content: flex-start; gap: 16px; flex-wrap: wrap; }
+  .lobby .secondary-grid { gap: 10px; }
+  .lobby .details-content { padding: 16px; }
+  .lobby .connection-copy h2 { font-size: 14px; }
+  .guide-dialog .keyboard-players { overflow-wrap: anywhere; }
+  .selection-subtitle { font-size: 12px; }
 }

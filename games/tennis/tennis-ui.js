@@ -6,6 +6,25 @@
   const guide = $('guideDialog'), game = window.__ST;
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let previewPaused = motion.matches;
+  const setup = menu.querySelector('.match-setup');
+  const setupFields = document.createElement('div');
+  setupFields.className = 'setup-fields';
+  setupFields.setAttribute('role', 'group');
+  setupFields.setAttribute('aria-label', '경기 옵션');
+  setup.querySelectorAll(':scope > .setup-group').forEach(group => setupFields.appendChild(group));
+  setup.querySelector('.start-area').before(setupFields);
+  setup.id = 'matchSetup';
+  const setupJump = document.createElement('button');
+  setupJump.type = 'button';
+  setupJump.className = 'setup-jump';
+  setupJump.setAttribute('aria-controls', setup.id);
+  setupJump.innerHTML = '게임 설정하고 시작하기 <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>';
+  setupJump.addEventListener('click', () => {
+    $('setupTitle').tabIndex = -1;
+    $('setupTitle').focus({ preventScroll: true });
+    setup.scrollIntoView({ behavior: motion.matches ? 'auto' : 'smooth', block: 'start' });
+  });
+  menu.querySelector('.page-heading').after(setupJump);
   const toolbar = document.createElement('div');
   toolbar.className = 'game-toolbar';
   toolbar.hidden = true;
@@ -69,6 +88,7 @@
   function updateConnection() {
     const count = joycon.list.length;
     $('connectionStatus').textContent = count ? `조이콘 ${count}개 연결됨 · 경기에선 라켓이 조이콘을 그대로 따라가요.` : '키보드만으로도 바로 플레이할 수 있어요.';
+    $('connectionStatus').closest('.connection-card').classList.toggle('is-connected', count > 0);
     if (count) $('controllerDetails').open = true;
   }
   joycon.on('change', () => { if (updateSlots) updateSlots(); updateConnection(); });

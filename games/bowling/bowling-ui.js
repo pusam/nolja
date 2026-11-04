@@ -6,6 +6,25 @@
   const guide = $('guideDialog'), game = window.__BW;
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let previewPaused = motion.matches;
+  const setup = menu.querySelector('.match-setup');
+  const setupFields = document.createElement('div');
+  setupFields.className = 'setup-fields';
+  setupFields.setAttribute('role', 'group');
+  setupFields.setAttribute('aria-label', '경기 옵션');
+  setup.querySelectorAll(':scope > .setup-group').forEach(group => setupFields.appendChild(group));
+  setup.querySelector('.start-area').before(setupFields);
+  setup.id = 'matchSetup';
+  const setupJump = document.createElement('button');
+  setupJump.type = 'button';
+  setupJump.className = 'setup-jump';
+  setupJump.setAttribute('aria-controls', setup.id);
+  setupJump.innerHTML = '게임 설정하고 시작하기 <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>';
+  setupJump.addEventListener('click', () => {
+    $('setupTitle').tabIndex = -1;
+    $('setupTitle').focus({ preventScroll: true });
+    setup.scrollIntoView({ behavior: motion.matches ? 'auto' : 'smooth', block: 'start' });
+  });
+  menu.querySelector('.page-heading').after(setupJump);
   const toolbar = document.createElement('div');
   toolbar.className = 'game-toolbar';
   toolbar.hidden = true;
@@ -60,11 +79,30 @@
   [menu, $('select'), $('pause'), $('result')].forEach(element => layoutObserver.observe(element, { attributes: true, attributeFilter: ['class'] }));
   document.querySelectorAll(OPTION_BUTTONS).forEach(button => button.addEventListener('click', syncLayout));
   new ResizeObserver(() => window.dispatchEvent(new Event('resize'))).observe(preview);
+  function syncRosterState() {
+    const roster = $('roster'), current = game.sel.cards.find(card => card.cpu < 0 && !card.ready);
+    roster.querySelectorAll('.tile').forEach(tile => {
+      const k = Number(tile.dataset.k), selected = !!current && current.ch === k;
+      const players = game.sel.cards.filter(card => card.ch === k).map(card => card.cpu >= 0 ? 'CPU' : `P${card.slot + 1}`);
+      tile.setAttribute('aria-pressed', String(selected));
+      tile.setAttribute('aria-label', `${game.CHARS[k].name}${players.length ? ', ' + players.join('·') + ' 선택됨' : ''}. ${selected ? '한 번 더 누르면 준비' : current ? `P${current.slot + 1} 캐릭터로 선택` : '모두 준비 완료'}`);
+    });
+    // Selection updates run before this observer, including the next player's turn.
+    if (current && !$('select').classList.contains('hidden') && document.activeElement?.matches('#roster .tile')) {
+      const selected = roster.querySelector(`.tile[data-k="${current.ch}"]`);
+      if (selected && selected !== document.activeElement) {
+        selected.focus({ preventScroll: true });
+        selected.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    }
+  }
+  new MutationObserver(syncRosterState).observe($('roster'), { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
   const joycon = window.Nolja.joycon;
   const updateSlots = joycon.handlers.change;
   function updateConnection() {
     const count = joycon.list.length;
     $('connectionStatus').textContent = count ? `조이콘 ${count}개 연결됨 · R을 누른 채 팔을 뒤로 뺐다가 앞으로 휘두르며 놓아요.` : '키보드만으로도 바로 플레이할 수 있어요.';
+    $('connectionStatus').closest('.connection-card').classList.toggle('is-connected', count > 0);
     if (count) $('controllerDetails').open = true;
   }
   joycon.on('change', () => { if (updateSlots) updateSlots(); updateConnection(); });

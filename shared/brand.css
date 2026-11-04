@@ -1,0 +1,14 @@
+/* One wordmark across the lounge and every game. The sport badge keeps each game's accent. */
+.nolja-brand { display: inline-flex; flex-direction: row; align-items: center; gap: 10px; color: #302d42; border-radius: 6px; }
+.nolja-brand .brand-symbol { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 12px; background: var(--brand-accent, var(--lavender, #6955a3)); color: #fff; transform: rotate(-8deg); }
+.nolja-brand .brand-symbol svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.nolja-brand .brand-word { font: 900 33px/1 Arial, sans-serif; letter-spacing: -2px; color: #302d42; }
+.nolja-brand .brand-dot { display: inline; width: auto; height: auto; margin: 0; border-radius: 0; background: none; color: var(--lavender-dark, #6955a3); }
+.nolja-brand .brand-tag { display: block; margin: 0 0 0 4px; padding-left: 12px; border-left: 1px solid #dedad3; color: #696574; font: 700 8px/1.5 Arial, sans-serif; letter-spacing: 1.4px; }
+@media (max-width: 560px) {
+  .nolja-brand { gap: 8px; }
+  .nolja-brand .brand-word { font-size: 29px; }
+  .nolja-brand .brand-symbol { width: 30px; height: 30px; border-radius: 10px; }
+  .nolja-brand .brand-symbol svg { width: 23px; height: 23px; }
+  .nolja-brand .brand-tag { display: none; }
+}

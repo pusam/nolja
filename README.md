@@ -145,6 +145,7 @@ shared/
   characters.js     몬스터 캐릭터 16종 (얼굴 그림 + 3D 모델 + 자세, 멀리 보이는 가벼운 모델)
   audio.js          소리 합성 (효과음·관중·음악 14곡(메뉴·레이스·코스 곡 열하나·볼링)·카트 코스 주변 소리·볼링장 소리·카트 엔진·볼링 공·핀 소리, 볼륨)
   nolja.css         공용 스타일
+  brand.css         놀자 로고 (홈 화면과 모든 게임 메뉴 공용)
   lobby.css         게임 메뉴(로비)·캐릭터 선택·가이드·일시정지·결과 공용 모양
   home.css          홈 화면 스타일
   vendor/three.min.js  three.js r149 (MIT, THREE_LICENSE)
@@ -168,7 +169,7 @@ start-game.bat      오프라인 실행기
 ## 새 게임 추가
 
 1. `games/게임이름/index.html` 만들고 `shared/*.js`를 불러와서 사용 (`window.Nolja.joycon`, `.characters`, `.audio`, `.store`)
-2. 루트 `index.html`의 게임 타일(`#channels`)에 카드를 추가하고, 같은 순서로 `GAMES` 목록에도 한 줄 추가 (키보드 ← → 고르기가 이 순서를 씀)
+2. 루트 `index.html`의 게임 타일(`#channels`)에 카드(`a.ch`, `data-name`)를 추가 (키보드 ← → 고르기는 이 카드들에서 저절로 만들어짐)
 
 ## 고친 걸 올릴 때
 

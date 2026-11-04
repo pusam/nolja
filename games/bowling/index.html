@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#5b3fa8">
 <title>몬스터 볼링 · 놀자</title>
-<link rel="stylesheet" href="../../shared/nolja.css?v=20261029b">
-<link rel="stylesheet" href="../../shared/lobby.css?v=20261029b">
-<link rel="stylesheet" href="bowling.css?v=20261029b">
+<link rel="stylesheet" href="../../shared/nolja.css?v=20261030e">
+<link rel="stylesheet" href="../../shared/lobby.css?v=20261030e">
+<link rel="stylesheet" href="bowling.css?v=20261030e">
+<link rel="stylesheet" href="../../shared/brand.css?v=20261030e">
 </head>
 <body>
 <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -27,7 +28,7 @@
 
 <div id="menu" class="overlay lobby">
   <header class="club-header">
-    <a class="brand" href="../../index.html" aria-label="놀자 홈"><span class="brand-symbol"><svg aria-hidden="true"><use href="#i-bowl"/></svg></span><span class="brand-word">nolja<span class="brand-dot">.</span></span><span class="brand-tag">PLAY<br>TOGETHER</span></a>
+    <a class="brand nolja-brand" href="../../index.html" aria-label="놀자 홈"><span class="brand-symbol"><svg aria-hidden="true"><use href="#i-bowl"/></svg></span><span class="brand-word">nolja<span class="brand-dot">.</span></span><span class="brand-tag">PLAY<br>TOGETHER</span></a>
     <nav class="club-nav" aria-label="메인 메뉴"><a href="../../index.html">게임 라운지</a><span class="nav-divider"></span><span class="current-game">몬스터 볼링</span></nav>
     <button id="btnFull" class="header-button" aria-label="전체화면 (F)"><svg aria-hidden="true" class="icon"><use href="#i-expand"/></svg><span>전체화면</span><kbd>F</kbd></button>
   </header>
@@ -35,7 +36,7 @@
     <div class="page-heading"><div><p class="eyebrow">TEN PINS. BIG CHEERS.</p><h1>오늘은 누가 스트라이크를 칠까요<span>?</span></h1></div><button id="btnGuide" class="text-button">플레이 가이드 <span aria-hidden="true">↗</span></button></div>
     <div class="lobby-grid">
       <section class="game-feature" aria-labelledby="gameTitle">
-        <div class="feature-copy"><div class="feature-topline"><span class="sport-badge"><span></span> NOLJA · MONSTER BOWLING</span><span class="feature-edition">LET’S ROLL TOGETHER!</span></div><div class="feature-intro"><h2 id="gameTitle">몬스터<br>볼링<span>MONSTER BOWLING</span></h2><p>핀 열 개, 친구 넷.<br>데굴데굴 굴려서 와르르!</p><span class="feature-note">차례대로 휘둘러요!</span></div><img id="bowlArt" class="monster-team bowl-art" alt="볼링공을 든 몬스터 친구들과 핀 열 개" hidden></div>
+        <div class="feature-copy"><div class="feature-topline"><span class="sport-badge"><span></span> NOLJA · MONSTER BOWLING</span><span class="feature-edition">LET’S ROLL TOGETHER!</span></div><div class="feature-intro"><h2 id="gameTitle">몬스터 <br>볼링<span>MONSTER BOWLING</span></h2><p>핀 열 개, 친구 넷.<br>데굴데굴 굴려서 와르르!</p><span class="feature-note">차례대로 휘둘러요!</span></div><img id="bowlArt" class="monster-team bowl-art" alt="볼링공을 든 몬스터 친구들과 핀 열 개" hidden></div>
         <div id="lanePreview" class="court-preview lane-preview"><div class="preview-caption"><span class="live-dot"></span> LIVE LANE <span class="caption-divider">/</span> 시범 경기</div><button id="btnPreview" class="preview-toggle" aria-pressed="false" aria-label="시범 경기 일시정지">Ⅱ</button><span class="court-watermark" aria-hidden="true">TEN PINS. BIG SMILES.</span></div>
         <div class="feature-perks"><span><svg aria-hidden="true" class="icon"><use href="#i-pad"/></svg> 조이콘 · 키보드 · 게임패드</span><span><svg aria-hidden="true" class="icon"><use href="#i-users"/></svg> 1–4인 차례대로</span><span><svg aria-hidden="true" class="icon"><use href="#i-spark"/></svg> 범퍼로 아이도 쉽게</span></div>
       </section>
@@ -61,11 +62,11 @@
 <div id="pause" class="overlay hidden"><div class="panel center pause-panel"><p class="eyebrow">TAKE A BREATHER</p><div class="big">잠깐, 쉬어갈까요?</div><p class="sub">레인은 그대로 기다리고 있어요.</p><div class="row modal-actions"><button id="btnResume" class="primary">계속 하기</button><button id="btnRestart">처음부터</button><button id="btnQuit">게임 설정으로</button></div><div id="pauseInfo" class="small"></div></div></div>
 <div id="result" class="overlay bottom hidden"><div class="panel center result-panel"><p id="resEyebrow" class="eyebrow">WHAT A GAME!</p><div id="resTitle" class="big"></div><div id="resRecord" class="bw-record hidden"></div><div id="resBody" class="sub"></div><div class="row modal-actions"><button id="btnAgain" class="primary">한 판 더!</button><button id="btnReselect">캐릭터 바꾸기</button><button id="btnMenu">게임 설정</button></div><div class="small result-hint">조이콘 버튼 / Enter = 다시 하기</div></div></div>
 <script src="../../shared/vendor/three.min.js"></script>
-<script src="../../shared/store.js?v=20261029b"></script>
-<script src="../../shared/audio.js?v=20261029b"></script>
-<script src="../../shared/joycon.js?v=20261029b"></script>
-<script src="../../shared/characters.js?v=20261029b"></script>
-<script src="bowling.js?v=20261029b"></script>
-<script src="bowling-ui.js?v=20261029b"></script>
+<script src="../../shared/store.js?v=20261030e"></script>
+<script src="../../shared/audio.js?v=20261030e"></script>
+<script src="../../shared/joycon.js?v=20261030e"></script>
+<script src="../../shared/characters.js?v=20261030e"></script>
+<script src="bowling.js?v=20261030e"></script>
+<script src="bowling-ui.js?v=20261030e"></script>
 </body>
 </html>

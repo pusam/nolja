@@ -5,6 +5,7 @@
 .court-preview #laneStage { position: absolute; inset: 0; }
 .lane-preview { background: #241c47; }
 .bowl-art[hidden] { display: none; }
+.bowl-art { object-fit: cover; object-position: center bottom; height: 250px; min-height: 0; }
 #countRow.hidden, #cpuRow.hidden { display: none; }
 
 /* 캐릭터 고르기: 사람 수만큼 카드 (1~5장) */
@@ -33,3 +34,19 @@
 .bw-rank li b { font-size: 15px; color: #514764; }
 .bw-rank li strong { font-size: 20px; color: #514764; }
 .bw-rank li > span:last-child { grid-column: 2 / 4; font-size: 12px; color: #88838b; }
+
+.bw-card { min-width: 0; }
+.bw-card .bw-bump.on { background: #327b54; border-color: #327b54; }
+.bw-card.bw-now { border-color: var(--lavender); box-shadow: 0 0 0 3px #7161c92b, 0 8px 28px #49345f1c; }
+.bw-rank li { padding: 13px 16px; }
+.bw-rank li > span:last-child { color: #696173; line-height: 1.7; }
+
+@media (max-width: 700px) {
+  .feature-copy { grid-template-columns: 1fr; min-height: 0; }
+  .feature-copy .feature-intro { grid-column: 1; grid-row: 2; padding-bottom: 0; }
+  .feature-copy h2 { font-size: 35px; }
+  .feature-copy h2 br { display: none; }
+  .bowl-art { grid-column: 1; grid-row: 3; width: calc(100% + 12px); height: 185px; min-height: 0; margin: -20px -6px 0; object-fit: cover; object-position: center bottom; }
+  .bw-cards { grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); }
+  #select .selmid { flex-wrap: wrap; }
+}
