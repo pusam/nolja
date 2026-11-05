@@ -73,6 +73,43 @@
   courseRow.classList.add('is-filtered');
   courseRow.before(courseFilters, courseHint, currentCourse);
   showCourseGroup(activeCourseGroup);
+  // 기록판 · 트로피 진열장: 코스·컵마다 트로피와 최고 기록, 빈자리도 그대로 보여 줌. 누르면 그 코스를 골라 바로 도전 (규칙은 kart.js recordBoard)
+  const records = $('recordDialog');
+  const LEVELS = ['쉬움', '보통', '어려움'];
+  const recordGroups = [['basic', '기본 코스'], ['challenge', '도전 코스'], ['adventure', '모험 코스'], ['legend', '전설 코스']];
+  const trophyBadge = t => `<span class="record-trophy ${t ? 't' + t.p : 'empty'}" aria-hidden="true"><svg class="icon"><use href="#i-trophy"/></svg>${game.hasCrown(t) ? '<svg class="icon record-crown"><use href="#i-crown"/></svg>' : ''}</span>`;
+  const trophyWords = t => t ? `${game.TROPHY_NAME[t.p]} 트로피 · ${LEVELS[t.lv]}${game.hasCrown(t) ? ' · 왕관' : ''}` : '빈자리';
+  const courseTimes = x => [x.lap ? `바퀴 ${game.fmtTime(x.lap)}` : '', ...x.race.map(r => `${r.laps}바퀴 ${game.fmtTime(r.t)}`)].filter(Boolean).join(' · ') || '아직 기록이 없어요';
+  const courseThumb = i => { const thumb = courseRow.querySelector(`button[data-course="${i}"] .course-thumb`); return thumb ? thumb.outerHTML : ''; };
+  const recordCard = (x, times, thumb, attr) => `<button type="button" class="record-card${x.trophy ? '' : ' is-empty'}" ${attr} aria-label="${x.name}, ${trophyWords(x.trophy)}, ${times}. 누르면 이 코스를 골라요">${trophyBadge(x.trophy)}<span class="record-text"><strong>${x.name}</strong><span class="record-medal">${trophyWords(x.trophy)}</span><span class="record-times">${times}</span></span>${thumb}</button>`;
+  function nextGoalText(next) {
+    if (!next) return '트로피를 전부 금으로, 왕관까지 다 모았어요!';
+    if (!next.trophy) return `다음 도전: ${next.name} · 3등 안에 들면 트로피`;
+    return next.trophy.p > 1 ? `다음 도전: ${next.name} · 1등 하면 금 트로피` : `다음 도전: ${next.name} · 어려움에서 1등 하면 왕관`;
+  }
+  function renderRecords() {
+    const board = game.recordBoard(), percent = Math.round(board.got / board.total * 100), next = board.next;
+    const sections = recordGroups.map(([id, title]) => `<section class="record-group"><h3>${title}</h3><div class="record-grid">${board.courses.filter(x => groupOfCourse(x.course) === id).map(x => recordCard(x, courseTimes(x), courseThumb(x.course), `data-course="${x.course}"`)).join('')}</div></section>`);
+    sections.push(`<section class="record-group"><h3>그랑프리 컵</h3><div class="record-grid">${board.cups.map(x => recordCard(x, x.score ? `최고 ${x.score}점` : '아직 기록이 없어요', '', `data-gp="${x.gp}"`)).join('')}</div></section>`);
+    $('recordBody').innerHTML = `<div class="record-summary"><div class="record-total"><strong>${board.got}</strong><span>/ ${board.total}개</span></div><div class="record-progress"><div class="record-bar" role="progressbar" aria-label="모은 트로피" aria-valuenow="${board.got}" aria-valuemin="0" aria-valuemax="${board.total}"><i style="width:${percent}%"></i></div><ul class="record-medals"><li class="t1">금 ${board.gold}</li><li class="t2">은 ${board.silver}</li><li class="t3">동 ${board.bronze}</li><li class="crown">왕관 ${board.crown}</li></ul></div></div>
+      <button type="button" class="record-next"${next ? (next.gp ? ` data-gp="${next.gp}"` : ` data-course="${next.course}"`) : ' disabled'}>${nextGoalText(next)}${next ? ' <span aria-hidden="true">→</span>' : ''}</button>
+      <p class="record-rule">코스를 1·2·3등으로 완주하면 금·은·동, 그랑프리는 종합 순위로 받아요. 어려움에서 1등 하면 왕관이 붙어요. 이 브라우저에 저장돼요.</p>${sections.join('')}`;
+  }
+  function updateRecordChip() { const board = game.recordBoard(); $('recordCount').textContent = `${board.got}/${board.total}`; }
+  let recordsByMouse = false;
+  $('btnRecords').addEventListener('click', event => { recordsByMouse = event.detail > 0; renderRecords(); records.showModal(); records.scrollTop = 0; });
+  records.addEventListener('close', () => { if (recordsByMouse) $('btnRecords').blur(); });
+  $('btnRecordClose').addEventListener('click', () => records.close());
+  records.addEventListener('click', event => {
+    if (event.target === records) { const r = records.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) records.close(); return; }
+    const pick = event.target.closest && event.target.closest('[data-course], [data-gp]');
+    if (!pick) return;
+    const target = courseRow.querySelector(pick.dataset.gp ? `button[data-gp="${pick.dataset.gp}"]` : `button[data-course="${pick.dataset.course}"]`);
+    records.close();
+    target.click();   // 메뉴에서 고른 것과 똑같이 (코스 바꾸고 시범 레이스도 그 코스로)
+    showCourseGroup(pick.dataset.gp ? 'gp' : groupOfCourse(Number(pick.dataset.course)));
+    setup.scrollIntoView({ behavior: motion.matches ? 'auto' : 'smooth', block: 'nearest' });
+  });
   function updatePreviewButton() {
     $('btnPreview').textContent = previewPaused ? '▷' : 'Ⅱ';
     $('btnPreview').setAttribute('aria-pressed', String(previewPaused));
@@ -92,6 +129,8 @@
   function syncLayout() {
     const inMenu = !menu.classList.contains('hidden');
     if (!inMenu && guide.open) guide.close();   // a controller button can leave the menu while the guide is open
+    if (!inMenu && records.open) records.close();
+    if (inMenu) updateRecordChip();
     const parent = inMenu ? preview : document.body;
     if (stage.parentElement !== parent) parent.prepend(stage);
     game.setDemoPaused(inMenu && previewPaused);
@@ -121,7 +160,7 @@
   guide.addEventListener('click', event => { if (event.target === guide) { const r = guide.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) guide.close(); } });
   // Let native controls keep only the keys they actually use; everything else (Enter to start, F, driving keys) reaches the game.
   window.addEventListener('keydown', event => {
-    if (guide.open) { event.stopImmediatePropagation(); return; }
+    if (guide.open || records.open) { event.stopImmediatePropagation(); return; }
     const el = event.target instanceof Element ? event.target.closest('button, a, input, summary, select, textarea') : null;
     if (!el) return;
     const activate = event.code === 'Enter' || event.code === 'NumpadEnter' || event.code === 'Space';

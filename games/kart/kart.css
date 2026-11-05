@@ -37,8 +37,10 @@ input[type=range], input[type=checkbox] { accent-color: var(--kart-orange-dark);
 .page-heading .eyebrow { font-size: 9px; letter-spacing: 2px; }
 .page-heading h1 { font-size: 29px; font-weight: 800; letter-spacing: -1.3px; margin-top: 7px; }
 .page-heading h1 > span { color: var(--kart-orange); }
-.page-heading > .text-button { font-size: 12px; gap: 9px; }
-.page-heading > .text-button .icon { width: 19px; height: 19px; }
+.page-actions { display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
+.page-actions > .text-button { margin-bottom: 2px; font-size: 12px; gap: 9px; }
+.page-actions > .text-button .icon { width: 19px; height: 19px; }
+.record-chip { padding: 2px 7px; border-radius: 999px; background: #eeece1; color: #5c6155; font: 800 10px/1.4 Arial, sans-serif; }
 .lobby-grid { grid-template-columns: minmax(0, 1.75fr) minmax(360px, 1fr); gap: 24px; }
 .game-feature { border: 1px solid var(--line); border-radius: 20px; background: var(--paper); box-shadow: none; }
 .feature-copy { display: block; min-height: 0; padding: 23px 30px 25px; background: var(--kart-orange); color: var(--kart-ink); }
@@ -236,6 +238,53 @@ input[type=range], input[type=checkbox] { accent-color: var(--kart-orange-dark);
 .result-list .time { text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; color: #69745a; }
 .result-hint { margin-top: 17px; color: #717a62; font-size: 10px; }
 .result-record { margin: -10px 0 16px; color: #6f7a5f; font-size: 12px; font-weight: 800; }
+.result-trophy { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 8px; margin: -10px 0 14px; }
+.result-trophy.hidden { display: none; }
+.result-trophy span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px; border-radius: 999px; font-size: 13px; font-weight: 800; }
+.result-trophy .icon { width: 17px; height: 17px; fill: currentColor; }
+.result-trophy .t1 { background: #fff0c7; color: #8a6400; }
+.result-trophy .t2 { background: #e9edf1; color: #566371; }
+.result-trophy .t3 { background: #f8e3d3; color: #8c5228; }
+/* 기록판 · 트로피 진열장 */
+.record-dialog { width: min(760px, calc(100% - 32px)); }
+.record-summary { display: flex; align-items: center; gap: 18px; margin: 10px 0 14px; }
+.record-total { display: flex; align-items: baseline; gap: 5px; flex-shrink: 0; color: var(--kart-ink); }
+.record-total strong { font-size: 40px; font-weight: 900; letter-spacing: -2px; line-height: 1; }
+.record-total span { color: #686d5e; font-size: 12px; font-weight: 700; }
+.record-progress { flex: 1; min-width: 0; }
+.record-bar { height: 8px; overflow: hidden; border-radius: 999px; background: #eeece1; }
+.record-bar i { display: block; height: 100%; border-radius: inherit; background: var(--kart-orange); }
+.record-medals { display: flex; flex-wrap: wrap; gap: 3px 12px; margin: 8px 0 0; padding: 0; list-style: none; font-size: 11px; font-weight: 800; }
+.record-medals .t1 { color: #8a6400; }
+.record-medals .t2 { color: #566371; }
+.record-medals .t3 { color: #8c5228; }
+.record-medals .crown { color: var(--kart-orange-dark); }
+.record-next { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 46px; padding: 10px 15px; border: 0; border-radius: 10px; background: var(--kart-ink); color: var(--paper); font-size: 13px; font-weight: 800; text-align: left; }
+.record-next:hover:not(:disabled) { background: var(--kart-orange-dark); color: var(--paper); }
+.record-next:disabled { background: #fff0c7; color: #8a6400; cursor: default; }
+.record-rule { margin: 10px 0 0; color: #686d5e; font-size: 12px; line-height: 1.7; }
+.record-group { margin-top: 20px; }
+.record-group h3 { margin: 0 0 9px; color: var(--kart-ink); font-size: 13px; }
+.record-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.record-card { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 66px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: #f8f6ec; color: var(--kart-ink); text-align: left; }
+.record-card:hover { border-color: var(--kart-orange-dark); background: #fff1e8; color: var(--kart-ink); }
+.record-card.is-empty { background: transparent; border-style: dashed; }
+.record-text { flex: 1; min-width: 0; display: block; }
+.record-text strong { display: block; font-size: 13px; font-weight: 800; line-height: 1.35; }
+.record-text span { display: block; font-size: 11px; line-height: 1.45; }
+.record-medal { color: #4f5548; font-weight: 700; }
+.record-card.is-empty .record-medal { color: #868b7d; font-weight: 600; }
+.record-times { color: #686d5e; }
+.record-card .course-thumb { flex: 0 0 46px; width: 46px; height: 32px; fill: none; stroke: #8b907f; stroke-width: 2.6; stroke-linejoin: round; opacity: .75; }
+.record-card .course-thumb circle { fill: var(--kart-orange); stroke: none; }
+.record-trophy { position: relative; display: grid; place-items: center; flex: 0 0 42px; width: 42px; height: 42px; border-radius: 50%; }
+.record-trophy .icon { width: 25px; height: 25px; fill: currentColor; }
+.record-trophy.t1 { background: #fff0c7; color: #c9970c; }
+.record-trophy.t2 { background: #e9edf1; color: #8291a0; }
+.record-trophy.t3 { background: #f8e3d3; color: #b5733f; }
+.record-trophy.empty { background: #eeece1; color: #cfcdbf; }
+.record-trophy.empty .icon { fill: none; }
+.record-crown.icon { position: absolute; top: -8px; right: -5px; width: 19px; height: 19px; color: var(--kart-orange-dark); stroke: #fffef8; stroke-width: 1.4; transform: rotate(14deg); }
 .result-record.new { color: var(--kart-orange-dark); }
 /* Grand Prix standings: overall rank, racer, one medal chip per course, points with the latest gain. */
 .gp-list li { grid-template-columns: 44px minmax(0, 1fr) auto auto 74px; }
@@ -310,8 +359,9 @@ input[type=range], input[type=checkbox] { accent-color: var(--kart-orange-dark);
   .page-heading { gap: 14px; margin-bottom: 20px; align-items: flex-end; }
   .page-heading h1 { font-size: 23px; line-height: 1.4; max-width: 250px; letter-spacing: -1px; }
   .page-heading .eyebrow { font-size: 8px; letter-spacing: 1.4px; }
-  .page-heading > .text-button { font-size: 11px; gap: 5px; white-space: nowrap; }
-  .page-heading > .text-button .icon { display: none; }
+  .page-actions { flex-direction: column; align-items: flex-end; gap: 0; }
+  .page-actions > .text-button { font-size: 11px; gap: 5px; white-space: nowrap; }
+  .page-actions > .text-button .icon { display: none; }
   .lobby-grid { display: flex; flex-direction: column; gap: 18px; }
   .game-feature, .match-setup { border-radius: 17px; }
   .feature-copy { padding: 22px 23px 24px; }

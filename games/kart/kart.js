@@ -182,10 +182,9 @@ const COURSES = [
     ramp: { s: 823, len: 12, h: 2.0 }, panels: [633, 808, 1034], boxRows: [60, 788, 1066],
     zones: [{ s: 559, len: 40, d0: 5.4, d1: 8.6, type: 'lava' }, { s: 710, len: 40, d0: -8.6, d1: -5.4, type: 'lava' }, { s: 839, len: 10, d0: -36, d1: 36, type: 'lava' },
       { s: 1375, len: 34, d0: 5.4, d1: 8.6, type: 'lava' }],
-    jets: [{ s: 498, d: -3.6, phase: 0 }, { s: 518, d: 3.6, phase: 1.7 }, { s: 658, d: 0, phase: 0.9 }, { s: 1092, d: -4, phase: 2.4 }, { s: 1112, d: 4, phase: 0.6 },
-      { s: 445, d: -3.6, phase: 0.4 }, { s: 468, d: 3.6, phase: 2.1 }, { s: 1000, d: 0, phase: 1.3 }, { s: 1150, d: -4, phase: 0.2 }, { s: 1172, d: 4, phase: 1.9 }],
+    jets: [{ s: 498, d: -3.6, phase: 0 }, { s: 518, d: 3.6, phase: 1.7 }, { s: 658, d: 0, phase: 0.9 }, { s: 1092, d: -4, phase: 2.4 }, { s: 1112, d: 4, phase: 0.6 }],
     hazards: [{ type: 'stomp', s: 1224, d: -4, phase: 0 }, { type: 'stomp', s: 1247, d: 0, phase: 1.13 }, { type: 'stomp', s: 1270, d: 4, phase: 2.27 },   // 성 앞 쿵쿵 돌 셋
-      { type: 'stomp', s: 120, d: -4, phase: 0.6 }, { type: 'stomp', s: 145, d: 4, phase: 1.8 }, { type: 'stomp', s: 900, d: -4, phase: 0.3 }, { type: 'stomp', s: 925, d: 0, phase: 1.43 }, { type: 'stomp', s: 950, d: 4, phase: 2.57 }] },   // 다리 앞 둘 · 긴 내리막 셋
+      { type: 'stomp', s: 120, d: -4, phase: 0.6 }, { type: 'stomp', s: 900, d: -4, phase: 0.3 }, { type: 'stomp', s: 950, d: 4, phase: 2.57 }] },   // 다리 앞 하나 · 긴 내리막 둘 (연달아 맞지 않게 띄움)
   // 도전 코스: 숲 속 꼬임 길. 빙글 도는 고리(왼쪽·오른쪽)를 돌아 오르며 방금 지나온 길 위를 다리로 두 번 건넘 · 고리 안쪽 진흙 웅덩이 · 큰 U턴 · 개울 점프
   { name: '구름다리 숲', en: 'CLOUD BRIDGE FOREST', fact: '길고 어려운 도전 코스 · 빙글 고리 둘 · 흔들 통나무 · 개울 점프', lapSec: 65, theme: 'forest', song: 'forest', hard: true,
     cps: pathCps([-40, 0], [['L', 70, 0], ['A', 70, 40, 40, -90, 0], ['L', 110, 80], ['A', 145, 80, 35, 180, -90], ['L', 55, 45], ['A', 55, 75, 30, -90, -180],
@@ -737,7 +736,7 @@ function makeKart(slot, ch, human) {
     steer: 0, drift: null, driftArm: false, prevDrift: false, prevItem: false, boostT: 0, boostFx: 0, spinT: 0, spinAt: -9, immuneT: 0, panelT: 0,
     item: null, itemN: 0, item2: null, itemN2: 0, swapAt: -9, prevSwap: false, swapHint: false, roulT: 0, roulTick: 0, lap: 0, s: 0, d: 0, seg: -1, prog: 0, place: 1, finished: false, finishT: 0,
     cut: -1, cs: 0, cd: 0, cseg: 0,   // 지름길 위면 그 번호와 지름길 위 자리
-    lapMax: 0, lapT0: 0, bestLap: 0, newLap: false, newRace: false,
+    lapMax: 0, lapT0: 0, bestLap: 0, newLap: false, newRace: false, newTrophy: null,
     shieldT: 0, magnetT: 0, magnetTarget: null, paintT: 0, paintAt: -9, boltFx: -9, frozenT: 0,
     ghostT: 0, planeT: 0, cloudT: 0, cloudAt: -9, cloudBy: null, cloudFrom: null, tinyT: 0, flatT: 0, ufoT: 0, bubbleT: 0, hopAt: -9,   // 유령 · 비행기 · 먹구름 · 작아짐 · 납작 · UFO 빛 · 물방울
     offroad: false, wrongT: 0, stuckT: 0, gasSince: null, speedMul: 1, bumpAt: -9, starT: 0, draft: 0, landT: -9,
@@ -1239,12 +1238,44 @@ function newRecord(kind, t) {   // kind: 'lap' 바퀴 · 'race' 완주(지금 �
   S.set('kart.records', REC);
   return true;
 }
+// 트로피: 코스는 완주 등수, 컵은 그랑프리 종합 순위 — 1·2·3등 = 금·은·동 (CPU 난이도는 안 가림). 어려움에서 1등이면 왕관
+//  더 좋아질 때만 바뀜 (같은 색이면 더 어려운 CPU 쪽으로). 예전 기록은 그대로 두고 REC.trophy에만 쌓음: 열쇠는 코스 번호 · 컵의 rec 이름, 값은 { p: 등수, lv: CPU 난이도 }
+const TROPHY_NAME = ['', '금', '은', '동'];
+const hasCrown = t => !!t && t.p === 1 && t.lv === 2;
+function trophyOf(key) {
+  const all = REC.trophy, t = all && typeof all === 'object' ? all[key] : null;
+  return t && typeof t === 'object' && [1, 2, 3].includes(t.p) ? { p: t.p, lv: [0, 1, 2].includes(t.lv) ? t.lv : 0 } : null;
+}
+function newTrophy(key, place, lv = settings.cpuLevel) {   // 더 좋아졌으면 저장. 결과 화면에 알릴 일(색이 오름 · 왕관을 처음 받음)이면 { p, crown, was: 전 등수 }, 아니면 null
+  if (![1, 2, 3].includes(place)) return null;
+  const old = trophyOf(key);
+  if (old && (old.p < place || (old.p === place && old.lv >= lv))) return null;
+  if (!REC.trophy || typeof REC.trophy !== 'object' || Array.isArray(REC.trophy)) REC.trophy = {};
+  REC.trophy[key] = { p: place, lv };
+  S.set('kart.records', REC);
+  const crown = hasCrown({ p: place, lv });
+  return !old || place < old.p || crown ? { p: place, crown, was: old ? old.p : 0 } : null;
+}
+const trophyText = t => t.crown ? `${t.name} 왕관! 어려움에서 1등` : t.was ? `${t.name} ${TROPHY_NAME[t.was]} → ${TROPHY_NAME[t.p]} 트로피!` : `${t.name} ${TROPHY_NAME[t.p]} 트로피!`;
+// 기록판에 보여 줄 것: 코스마다 트로피·최고 바퀴·바퀴 수별 완주, 컵마다 트로피·최고 점수, 모은 개수, 다음 도전
+function recordBoard() {
+  const courses = COURSES.map((c, i) => {
+    const r = REC[i] && typeof REC[i] === 'object' ? REC[i] : {}, race = r.race && typeof r.race === 'object' ? r.race : {};
+    return { course: i, name: c.name, lap: r.lap > 0 ? r.lap : 0, race: Object.keys(race).map(Number).filter(n => race[n] > 0).sort((a, b) => a - b).map(n => ({ laps: n, t: race[n] })), trophy: trophyOf(i) };
+  });
+  const cups = CUPS.map((c, i) => ({ gp: i + 1, name: c.name, score: REC[c.rec] > 0 ? REC[c.rec] : 0, trophy: trophyOf(c.rec) }));
+  const all = [...courses, ...cups], won = all.filter(x => x.trophy);
+  const next = all.find(x => !x.trophy) || all.find(x => x.trophy.p > 1) || all.find(x => !hasCrown(x.trophy)) || null;
+  return { courses, cups, total: all.length, got: won.length, gold: won.filter(x => x.trophy.p === 1).length, silver: won.filter(x => x.trophy.p === 2).length, bronze: won.filter(x => x.trophy.p === 3).length,
+    crown: won.filter(x => hasCrown(x.trophy)).length, next };
+}
 function finishKart(k) {
   if (k.finished) return;
   k.finished = true; k.finishT = T() - game.goT; k.lap = game.laps + 1;
   game.finishOrder.push(k.slot);
   k.place = game.finishOrder.length;
   if (recordable(k) && newRecord('race', k.finishT)) k.newRace = true;
+  if (recordable(k)) { const t = newTrophy(COURSES.indexOf(COURSE), k.place); if (t) k.newTrophy = { ...t, name: COURSE.name }; }   // 2인이면 먼저 들어온 쪽이 등수가 좋으니 뒤따라온 쪽은 안 바뀜
   if (k.human >= 0) {
     showMsg(k.human, k.place === 1 ? '1등! 골인!' : `${k.place}등 골인!`, k.place === 1 ? '#facc15' : '#ffffff', `${k.newRace ? '새 기록! ' : ''}${fmtTime(k.finishT)}`);
     if (k.place <= 3) { sfx('jingle', k.place === 1); sfx('cheer', k.place === 1 ? 2.4 : 1.4); } else sfx('applause', 0.4);
@@ -2285,12 +2316,13 @@ function showResult() {
   gpScore(order);
   const hum = order.filter(k => k.human >= 0), two = settings.mode === '2p' && hum.length === 2;
   const best = hum[0], who = k => two ? `${tagOf(k)} ${nameOf(k)} ` : '';
-  let title, body, eyebrow = 'ACROSS THE FINISH LINE', podium = order.slice(0, 3);
+  let title, body, eyebrow = 'ACROSS THE FINISH LINE', podium = order.slice(0, 3), cupRank = 0;
   if (gp.on) {
     const st = gpStandings(), bestG = st.find(k => k.human >= 0), rank = st.indexOf(bestG) + 1;
     if (gpLast()) {   // 마지막 코스: 종합 순위로 시상대
       eyebrow = `${gpCup().en} · FINAL`; podium = st.slice(0, 3);
       title = who(bestG) + (rank === 1 ? '그랑프리 우승!' : `종합 ${rank}위!`);
+      cupRank = rank;
       for (let i = 0; i < 3; i++) confetti(6, 4.5 + i * 0.6, (i - 1) * 2.4);
     } else {
       eyebrow = `${gpCup().en} · RACE ${gp.race + 1} / ${gpCourses().length}`;
@@ -2313,6 +2345,12 @@ function showResult() {
   const recLine = recs.length ? `★ 새 기록! ${recs.join(' · ')}` : mark.length ? `${COURSE.name} 최고 기록 · ${mark.join(' · ')}` : '';
   $('resRecord').textContent = recLine;
   $('resRecord').classList.toggle('hidden', !recLine); $('resRecord').classList.toggle('new', recs.length > 0);
+  // 트로피: 코스는 골인할 때 벌써 저장됨, 컵은 마지막 코스가 끝나면 종합 순위로
+  const won = hum.map(k => k.newTrophy).filter(Boolean);
+  if (gpLast() && hum.some(recordable)) { const t = newTrophy(gpCup().rec, cupRank); if (t) won.push({ ...t, name: gpCup().name }); }
+  $('resTrophy').innerHTML = won.map(t => `<span class="t${t.p}${t.crown ? ' crown' : ''}"><svg aria-hidden="true" class="icon"><use href="#i-${t.crown ? 'crown' : 'trophy'}"/></svg>${trophyText(t)}</span>`).join('');
+  $('resTrophy').classList.toggle('hidden', !won.length);
+  if (won.length) sfx('jingle', won.some(t => t.p === 1));
   $('resEyebrow').textContent = eyebrow;
   $('resTitle').textContent = title;
   $('resBody').innerHTML = body;
@@ -5930,6 +5968,7 @@ requestAnimationFrame(frame);
 window.__KT = { game, karts, settings, T, update, render: renderFrame, startRace, toMenu, openSelect, selMove, selReady, selSet, sel, pause, resume,
   TRACK, boxes, shots, traps, KART, trackPoint, locate, groundAt, elevAt, elevCurv, sdiff, useItem, spinOut, joySteer, tilt, readInputs, keys, inCreek,
   gfx, G3, Q, applyQuality, autoStep, parts, CHARS, joycon: JC, setDemoPaused, showResult, mergeGeoms, views, humanKart, levelFor,
+  finishKart, trophyOf, newTrophy, hasCrown, recordBoard, TROPHY_NAME,
   COURSES, switchCourse, DRIFT, ITEMS, ITEM_KEYS, ATTACK, gp, CUPS, GP_POINTS, resultNext, pathPoint, fmtTime, rockets, tornados, snowballs, bombs, ufos, boomerangs, waters, pows, horns, itemLabel, freezeOut, hitBy, HITCAM, REC, lodFor, rollItem, balls, JET, jetState,
   get JETS() { return JETS; }, get CUTS() { return CUTS; }, get HAZ() { return HAZ; }, hazAt, HZ, HAZ_KIND, get GP_COURSES() { return gp.on ? gpCourses() : (menuCup() || CUPS[0]).courses; },
   get TR() { return TR; }, get L() { return L; }, get RAMP() { return RAMP; }, get PANELS() { return PANELS; }, get ZONES() { return ZONES; },
