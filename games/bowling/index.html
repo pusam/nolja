@@ -5,10 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#5b3fa8">
 <title>몬스터 볼링 · 놀자</title>
-<link rel="stylesheet" href="../../shared/nolja.css?v=20261104a">
-<link rel="stylesheet" href="../../shared/lobby.css?v=20261104a">
-<link rel="stylesheet" href="bowling.css?v=20261104a">
-<link rel="stylesheet" href="../../shared/brand.css?v=20261104a">
+<meta name="description" content="위 볼링처럼 쥔 채 휘두르다 놓으면 굴러가는 1~4인 볼링. 범퍼와 CPU 친구도 있어요.">
+<link rel="icon" href="../../shared/icon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="놀자">
+<meta property="og:title" content="몬스터 볼링 · 놀자">
+<meta property="og:description" content="위 볼링처럼 쥔 채 휘두르다 놓으면 굴러가는 1~4인 볼링. 범퍼와 CPU 친구도 있어요.">
+<meta property="og:url" content="https://pusam.github.io/nolja/games/bowling/">
+<meta property="og:image" content="https://pusam.github.io/nolja/shared/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="../../shared/nolja.css?v=20261106a">
+<link rel="stylesheet" href="../../shared/lobby.css?v=20261106a">
+<link rel="stylesheet" href="bowling.css?v=20261106a">
+<link rel="stylesheet" href="../../shared/couch.css?v=20261106a">
+<link rel="stylesheet" href="../../shared/brand.css?v=20261106a">
 </head>
 <body>
 <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -49,7 +61,7 @@
     </div>
     <section class="connection-card" aria-labelledby="controllerTitle"><span class="connection-icon"><svg aria-hidden="true" class="icon"><use href="#i-pad"/></svg></span><div class="connection-copy"><h2 id="controllerTitle">휘둘러서 굴리기, 조이콘과 함께</h2><p id="connectionStatus">키보드만으로도 바로 플레이할 수 있어요.</p></div><div class="connection-actions"><button id="btnConnect" class="connect-button"><span class="plus-icon" aria-hidden="true">+</span> 조이콘 연결</button></div></section>
     <div class="secondary-grid">
-      <details class="club-details" id="controllerDetails"><summary><span><svg aria-hidden="true" class="icon"><use href="#i-pad"/></svg> 컨트롤러 상태 · 연결 방법</span><svg aria-hidden="true" class="icon chevron"><use href="#i-chevron"/></svg></summary><div class="details-content"><p class="small">윈도우 블루투스에서 조이콘 측면의 동그란 버튼을 길게 눌러 페어링한 뒤, ‘조이콘 연결’을 눌러주세요. 여러 개를 연결하려면 한 번씩 눌러주세요. 차례대로 치니까 하나를 돌려 써도 돼요.</p><div id="hidWarn" class="warn hidden" role="status"></div><div id="slots" aria-live="polite"></div></div></details>
+      <details class="club-details" id="controllerDetails"><summary><span><svg aria-hidden="true" class="icon"><use href="#i-pad"/></svg> 컨트롤러 상태 · 연결 방법</span><svg aria-hidden="true" class="icon chevron"><use href="#i-chevron"/></svg></summary><div class="details-content"><p class="small">윈도우 블루투스에서 조이콘 측면의 동그란 버튼을 길게 눌러 페어링한 뒤, ‘조이콘 연결’을 눌러주세요. 여러 개를 연결하려면 한 번씩 눌러주세요. 연결하고 나면 메뉴도 조이콘으로 골라요: 스틱 = 옮기기, 오른쪽 버튼 = 누르기, 아래 버튼 = 뒤로. 차례대로 치니까 하나를 돌려 써도 돼요.</p><div id="hidWarn" class="warn hidden" role="status"></div><div id="slots" aria-live="polite"></div></div></details>
       <details class="club-details" id="settingsDetails"><summary><span><svg aria-hidden="true" class="icon"><use href="#i-sliders"/></svg> 그래픽 · 플레이 설정</span><svg aria-hidden="true" class="icon chevron"><use href="#i-chevron"/></svg></summary><div class="details-content"><div class="setting-title">그래픽 품질</div><div id="qRow" class="row seg"><button data-q="auto">자동</button><button data-q="high">높음</button><button data-q="mid">보통</button><button data-q="low">낮음</button><button data-q="lowest">최저</button></div><div id="gfxInfo" class="small gfx-info"></div><label class="set" for="sens">스윙 감도 <input id="sens" type="range" min="0.6" max="1.6" step="0.05"><span id="sensV" class="small"></span></label><div class="setting-title">굴러갈 길 미리 보기</div><div id="guideRow" class="row seg"><button data-guide="full">핀까지</button><button data-guide="short">화살표까지</button><button data-guide="off">끄기</button></div><p class="small">조준할 때 바닥에 공이 굴러갈 길이 화살 띠로 나와요. 어른끼리는 ‘화살표까지’나 ‘끄기’로 해 보세요.</p><div class="setting-title sound-title">소리 크기</div><label class="set" for="volMusic">음악 <input id="volMusic" type="range" min="0" max="100" step="5"><span id="volMusicV" class="small"></span></label><label class="set" for="volSfx">효과음 <input id="volSfx" type="range" min="0" max="100" step="5"><span id="volSfxV" class="small"></span></label><label class="set" for="volCrowd">관중 <input id="volCrowd" type="range" min="0" max="100" step="5"><span id="volCrowdV" class="small"></span></label><p class="small">볼링장 음악은 계속 흐르고, 게임 중엔 옆 레인 소리와 웅성거림이 나와요. 0이면 꺼져요.</p></div></details>
     </div>
     <footer class="club-footer"><button id="btnHome" class="text-button">← 놀자 라운지</button><span>조이콘 스트랩을 꼭 끼고, 주변 공간을 확보해 주세요.</span><span class="footer-signoff">LITTLE FRIENDS, LOVELY GAMES.</span></footer>
@@ -58,15 +70,16 @@
 
 <dialog id="guideDialog" class="guide-dialog" aria-labelledby="guideTitle"><div class="dialog-heading"><div><p class="eyebrow">READY, SET, ROLL!</p><h2 id="guideTitle">처음이어도 괜찮아요.</h2></div><button id="btnGuideClose" class="close-button" aria-label="플레이 가이드 닫기">×</button></div><p class="sub">조준은 스틱으로, 굴리기는 휘둘러서! 한 사람씩 차례대로 쳐요.</p><div class="guide-steps"><div><span>01</span><h3>자리·방향·휘기</h3><p>스틱을 위아래로 움직여 고칠 것을 고르고, 좌우로 바꿔요. 바닥의 화살 띠가 공이 굴러갈 길이에요. 휘기를 넣으면 공이 핀 앞에서 휘어 들어가요.</p></div><div><span>02</span><h3>위 볼링처럼 휘두르기</h3><p>조이콘을 R 버튼 쪽이 손끝을 향하게 쥐고, R(ZR)을 누른 채 팔을 뒤로 뺐다가 앞으로 휘두르며 놓아요. 화면 속 팔이 내 팔을 그대로 따라가요. 빨리 휘두를수록 빠르고, 놓을 때 손목을 비틀면 그쪽으로 휘어요. 버튼 없이 휘둘러도 맨 아래에서 저절로 굴러가요.</p></div><div><span>03</span><h3>스트라이크·스페어</h3><p>첫 공에 열 개 다 쓰러뜨리면 스트라이크(X), 두 공에 다 쓰러뜨리면 스페어(/)예요. 보너스 점수를 받아요! 아이는 범퍼를 켜면 도랑에 안 빠져요.</p></div></div><div class="keyboard-guide"><h3><svg aria-hidden="true" class="icon"><use href="#i-keyboard"/></svg> 키보드로 플레이</h3><div class="keyboard-players"><div><kbd>↑</kbd><kbd>↓</kbd> 고르기 <kbd>←</kbd><kbd>→</kbd> 바꾸기 <kbd>Space</kbd> 꾹 눌렀다 떼면 굴러가요</div><div><kbd>A</kbd> 살살 <kbd>S</kbd> 보통 <kbd>D</kbd> 세게 바로 굴리기 · <kbd>B</kbd> 범퍼 켜고 끄기</div></div><p class="small"><kbd>Enter</kbd> 시작 · <kbd>Esc</kbd> 일시정지 · <kbd>F</kbd> 전체화면</p><p class="small">게임패드: 스틱 조준 · A 꾹 눌렀다 떼기 · RB 세게 · LB 살살 · X 보통 · Y 범퍼</p></div></dialog>
 
-<div id="select" class="overlay sel hidden"><div class="selection-top"><p class="eyebrow">PICK YOUR BOWLER</p><div class="seltitle">함께 칠 친구를 골라요<span>.</span></div><p class="selection-subtitle">한 사람씩 차례대로 골라요. 아이는 범퍼를 켜 주세요!</p><div id="roster" class="roster" aria-label="볼링 캐릭터 목록"></div><div class="center selection-hint"><span class="hint">클릭으로 고르기 · 같은 친구를 한 번 더 누르면 준비 · 조이콘 Y·A ◀▶, 휘두르면 준비 · 키보드 ←→, Enter</span><span class="roster-scroll-hint">캐릭터 목록을 스크롤하면 더 많은 친구가 보여요.</span></div></div><div class="selbottom bw-selbottom"><div id="selCards" class="bw-cards"></div><div class="selmid"><div id="selMsg" class="selmsg" role="status"></div><button id="btnSelBack">← 게임 설정</button></div></div></div>
+<div id="select" class="overlay sel hidden"><div class="selection-top"><p class="eyebrow">PICK YOUR BOWLER</p><div class="seltitle">함께 칠 친구를 골라요<span>.</span></div><p class="selection-subtitle">한 사람씩 차례대로 골라요. 아이는 범퍼를 켜 주세요!</p><div id="roster" class="roster" aria-label="볼링 캐릭터 목록"></div><div class="center selection-hint"><span class="hint">클릭으로 고르기 · 같은 친구를 한 번 더 누르면 준비 · 조이콘 Y·A ◀▶, 휘두르면 준비, B 뒤로 · 키보드 ←→, Enter</span><span class="roster-scroll-hint">캐릭터 목록을 스크롤하면 더 많은 친구가 보여요.</span></div></div><div class="selbottom bw-selbottom"><div id="selCards" class="bw-cards"></div><div class="selmid"><div id="selMsg" class="selmsg" role="status"></div><button id="btnSelBack">← 게임 설정</button></div></div></div>
 <div id="pause" class="overlay hidden"><div class="panel center pause-panel"><p class="eyebrow">TAKE A BREATHER</p><div class="big">잠깐, 쉬어갈까요?</div><p class="sub">레인은 그대로 기다리고 있어요.</p><div class="row modal-actions"><button id="btnResume" class="primary">계속 하기</button><button id="btnRestart">처음부터</button><button id="btnQuit">게임 설정으로</button></div><div id="pauseInfo" class="small"></div></div></div>
 <div id="result" class="overlay bottom hidden"><div class="panel center result-panel"><p id="resEyebrow" class="eyebrow">WHAT A GAME!</p><div id="resTitle" class="big"></div><div id="resRecord" class="bw-record hidden"></div><div id="resBody" class="sub"></div><div class="row modal-actions"><button id="btnAgain" class="primary">한 판 더!</button><button id="btnReselect">캐릭터 바꾸기</button><button id="btnMenu">게임 설정</button></div><div class="small result-hint">조이콘 버튼 / Enter = 다시 하기</div></div></div>
 <script src="../../shared/vendor/three.min.js"></script>
-<script src="../../shared/store.js?v=20261104a"></script>
-<script src="../../shared/audio.js?v=20261104a"></script>
-<script src="../../shared/joycon.js?v=20261104a"></script>
-<script src="../../shared/characters.js?v=20261104a"></script>
-<script src="bowling.js?v=20261104a"></script>
-<script src="bowling-ui.js?v=20261104a"></script>
+<script src="../../shared/store.js?v=20261106a"></script>
+<script src="../../shared/audio.js?v=20261106a"></script>
+<script src="../../shared/joycon.js?v=20261106a"></script>
+<script src="../../shared/couch.js?v=20261106a"></script>
+<script src="../../shared/characters.js?v=20261106a"></script>
+<script src="bowling.js?v=20261106a"></script>
+<script src="bowling-ui.js?v=20261106a"></script>
 </body>
 </html>

@@ -1,3 +1,5 @@
+# 로컬 도구 설정
+.claude/
 # IDE
 .idea/
 *.iml

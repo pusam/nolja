@@ -252,10 +252,13 @@ assert(G.state === 'end', `3프레임 끝 (공 ${G.stats.throws}번)`);
 assert(G.players.every(p => p.frames.length === 3 && BW.frameDone(p.frames[2], true)), `둘 다 3프레임 다 침 (${G.players.map(p => JSON.stringify(p.frames)).join(' / ')})`);
 const tots = G.players.map(p => BW.totalOf(p)), ft = G.players.map(p => BW.frameTotals(p.frames, 3)[2]);
 assert(tots.join() === ft.join() && tots.every(v => v >= 0 && v <= 90), `합계 = 마지막 칸 점수 (${tots.join(' · ')})`);
-run(2.4);
+runUntil(() => !el('result').classList.contains('hidden'), 3);
 assert(!el('result').classList.contains('hidden') && el('resTitle').textContent.length > 0 && (el('resBody').innerHTML.match(/<li/g) || []).length === 2, `결과 창: "${el('resTitle').textContent}" + 순위 둘`);
 const rec = JSON.parse(storage['nolja.bowling.best'] || '{}');
 assert(rec[3] && rec[3].score === Math.max(...tots), `3프레임 최고 기록 저장 ${rec[3] && rec[3].score}점`);
+tap('Enter');
+assert(!el('result').classList.contains('hidden') && BW.resultWait(), '결과가 뜬 직후의 Enter는 무시 (연타하던 아이가 점수를 보기도 전에 다음 판이 시작되지 않게)');
+run(1.6);
 tap('Enter');
 assert(G.state === 'turn' && G.players.length === 2 && G.players.every(p => p.frames.length === 0) && el('result').classList.contains('hidden'), '결과에서 Enter → 같은 사람들로 한 판 더');
 tap('Escape');
@@ -358,10 +361,19 @@ assert(G.state === 'select', '메뉴에서 조이콘 버튼 → 캐릭터 고르
 const c0 = BW.sel.cards[0].ch;
 JC.handlers.buttons(0, B.A, jc);
 assert(BW.sel.cards[0].ch === (c0 + 1) % BW.CHARS.length, '고르기: A → 다음 친구');
-JC.handlers.buttons(0, B.B, jc);
-assert(BW.sel.cards[0].bumper !== BW.settings.bumpers[0] || true, '고르기: B → 범퍼');
+const bump0 = BW.sel.cards[0].bumper;
+JC.handlers.buttons(0, B.X, jc);
+assert(BW.sel.cards[0].bumper !== bump0, '고르기: X → 범퍼');
 JC.handlers.swing(0, 0.5, now, jc);
 assert(BW.sel.cards[0].ready, '고르기: 휘두르면 준비');
+JC.handlers.buttons(0, B.B, jc);
+assert(!BW.sel.cards[0].ready && G.state === 'select', '고르기: B → 준비 취소 (− 가 없는 오른쪽 조이콘도)');
+JC.handlers.buttons(0, B.B, jc);
+assert(!el('menu').classList.contains('hidden') && el('select').classList.contains('hidden'), '아무도 준비 안 했으면 B → 메뉴로 (컨트롤러만으로 돌아갈 수 있음)');
+BW.settings.mode = 'family'; BW.settings.count = 2; BW.openSelect();
+run(1.1, null, false);
+JC.handlers.swing(0, 0.5, now, jc); now += 0.35; JC.handlers.swing(0, 0.5, now, jc);
+assert(BW.sel.cards[0].ready && !BW.sel.cards[1].ready, '함께 치기: 한 번 휘두르며 스윙이 둘로 잡혀도 한 사람만 준비');
 JC.list.splice(JC.list.indexOf(jc), 1);
 BW.toMenu();
 
@@ -396,11 +408,12 @@ console.log('\n[7b] 조이콘 몸짓 (가짜 IMU)');
   const throwOne = (jc, o = {}) => {   // 한 번 굴려 보고 결과를 돌려줌
     const P = swingPlan(o), relT = o.relAt != null ? o.relAt(P) : P.at(10);
     const zr = o.auto ? () => false : t => t >= 0.8 && t < relT;
-    let minArm = 9, sawThrow = false, maxBack = 0;
+    let minArm = 9, sawThrow = false, maxBack = 0, sawOops = false;
     drive(jc, SIM.bowl(P.th, { zr, twist: o.twist, yaw: o.yaw }), P.dur, () => {
       if (G.state === 'throw') { sawThrow = true; const d = BW.bowlerPose(BW.T()).dR; maxBack = Math.max(maxBack, d.z); minArm = Math.min(minArm, BW.MO.th); }
+      if (G.state === 'oops') sawOops = true;
     });
-    return { state: G.state, sawThrow, maxBack, minArm: minArm * 180 / Math.PI, last: BW.MO.last, spin: ball.spin, v0: ball.v0, kmh: G.speedKmh, ang: Math.atan2(ball.vx, ball.vz) * 180 / Math.PI, P };
+    return { state: G.state, sawThrow, sawOops, maxBack, minArm: minArm * 180 / Math.PI, last: BW.MO.last, spin: ball.spin, v0: ball.v0, kmh: G.speedKmh, ang: Math.atan2(ball.vx, ball.vz) * 180 / Math.PI, P };
   };
   const r1 = throwOne(jcR);
   assert(r1.sawThrow && r1.minArm < -65 && r1.minArm > -85, `R을 누르면 공을 쥐고, 화면 속 팔이 뒤로 ${r1.minArm.toFixed(0)}°까지 따라감 (실제 -75°)`);
@@ -433,6 +446,56 @@ console.log('\n[7b] 조이콘 몸짓 (가짜 IMU)');
   const still = { th: t => (t < 0.5 ? 110 - 30 * smoothT(t / 0.5) : t < 1.6 ? 80 : 80 + 30 * smoothT((t - 1.6) / 0.4)), zr: t => t > 0.7 && t < 1.4 };
   drive(jcR, SIM.bowl(still.th, { zr: still.zr }), 2.2);
   assert(G.state === 'aim' && G.players[0].frames.flat().length === before && BW.gfx.toast, 'R을 눌렀다가 휘두르지 않고 놓으면 그냥 다시 조준 (안내 문구)');
+  // 늦게 놓아도: 앞으로 다 휘두르고 잠깐 뒤 놓으면 휘두른 만큼 · 방향이 뒤집히지 않음. 너무 늦으면 손에서 툭
+  const late = throwOne(jcR, { relAt: P => P.tE + 0.2 });
+  assert((late.state === 'roll' || late.state === 'result') && late.last && late.last.pow > 0.2 && Math.abs(late.last.dAng) < 0.01, `앞으로 다 휘두르고 0.2초 늦게 놓아도 휘두른 만큼 나감 (세기 ${late.last ? Math.round(late.last.pow * 100) : '-'}% · 방향 ${late.last ? late.last.dAng.toFixed(2) : '-'}°)`);
+  waitAim();
+  const n0 = G.players[0].frames.flat().length;
+  const tooLate = throwOne(jcR, { relAt: P => P.tE + 0.55 });
+  assert(tooLate.state === 'oops' && ball.st === 'drop', '멈추고 한참 뒤에 놓으면 손에서 툭 (점수엔 안 들어감)');
+  run(1.5);
+  const pullBack = throwOne(jcR, { relAt: P => P.tB + 0.24 });   // 앞에서 뒤로 빼는 중 (팔이 아직 앞에 있음)
+  assert(pullBack.sawOops, '앞으로 든 팔을 뒤로 빼는 중에 놓아도 공이 나가지 않고 손에서 툭');
+  run(1.5);
+  assert(G.players[0].frames.flat().length === n0, '둘 다 점수엔 안 들어감');
+  // 어디가 앞인지 잘못 알고 있어도: 팔을 늘어뜨린 채 R을 누르고 뒤로 → 앞으로 휘두르면 제대로 굴러감
+  const hangPlan = (rest = 0, o = {}) => {
+    const t0 = 0.7, tB = 1.1, bk = o.back === undefined ? -75 : o.back, tF = o.noBack ? tB : tB + 0.55, tE = tF + 0.6, from = o.noBack ? rest : bk;
+    const th = t => t < t0 ? 110 + (rest - 110) * smoothT(t / t0) : t < tB ? rest : t < tF ? rest + (bk - rest) * smoothT((t - tB) / 0.55) : t < tE ? from + (110 - from) * smoothT((t - tF) / 0.6) : 110;
+    let lo = tF, hi = tE;
+    for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (th(m) < 10) lo = m; else hi = m; }
+    return { th, rel: (lo + hi) / 2, dur: tE + 0.6 };
+  };
+  const turnHead = deg => { const a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a), h = jcR.bwH; jcR.bwH = { x: h.x * c - h.y * s, y: h.x * s + h.y * c }; };
+  for (const off of [100, 180, -130]) {
+    const P = hangPlan();
+    let done = false;
+    drive(jcR, SIM.bowl(P.th, { zr: t => t >= 0.9 && t < P.rel }), P.dur, t => { if (!done && t > 0.85) { done = true; turnHead(off); jcR.bwAt = -99; } });
+    assert((G.state === 'roll' || G.state === 'result') && BW.MO.last && BW.MO.last.pow > 0.1 && Math.abs(BW.MO.last.dAng) < 0.8, `앞을 ${off}° 틀리게 알아도 늘어뜨린 팔로 쥐고 휘두르면 굴러감 (${G.state} · 세기 ${BW.MO.last ? Math.round(BW.MO.last.pow * 100) : '-'}% · 방향 ${BW.MO.last ? BW.MO.last.dAng.toFixed(2) : '-'}°)`);
+    waitAim();
+  }
+  {
+    const P = hangPlan();
+    let done = false;
+    drive(jcR, SIM.bowl(P.th, { zr: () => false }), P.dur, t => { if (!done && t > 0.85) { done = true; turnHead(150); jcR.bwAt = -99; } });
+    assert((G.state === 'roll' || G.state === 'result') && BW.MO.last && BW.MO.last.pow > 0.1, `앞을 모를 때 버튼 없이 휘둘러도 처음 움직인 쪽을 뒤로 보고 굴러감 (${G.state})`);
+    waitAim();
+  }
+  {   // 뒤로 뺀 채 R을 누르고 곧장 앞으로
+    const P = hangPlan(-50, { noBack: true, back: -50 });
+    drive(jcR, SIM.bowl(P.th, { zr: t => t >= 0.9 && t < P.rel }), P.dur, t => { if (t < 0.85) jcR.bwAt = BW.T(); });
+    assert(G.state === 'roll' || G.state === 'result', `팔을 뒤로 뺀 채 R을 눌러도 앞을 뒤로 착각하지 않음 (${G.state})`);
+    waitAim();
+  }
+  // 차례가 오기 전부터 R을 누르고 있었어도 쥠 (팔을 조금만 빼도 돼서 '아무 일도 안 일어남'이 없음)
+  G.state = 'turn'; G.stateT = BW.T(); G.same = true;
+  jcR.hold = B.TRIGGER;
+  run(0.05, null, false);
+  runUntil(() => G.state !== 'turn', 3, false);
+  run(0.05, null, false);
+  assert(G.state === 'throw' && BW.MO.mode === 'grip', '차례가 오기 전부터 R을 누르고 있으면 조준이 되자마자 쥠');
+  jcR.hold = 0; run(0.1, null, false);
+  assert(G.state === 'aim', '그대로 놓으면 다시 조준');
   JC.list.splice(JC.list.indexOf(jcR), 1);
   const jcL = mk('L');
   JC.list.push(jcL);

@@ -11,7 +11,8 @@
  *                  jc.lastSide: 'fh' 포핸드(위에서 볼 때 반시계) · 'bh' 백핸드(시계) · null 머리 위로 내려치기 등 (오른손 기준)
  *  - swingDir(jc)     지금까지 모은 스윙으로 { spin, path, side } (휘두르는 도중에도 부를 수 있음)
  *        'buttons' (player, 새로 눌린 버튼 비트, jc)
- *        'change'  () — 연결·배정이 바뀜
+ *        'change'  () — 연결·배정·배터리가 바뀜
+ *        'lost'    (jc) — 조이콘이 끊김 · 'found' (jc) — 조이콘이 쓸 수 있게 됨 · 'lowbattery' (jc) — 배터리가 거의 없음 (연결마다 한 번)
  *  - jc.hold          지금 누르고 있는 버튼 비트 (앞면·방향키·+/− 에 SL·SR·L/R·ZL/ZR·스틱 누르기까지, 레이싱처럼 계속 누르는 조작용)
  *  - jc.kind          'L' · 'R' · 'pro' (조이콘 종류에 따라 가로로 쥐었을 때 버튼 위치가 다름)
  *  - jc.stick         스틱 원래 값 { x, y } (0~4095, 가운데 약 2048, 위·오른쪽이 큼)
@@ -19,6 +20,12 @@
  *                     새로 붙은 조이콘은 빈자리로 가고, 하나가 끊겨도 나머지 자리는 그대로
  *  - rumble(player, 세기, ms)  진동
  *  - tilt(player)     가속도 {x,y,z} (단위 g) — 기울이기 조작(레이싱 등)에 사용
+ *  - jc.battery       배터리 0(비었음)~4(가득) · jc.charging 충전 중 · batteryText(jc) 화면에 보일 글 (첫 리포트 전엔 undefined · '')
+ *  - 메뉴 고르기 (shared/couch.js): 세로로 쥐든 가로로 쥐든 같은 자리면 같은 뜻이 되게
+ *      sideways(jc)   가로로 쥐었나 · wheel = true면 가로가 기본인 게임 (카트)
+ *      stickAxes(jc)  쥔 방향대로 바꾼 스틱 { x 오른쪽 +, y 위 + } (-1~1)
+ *      faceOf(jc, m)  눌린 버튼을 뜻으로 { ok 오른쪽·위·왼쪽 자리, back 아래 자리, dir 프로콘 방향키 }
+ *      nav            (player, 새로 눌린 비트, jc) → true면 'buttons'로 넘기지 않음 (메뉴에서 칸을 고르는 중)
  *  - 자세 (닌텐도 위처럼 화면 속 팔·라켓이 조이콘을 그대로 따라가게)
  *      jc.q           [w,x,y,z] 조이콘 몸체 → 세상 회전 (세상 z = 위). 가속도를 처음 받기 전엔 null
  *      jc.w           지금 회전 속도 (몸체 기준 rad/s, 자이로 영점을 뺀 값)
@@ -45,16 +52,19 @@
   const BTN = { Y: 0x01, X: 0x02, B: 0x04, A: 0x08, DOWN: 0x10, UP: 0x20, RIGHT: 0x40, LEFT: 0x80, MINUS: 0x100, PLUS: 0x200,
     SR: 0x400, SL: 0x800, SHOULDER: 0x1000, TRIGGER: 0x2000, STICK: 0x4000 };
 
+  let seatsSwapped = N.store ? !!N.store.get('swapped', false) : false;
   const J = N.joycon = {
     supported: typeof navigator !== 'undefined' && !!navigator.hid,
     list: [],                 // 연결된 조이콘들
     swapped: N.store ? !!N.store.get('swapped', false) : false,
     single: false,            // true면 모두 P1 (1인 모드)
+    wheel: false,             // true면 조이콘을 가로로 쥐는 게임 (메뉴 고르기에서 쥔 방향을 볼 때)
+    nav: null,                // 메뉴 고르기가 버튼을 먼저 받음 (shared/couch.js)
     sensitivity: 1,           // 스윙 감도 (게임이 설정값으로 갱신)
     BTN,
     isPrev: m => !!(m & (BTN.Y | BTN.LEFT)),   // 메뉴에서 이전
     isNext: m => !!(m & (BTN.A | BTN.RIGHT)),  // 메뉴에서 다음
-    handlers: { swing: null, buttons: null, change: null },
+    handlers: { swing: null, buttons: null, change: null, lost: null, found: null, lowbattery: null },
     pkt: 0, started: false,
   };
   J.on = (name, fn) => { J.handlers[name] = fn; };
@@ -87,7 +97,7 @@
       lastSpin: null, lastPath: null, lastSide: null, up: null, restX: 0, sw: null, motion: null,
       accel: { x: 0, y: 0, z: 0 }, gyroDps: { x: 0, y: 0, z: 0 } };
     J.list.push(jc);
-    jc.player = freeSlot(jc); emit('change');
+    jc.seat = freeSeat(jc); jc.player = J.single ? 0 : jc.seat; emit('change');
     try { if (!device.opened) await device.open(); }
     catch (e) {   // 못 열면 목록에서 빼서 자리를 비우고, 다시 연결할 수 있게 함
       const i = J.list.indexOf(jc); if (i >= 0) J.list.splice(i, 1);
@@ -96,28 +106,34 @@
     }
     device.addEventListener('inputreport', ev => J.report(jc, ev));
     await init(jc);
-    jc.ok = true; jc.lastReport = now(); emit('change');
+    jc.ok = true; jc.lastReport = now(); emit('change'); emit('found', jc);
     J.rumbleOne(jc, 0.5, 120);
     return '';
   }
   // 끊긴 조이콘만 빼고 남은 조이콘 자리는 그대로 (경기 중에 P1·P2가 뒤바뀌지 않게)
   function remove(device) {
     const i = J.list.findIndex(j => j.device === device);
-    if (i >= 0) { J.list.splice(i, 1); emit('change'); }
+    if (i >= 0) { const [jc] = J.list.splice(i, 1); emit('change'); emit('lost', jc); }
   }
   // 새로 붙은 조이콘은 빈자리로 (P1부터, 바꿈이면 P2부터). 둘 다 차 있으면 번갈아
-  function freeSlot(jc) {
-    if (J.single) return 0;
-    const used = J.list.filter(j => j !== jc).map(j => j.player), order = J.swapped ? [1, 0] : [0, 1];
+  //  jc.seat = 2인일 때 앉는 자리 (모두 P1인 1인 모드에서도 기억해 둠) · jc.player = 지금 자리
+  function freeSeat(jc) {
+    const used = J.list.filter(j => j !== jc).map(j => j.seat), order = J.swapped ? [1, 0] : [0, 1];
     const free = order.find(pi => !used.includes(pi));
     return free !== undefined ? free : order[(J.list.length - 1) % 2];
   }
 
+  // 이미 앉은 자리는 그대로 둠: 경기를 새로 시작할 때 연결 순서대로 다시 앉히면, 끊겼다 돌아온 조이콘 때문에 P1·P2가 뒤바뀜
   J.assign = function () {
-    J.list.forEach((jc, idx) => {
-      let pi = idx % 2;
-      if (J.swapped) pi = 1 - pi;
-      if (J.single) pi = 0;
+    if (J.swapped !== seatsSwapped) {   // 'P1 ↔ P2 바꾸기'
+      seatsSwapped = J.swapped;
+      for (const jc of J.list) if (jc.seat === 0 || jc.seat === 1) jc.seat = 1 - jc.seat;
+    }
+    const seen = [];
+    for (const jc of J.list) { if ((jc.seat !== 0 && jc.seat !== 1) || seen.includes(jc.seat)) jc.seat = undefined; else seen.push(jc.seat); }
+    J.list.forEach(jc => {
+      if (jc.seat === undefined) jc.seat = freeSeat(jc);
+      const pi = J.single ? 0 : jc.seat;
       if (jc.player !== pi) { jc.player = pi; if (jc.ok) lights(jc); }
     });
     emit('change');
@@ -147,12 +163,31 @@
     setInterval(() => { for (const jc of J.list) if (jc.ok && jc.device.opened && now() - jc.lastReport > 2) init(jc); }, 2000);
   };
 
+  function navTook(jc, pressed) {
+    if (!J.nav) return false;
+    try { return !!J.nav(jc.player, pressed, jc); } catch (e) { console.error(e); return false; }
+  }
+  // 배터리: 리포트의 윗 4비트 = 8 가득 · 6 넉넉 · 4 보통 · 2 적음 · 0 없음, 맨 아래 비트 = 충전 중
+  function battery(jc, v) {
+    const level = v >> 1, charging = !!(v & 1);
+    if (level === jc.battery && charging === jc.charging) return;
+    jc.battery = level; jc.charging = charging;
+    if (level > 2 || charging) jc.lowSaid = false;   // 경계에서 값이 오르내려도 알림은 한 번
+    else if (level <= 1 && !jc.lowSaid) { jc.lowSaid = true; emit('lowbattery', jc); }
+    emit('change');
+  }
+  J.batteryText = jc => {
+    if (jc.battery === undefined) return '';
+    return jc.charging ? '충전 중' : '배터리 ' + (['없음', '거의 없음', '조금', '넉넉', '가득'][jc.battery] || '');
+  };
+
   // 입력 리포트 처리 (테스트에서도 직접 부름)
   J.report = function (jc, ev) {
     const id = ev.reportId, d = ev.data;
     if (id === 0x3f) { if ((jc.simple++ % 30) === 0) init(jc); return; }   // 단순 모드면 다시 설정
     if (id !== 0x30 || d.byteLength < 48) return;
     jc.lastReport = now();
+    battery(jc, d.getUint8(1) >> 4);
     const b2 = d.getUint8(2), b3 = d.getUint8(3), b4 = d.getUint8(4);
     const btn = (b2 & 0x0f) | ((b4 & 0x0f) << 4) | ((b3 & 0x03) << 8);   // 앞면 버튼·방향키·+/−
     const pressed = btn & ~jc.prevBtn;
@@ -161,7 +196,7 @@
     jc.hold = btn | (side & 0x10 ? BTN.SR : 0) | (side & 0x20 ? BTN.SL : 0) | (side & 0x40 ? BTN.SHOULDER : 0) | (side & 0x80 ? BTN.TRIGGER : 0) | (b3 & 0x0c ? BTN.STICK : 0);
     const so = jc.kind === 'R' ? 8 : 5;   // 스틱 12비트 두 개: 왼쪽 스틱(조이콘 L·프로콘) 5~7바이트, 오른쪽 스틱(조이콘 R) 8~10바이트. 가운데 약 2048
     jc.stick = { x: d.getUint8(so) | ((d.getUint8(so + 1) & 0x0f) << 8), y: (d.getUint8(so + 1) >> 4) | (d.getUint8(so + 2) << 4) };
-    if (pressed) emit('buttons', jc.player, pressed, jc);
+    if (pressed && !navTook(jc, pressed)) emit('buttons', jc.player, pressed, jc);
     const t = now();
     for (let k = 0; k < 3; k++) {
       const o = 12 + k * 12;
@@ -334,6 +369,34 @@
   J.armWorld = (jc, out) => J.toWorld(jc, jc.arm || { x: 1, y: 0, z: 0 }, out);
   J.rateWorld = (jc, out) => J.toWorld(jc, jc.w, out);
   J.GYRO = GYRO; J.ACC = ACC;
+
+  // ---------- 메뉴 고르기: 쥔 방향이 달라도 같은 자리면 같은 뜻 ----------
+  //  레일(SL·SR 쪽 = 몸체 -Y)이 위를 보면 가로로 쥔 것. 카트는 가로가 기본이라 세로로 세웠을 때만 세로로 봄
+  J.sideways = function (jc) {
+    if (jc.kind === 'pro' || !jc.accel) return false;
+    const a = jc.accel, an = Math.hypot(a.x, a.y, a.z);
+    if (an < 0.5) return !!J.wheel;
+    return J.wheel ? Math.abs(a.x) / an <= 0.86 : -a.y / an > 0.6;
+  };
+  //  가로로 쥐면 L은 반시계, R은 시계로 90° 돈 셈: 스틱·버튼 자리도 같이 돎 (둘 다 스틱이 왼쪽, 레일이 위)
+  J.stickAxes = function (jc) {
+    if (!jc.stick) return { x: 0, y: 0 };
+    const x = clamp((jc.stick.x - 2048) / 1400, -1, 1), y = clamp((jc.stick.y - 2048) / 1400, -1, 1);
+    if (!J.sideways(jc)) return { x, y };
+    return jc.kind === 'L' ? { x: -y, y: x } : { x: y, y: -x };
+  };
+  const FACE = {   // 자리별 버튼 [오른쪽, 아래, 위, 왼쪽]
+    R: [BTN.A, BTN.B, BTN.X, BTN.Y], Rs: [BTN.X, BTN.A, BTN.Y, BTN.B],
+    L: [BTN.RIGHT, BTN.DOWN, BTN.UP, BTN.LEFT], Ls: [BTN.DOWN, BTN.LEFT, BTN.RIGHT, BTN.UP],
+  };
+  J.faceOf = function (jc, m) {
+    if (jc.kind === 'pro') {
+      const dir = m & BTN.LEFT ? 'left' : m & BTN.RIGHT ? 'right' : m & BTN.UP ? 'up' : m & BTN.DOWN ? 'down' : '';
+      return { ok: !!(m & (BTN.A | BTN.X | BTN.Y)), back: !!(m & BTN.B), dir };
+    }
+    const k = (jc.kind === 'L' ? 'L' : 'R') + (J.sideways(jc) ? 's' : ''), [right, down, up, left] = FACE[k];
+    return { ok: !!(m & (right | up | left)), back: !!(m & down), dir: '' };
+  };
 
   J.tilt = pi => { const j = J.list.find(x => x.player === pi && x.ok); return j ? j.accel : null; };
 

@@ -6,8 +6,19 @@
 <meta name="theme-color" content="#f8f7f2">
 <meta name="description" content="우리 집이 플레이 그라운드가 되는 시간. 조이콘이나 키보드로 함께 즐기는 놀자 게임 클럽. 몬스터 테니스 · 몬스터 카트 · 몬스터 볼링.">
 <title>놀자 · 몬스터 게임 클럽</title>
-<link rel="stylesheet" href="shared/home.css?v=20261104a">
-<link rel="stylesheet" href="shared/brand.css?v=20261104a">
+<link rel="icon" href="shared/icon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="놀자">
+<meta property="og:title" content="놀자 · 몬스터 게임 클럽">
+<meta property="og:description" content="우리 집이 플레이 그라운드가 되는 시간. 조이콘이나 키보드로 함께 즐기는 놀자 게임 클럽. 몬스터 테니스 · 몬스터 카트 · 몬스터 볼링.">
+<meta property="og:url" content="https://pusam.github.io/nolja/">
+<meta property="og:image" content="https://pusam.github.io/nolja/shared/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="shared/home.css?v=20261106a">
+<link rel="stylesheet" href="shared/brand.css?v=20261106a">
+<link rel="stylesheet" href="shared/couch.css?v=20261106a">
 </head>
 <body>
 <a class="skip-link" href="#games">게임 고르기로 바로 가기</a>
@@ -85,7 +96,7 @@
         </div>
       </div>
       <article class="upcoming" aria-label="야구, 준비 중"><svg class="icon" aria-hidden="true"><use href="#i-baseball"/></svg><div><h2>다음은, 야구.</h2><p>담장 너머로 날릴 다음 한 판을 준비하고 있어요.</p></div><span class="soon-label">COMING SOON</span></article>
-      <p class="keyboard-hint"><span><kbd>←</kbd><kbd>→</kbd> 게임 고르기</span><span><kbd>Enter</kbd> 시작하기</span><span id="gameHint" class="selection-status" aria-live="polite" aria-atomic="true"></span></p>
+      <p class="keyboard-hint"><span><kbd>←</kbd><kbd>→</kbd> 게임 고르기</span><span><kbd>Enter</kbd> 시작하기</span><span id="padHint" class="pad-hint" hidden><kbd>스틱</kbd> 게임 고르기 · <kbd>버튼</kbd> 시작하기</span><span id="gameHint" class="selection-status" aria-live="polite" aria-atomic="true"></span></p>
     </section>
     <section id="how-to-play" class="club-lounge" aria-labelledby="lounge-title">
       <div class="lounge-copy"><p class="eyebrow">EVERYONE'S INVITED.</p><h2 id="lounge-title">준비물은, 같이 놀 마음.</h2><p>PC 크롬이나 엣지에서 열고, 편한 컨트롤러로 즐겨요.<br>TV에 연결하면 거실이 우리만의 게임 클럽이 돼요.</p><ol class="play-steps"><li><b>01</b> 게임 고르기</li><li><b>02</b> 친구 고르기</li><li><b>03</b> 함께 플레이!</li></ol><span class="controller-note"><svg class="icon" aria-hidden="true"><use href="#i-controller"/></svg> 키보드로 바로 시작하거나, 게임 메뉴에서 조이콘을 연결해요.</span></div>
@@ -94,8 +105,10 @@
   </main>
   <footer class="site-footer"><span>NOLJA CLUB</span><p>좋은 시간은, 함께 플레이할 때.</p><span>MADE FOR TOGETHER.</span></footer>
 </div>
-<script src="shared/store.js?v=20261104a"></script>
-<script src="shared/characters.js?v=20261104a"></script>
+<script src="shared/store.js?v=20261106a"></script>
+<script src="shared/joycon.js?v=20261106a"></script>
+<script src="shared/couch.js?v=20261106a"></script>
+<script src="shared/characters.js?v=20261106a"></script>
 <script>
 (() => {
   'use strict';
@@ -127,6 +140,12 @@
       e.preventDefault(); location.href = tiles[choice].href;
     }
   });
+  // 소파에서 조이콘·게임패드로 고르기 (예전에 허락한 조이콘은 저절로 붙음)
+  const { joycon, couch } = window.Nolja, padHint = document.getElementById('padHint');
+  const showPadHint = () => { padHint.hidden = !joycon.list.some(j => j.ok); };
+  joycon.on('change', showPadHint);
+  couch.attach({ pads: true, layers: [{ el: document.getElementById('channels'), on: () => true, first: 'a.ch', auto: true }] });
+  joycon.start();
 })();
 </script>
 </body>

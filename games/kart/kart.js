@@ -1211,6 +1211,7 @@ function rescue(k) {
 }
 function lapUp(k) {
   k.lap++;
+  if (k.finished) return;   // 골인한 뒤 저절로 도는 바퀴는 기록이 아님 (2인에서 상대를 기다리는 동안)
   let lapT = 0, rec = false;
   if (k.lap > k.lapMax) {   // 처음 넘는 줄에서만 바퀴 시간을 잼 (거꾸로 넘었다가 다시 넘은 건 안 셈)
     const now = T() - game.goT;
@@ -1370,10 +1371,11 @@ const leader = k => karts.filter(o => o !== k && !o.finished).sort((a, b) => b.p
 function nextAhead(k, range) { let best = null, bd = range; for (const o of karts) { const ds = sdiff(o.s, k.s); if (o !== k && !o.finished && ds > 2 && ds < bd) { bd = ds; best = o; } } return best; }
 function useItem(k) {
   const it = k.item;
-  if (!it || k.spinT > 0 || k.frozenT > 0) return;
+  if (!it || k.finished || k.spinT > 0 || k.frozenT > 0 || k.bubbleT > 0) return;   // 골인했거나 빙글·꽁꽁·물방울이면 못 씀 (아이템은 그대로)
   game.stats.items++; game.stats.used = game.stats.used || {}; game.stats.used[it] = (game.stats.used[it] || 0) + 1;
-  if (ITEMS[it].n && --k.itemN > 0) { /* 아직 남음 (불꽃 대시 ×3 · 줄줄이 함정 · 부메랑) */ } else shiftItems(k);
-  if (it === 'boost' || it === 'triple') { giveBoost(k, it === 'triple' ? 1.2 : 1.5, 1.12); if (k.human >= 0) showMsg(k.human, it === 'triple' ? `불꽃 대시! ${k.itemN ? '×' + k.itemN + ' 남음' : ''}` : '불꽃 대시!', '#fb923c'); }
+  const left = ITEMS[it].n ? k.itemN - 1 : 0;   // 이 아이템이 몇 번 더 남았나 (칸이 당겨지면 itemN은 다음 아이템 것이 됨)
+  if (left > 0) k.itemN = left; else shiftItems(k);   // 남은 게 있으면 그대로 (불꽃 대시 ×3 · 줄줄이 함정 · 부메랑)
+  if (it === 'boost' || it === 'triple') { giveBoost(k, it === 'triple' ? 1.2 : 1.5, 1.12); if (k.human >= 0) showMsg(k.human, it === 'triple' ? `불꽃 대시! ${left ? '×' + left + ' 남음' : ''}` : '불꽃 대시!', '#fb923c'); }
   else if (it === 'star') {
     k.starT = 6; k.v = Math.max(k.v, KART.VMAX * 1.1 * kartClass(k)); k.drift = null;
     if (k.human >= 0) { sfx('itemBox'); sfx('boost'); showMsg(k.human, '반짝 별!', '#ffe14d', '6초 동안 무적이에요'); rumble(k.human, 0.5, 160); }
@@ -1457,7 +1459,7 @@ function useItem(k) {
     if (k.human >= 0) { showMsg(k.human, '꼬마 비행기!', '#7dd3fc', '알아서 날아가요 · 부딪힌 카트는 빙글'); rumble(k.human, 0.5, 160); }
   } else if (it === 'boomerang') {   // 부메랑 (세 번): 앞으로 34m 날아갔다가 돌아옴. 가는 길·오는 길에 닿는 카트는 모두 빙글
     const C = k.cut >= 0 ? CUTS[k.cut] : null, p = C ? pathPoint(C.P, k.cs + 2.5, k.d) : trackPoint(k.s + 2.5, k.d);
-    boomerangs.push({ owner: k, s: C ? cutMainS(C, k.cs + 2.5) : wrapS(k.s + 2.5), d: k.d, d0: k.d, side: k.itemN % 2 ? 1 : -1, cut: k.cut, cs: k.cs + 2.5, v: Math.max(k.v, 8) + 20, dist: 0, back: false, x: p.x, y: k.y + 1, z: p.z, t0: T(), life: 4.5, hit: [] });
+    boomerangs.push({ owner: k, s: C ? cutMainS(C, k.cs + 2.5) : wrapS(k.s + 2.5), d: k.d, d0: k.d, side: left % 2 ? 1 : -1, cut: k.cut, cs: k.cs + 2.5, v: Math.max(k.v, 8) + 20, dist: 0, back: false, x: p.x, y: k.y + 1, z: p.z, t0: T(), life: 4.5, hit: [] });
     sfx('boomerang');
   } else if (it === 'cloud') {   // 천둥 먹구름: 8초 동안 머리 위에 (조금 빨라짐). 다른 카트에 부딪히면 넘어가고, 시간이 다 되면 들고 있는 카트에 번개
     k.cloudT = 8; k.cloudAt = T(); k.cloudBy = k;
@@ -1663,10 +1665,24 @@ function hazWorld(z, out = HW) {   // hazAt 결과(HZ) → 월드 자리 · 길 
   out.x = p.x; out.z = p.z; out.a = Math.atan2(p.tx, p.tz); out.y = C ? cutGround(C, HZ.s, HZ.d) : groundAt(HZ.s, HZ.d);
   return out;
 }
+// 장애물이 앞에 보일 때쯤 소리로도 알려 줌: 사람마다 장애물 하나에 한 번, 알림끼리 겹치지 않게
+const cueAt = [-9, -9];
+function hazCue(z, s, cut, kind, t) {
+  for (const k of karts) {
+    if (k.human < 0 || k.finished || k.cut !== cut) continue;
+    const ds = cut >= 0 ? s - k.cs : sdiff(s, k.s), p = k.human;
+    if (ds < 8 || ds > 30) continue;
+    const heard = z.heard || (z.heard = [-9, -9]);
+    if (t - heard[p] < 6 || t - cueAt[p] < 1.2) continue;
+    heard[p] = cueAt[p] = t;
+    sfx('hazard', kind, 1 - (ds - 8) / 44);
+  }
+}
 function updateHazards(t) {
   for (const z of HAZ) {
     const K = HAZ_KIND[z.type], C = z.cut >= 0 ? CUTS[z.cut] : null;
     hazAt(z, t);
+    hazCue(z, HZ.s, z.cut, z.type, t);
     if (z.type === 'stomp' || z.type === 'meteor') {   // 쾅 내려찍는 순간: 흙먼지 + 가까이 있는 사람에게 쿵
       const cyc = Math.floor((t + z.phase) / K.period);
       if (HZ.y === 0 && z.last !== cyc) {
@@ -1767,7 +1783,9 @@ function updateItems(h) {
   }
   updateNewItems(h, t);
   for (const j of JETS) {   // 불기둥이 솟는 동안 가까이 있으면 앗 뜨거
-    if (jetState(j, t) < 1) continue;
+    const js = jetState(j, t);
+    if (js > 0 && js < 1) hazCue(j, j.s, -1, jetLook().why, t);   // 달아오르기 시작하면 소리로도
+    if (js < 1) continue;
     for (const k of karts) if (!k.air && k.cut < 0 && Math.abs(sdiff(k.s, j.s)) < JET.r && Math.abs(k.d - j.d) < JET.r) spinOut(k, jetLook().why);
   }
   updateHazards(t);
@@ -2084,13 +2102,22 @@ function joySteer(p, jc) {
   }
   if (an < 0.5 || an > 1.6) return st.v;   // 크게 흔드는 중엔 그대로
   const ax = clamp(a.x / an, -1, 1);
-  st.upright = Math.abs(ax) > 0.86;   // 세로로 들고 있음 → 가로로 잡으라고 알려줌
-  if (st.upright) return 0;
+  // 60° 넘게 기움: 힘껏 꺾는 중일 수 있어서 끝까지 꺾은 것으로 봄. 1.5초 넘게 그대로면 세로로 든 것 → 가로로 잡으라고 알려줌
+  if (Math.abs(ax) <= 0.86) { jc.overAt = 0; st.upright = false; }
+  else if (!jc.overAt) jc.overAt = realNow();
+  else if (realNow() - jc.overAt > 1.5) { st.upright = true; return 0; }
   let ang = Math.asin(ax) * 180 / Math.PI * (jc.kind === 'L' ? 1 : -1);
   if (settings.flip[p]) ang = -ang;
   st.angle = ang;
   const full = settings.steerAngle, dead = 3;
   return Math.sign(ang) * clamp((Math.abs(ang) - dead) / (full - dead), 0, 1);
+}
+// 손에 든 조이콘인가: 사람 손은 늘 조금씩 떨려서, 3초 넘게 전혀 안 움직이면 어딘가에 내려놓은 것으로 봄
+function inHand(jc, now) {
+  if (!jc.w) return true;
+  const stick = jc.stick && Math.max(Math.abs(jc.stick.x - 2048), Math.abs(jc.stick.y - 2048)) > 500;
+  if (jc.hold || stick || Math.hypot(jc.w.x, jc.w.y, jc.w.z) > 0.05) jc.handT = now;   // 약 3도/초 (자이로 영점을 뺀 값)
+  return now - (jc.handT === undefined ? -9 : jc.handT) < 3;
 }
 const padPrev = {}, padSel = {}, padSlot = {};   // padSlot: 패드 번호 → 선수. 다른 패드가 빠져도 자리가 안 바뀜
 const tiltSel = [{ dir: 0, at: 0 }, { dir: 0, at: 0 }];
@@ -2108,16 +2135,19 @@ function readInputs(t) {
     }
   }
   pollGamepads(out);
-  // 조이콘: 한 사람에게 여러 개면 가장 크게 기울인 것
+  // 조이콘: 한 사람에게 여러 개면 손에 든 것 중 가장 크게 기울인 것 (혼자 할 때 옆에 내려놓은 조이콘이 핸들을 잡고 있지 않게)
+  const nowR = realNow(), hands = [0, 0];
   for (const p of [0, 1]) tilt[p].joy = false;
+  for (const jc of JC.list) if (jc.ok && (jc.player === 0 || jc.player === 1) && inHand(jc, nowR)) hands[jc.player]++;
   for (const jc of JC.list) {
     if (!jc.ok || (jc.player !== 0 && jc.player !== 1)) continue;
     const p = jc.player, c = out[p], m = JMAP[jc.kind] || JMAP.R, hold = jc.hold || 0;
     c.gas = c.gas || !!(hold & m.gas); c.brake = c.brake || !!(hold & m.brake);
     c.drift = c.drift || !!(hold & m.drift); c.item = c.item || !!(hold & m.item); c.swap = c.swap || !!(hold & m.swap);
+    tilt[p].joy = true;
+    if (hands[p] && !inHand(jc, nowR)) continue;
     const st = joySteer(p, jc);
     if (c.joySteer === null || Math.abs(st) > Math.abs(c.joySteer)) c.joySteer = st;
-    tilt[p].joy = true;
   }
   for (const p of [0, 1]) {
     const c = out[p];
@@ -2128,7 +2158,7 @@ function readInputs(t) {
     const k = humanKart(p);
     if (k) Object.assign(k.ctl, c);
     // 캐릭터 선택: 조이콘을 기울여서 고르기 (끝까지 기울이면 0.5초마다 한 칸 더)
-    if (selectOpen() && tilt[p].joy && !sel[p].ready && !selCPU(p)) {
+    if (selectOpen() && tilt[p].joy && hands[p] && !sel[p].ready && !selCPU(p)) {   // 내려놓은 조이콘이 저절로 고르지 않게
       const v = c.joySteer || 0, ts = tiltSel[p];
       if (Math.abs(v) < 0.25) ts.dir = 0;
       else if (Math.abs(v) > 0.55 && (ts.dir !== Math.sign(v) || t - ts.at > 0.5)) { ts.dir = Math.sign(v); ts.at = t; selMove(p, ts.dir); }
@@ -2158,6 +2188,7 @@ function pollGamepads(out) {
     const prev = padPrev[gp.index] || [];
     const rise = i => !!now[i] && !prev[i];
     padPrev[gp.index] = now;
+    if (window.Nolja.couch && window.Nolja.couch.pad(gp)) continue;   // 메뉴에서 칸을 고르는 중 (shared/couch.js)
     const std = gp.mapping === 'standard', ax = gp.axes && gp.axes.length ? gp.axes[0] : 0;
     if (selectOpen()) {
       const left = (std && !!now[14]) || ax < -0.6, right = (std && !!now[15]) || ax > 0.6;
@@ -2166,7 +2197,7 @@ function pollGamepads(out) {
       if (right && !st.r) selMove(pi, 1);
       st.l = left; st.r = right;
       if (rise(0) || rise(9)) selReady(pi, true);
-      if (rise(1)) selReady(pi, false);
+      if (rise(1)) selBack(pi);
       continue;
     }
     if (rise(9) && racingNow() && !game.paused) { pause(); continue; }
@@ -2214,7 +2245,7 @@ function assignJoyCons() { JC.single = settings.mode === '1p'; JC.assign(); }
 function onJoyButtons(pi, m, jc) {
   if (selectOpen()) {
     const map = JMAP[jc && jc.kind] || JMAP.R;
-    selReady(pi, !(m & map.brake));   // 브레이크 자리 = 준비 취소, 나머지 = 준비
+    if (m & map.brake) selBack(pi); else selReady(pi, true);   // 브레이크 자리 = 준비 취소·메뉴로, 나머지 = 준비
     return;
   }
   if (racingNow() && !game.paused) { if (m & (B.PLUS | B.MINUS)) pause(); return; }
@@ -2262,9 +2293,10 @@ function nextRandomCourse() {
   }
   return randomBag.pop();
 }
-function startRace() {
+function startRace(sameCourse = false) {
   setDemoPaused(false);
-  const rolled = !gp.on && settings.random;
+  const rolled = !gp.on && settings.random && sameCourse !== true;   // 처음부터 다시는 같은 코스로
+  game.randomRace = !gp.on && settings.random;
   if (rolled) settings.course = nextRandomCourse();
   sfxInit(); saveSettings();
   game.demo = false; game.paused = false; selStartAt = 0;
@@ -2273,7 +2305,6 @@ function startRace() {
   assignJoyCons();
   setupRace(false);
   game.state = 'countdown'; game.stateT = T(); game.goT = T() + 3.6; game.cd = 4;
-  if (rolled) for (const p of [0, 1]) showMsg(p, COURSE.name, '#ffd36e', '이번 코스는 여기!');
   snd.tempo = 1; A.tempo(1);
   for (const p of [0, 1]) { const c = G3.camState[p]; if (c) c.snap = true; }
 }
@@ -2300,9 +2331,10 @@ function resume() {
   if (!game.paused) return;
   pauseOffset += realNow() - pausedAt; game.paused = false; $('pause').classList.add('hidden');
 }
+// 결과가 뜬 직후 1.5초는 입력을 무시: 경주 중에 버튼을 연타하던 아이가 순위를 보기도 전에 다시 출발하지 않게
+const resultWait = () => T() - game.stateT <= 1.5;
 function onConfirm() {
-  // 결과가 뜬 직후 1.5초는 무시: 경주 중에 버튼을 연타하던 아이가 순위를 보기도 전에 다시 출발하지 않게
-  if (resultOpen()) { if (T() - game.stateT > 1.5) resultNext(); return; }
+  if (resultOpen()) { if (!resultWait()) resultNext(); return; }
   if (game.paused) { resume(); return; }
   if (menuOpen()) openSelect();
 }
@@ -2397,6 +2429,10 @@ function openSelect() {
   renderSelect();
   revealRosterCharacter(sel[0].idx);
 }
+function selBack(i) {   // 뒤로: 준비했으면 취소, 아무도 준비 안 했으면 메뉴로 (컨트롤러만으로도 돌아갈 수 있게)
+  if (game.state !== 'select') return;
+  if (sel[i].ready) selReady(i, false); else if (!sel[1 - i].ready || selCPU(1 - i)) toMenu();
+}
 function selSet(i, k, force) {
   if (game.state !== 'select' || selCPU(i)) return;
   if (sel[i].idx === k && !force) { selReady(i, !sel[i].ready); return; }   // 같은 캐릭터를 또 고르면 준비 토글
@@ -2472,13 +2508,13 @@ function updateSelectHints() {
 // 아이템 두 칸 순서 바꾸기 버튼 이름 (그 사람이 쓰는 것으로)
 function swapKey(p) {
   if (JC.list.some(j => j.ok && j.player === p)) return '스틱 누르기';
-  if (game.padCount > (settings.mode === '1p' ? 0 : p)) return '십자키 ↑↓';
+  if (settings.mode === '1p' ? game.padCount > 0 : Object.values(padSlot).includes(p)) return '십자키 ↑↓';
   return p === 0 ? 'Q · R' : ', · P';
 }
 function inputLabel(pi) {
   const j = JC.list.find(j => j.player === pi);
   if (j) return j.name;
-  if (game.padCount > (settings.mode === '1p' ? 0 : pi)) return '게임패드';
+  if (settings.mode === '1p' ? game.padCount > 0 : Object.values(padSlot).includes(pi)) return '게임패드';
   return pi === 0 ? '키보드 W·A·S·D' : '키보드 방향키';
 }
 function renderSlots() {
@@ -2486,7 +2522,7 @@ function renderSlots() {
   el.innerHTML = [0, 1].map(pi => {
     const solo = settings.mode === '1p' && pi === 1;
     const jcs = JC.list.filter(j => j.player === pi);
-    const inputs = solo ? ['CPU 5명과 달리기'] : [...jcs.map(j => j.name + (j.err ? ` ⚠ ${j.err}` : j.ok ? ' ✓' : ' (연결 중)')), pi === 0 ? '키보드 W·A·S·D' : '키보드 방향키'];
+    const inputs = solo ? ['CPU 5명과 달리기'] : [...jcs.map(j => j.name + (j.err ? ` ⚠ ${j.err}` : j.ok ? ` ✓ ${JC.batteryText(j)}`.trimEnd() : ' (연결 중)')), pi === 0 ? '키보드 W·A·S·D' : '키보드 방향키'];
     return `<div class="slot"><span class="badge b${pi + 1}">${pi === 0 ? 'P1' : solo ? 'CPU' : 'P2'}</span>
       <div style="flex:1;min-width:0"><div style="font-size:15px">${inputs.join(' · ')}</div>
       <div class="row" style="margin-top:6px;flex-wrap:nowrap"><div class="steer-meter"><i id="m${pi}"></i></div><span id="s${pi}" class="small" style="min-width:150px"></span></div></div></div>`;
@@ -2571,7 +2607,7 @@ const gfx = { level: 'mid', autoLevel: 'mid', locked: false, pending: null, prev
   acc: 0, frames: 0, dispAcc: 0, dispFrames: 0, dispFps: 0, ignoreUntil: 0, note: '', toast: null, lastReal: 0, infoT: 0 };
 const hud = $('hud'), hctx = hud.getContext('2d');
 const levelFor = q => q === 'auto' ? gfx.autoLevel : Q[q] ? q : 'lowest';   // 테니스의 '2D'는 카트에선 '최저'
-function resize() {
+function resize(force) {
   const lv = Q[gfx.level] || Q.mid;
   const stage = $('kartStage');
   const cssW = Math.max(1, stage && stage.clientWidth || window.innerWidth), cssH = Math.max(1, stage && stage.clientHeight || window.innerHeight);
@@ -2592,8 +2628,9 @@ function resize() {
   }
   const dpr = window.devicePixelRatio || 1;
   const pr = Math.max(0.25, Math.min(dpr, lv.maxW / cssW));   // 4K 화면이어도 렌더 해상도는 상한까지만
+  if (force !== true && G3.cssW === cssW && G3.cssH === cssH && G3.pr === pr) return;   // 크기가 그대로면 그대로 (일시정지·재개 때 카메라가 튀고 HUD가 지워지지 않게)
   hud.width = Math.max(1, Math.round(cssW * pr)); hud.height = Math.max(1, Math.round(cssH * pr));
-  G3.cssW = cssW; G3.cssH = cssH;
+  G3.cssW = cssW; G3.cssH = cssH; G3.pr = pr;
   if (G3.renderer) { G3.renderer.setPixelRatio(pr); G3.renderer.setSize(cssW, cssH, false); }
   for (const c of G3.camState) c.snap = true;
 }
@@ -2608,7 +2645,7 @@ function applyQuality(level) {
   }
   gfx.level = level;
   gfx.ignoreUntil = realNow() + 2.5; gfx.acc = 0; gfx.frames = 0;
-  resize();
+  resize(true);
 }
 function gfxInfoText() {
   const lv = Q[gfx.level] || Q.mid;
@@ -4481,10 +4518,10 @@ function deadTreeGeo() {
 }
 // 다시마: 바닥에서 위로 구불구불 올라가는 긴 잎 셋
 function kelpGeo() {
-  const sph = new THREE.SphereGeometry(1, 6, 5), P = [], cols = ['#2f8f6a', '#3aa56f', '#25705c', '#58b878'].map(c => new THREE.Color(c));
-  for (let b = 0; b < 3; b++) for (let k = 0; k < 10; k++) {
-    const a = b * 2.1, w = Math.sin(k * 0.9 + b * 1.7), x = Math.cos(a) * 0.9 + w * 0.4, z = Math.sin(a) * 0.9 + Math.cos(k * 0.7 + b) * 0.3;
-    P.push({ geo: sph, matrix: partM(x, 0.8 + k * 1.3, z, 0, a, w * 0.25, 0.46, 1.05, 0.14), color: cols[(b + k) % 4] });
+  const sph = new THREE.SphereGeometry(1, 5, 3), P = [], cols = ['#2f8f6a', '#3aa56f', '#25705c', '#58b878'].map(c => new THREE.Color(c));
+  for (let b = 0; b < 3; b++) for (let k = 0; k < 7; k++) {   // 230그루를 한꺼번에 그려서 마디를 적게 (높이는 그대로, 마디마다 길게)
+    const a = b * 2.1, w = Math.sin(k * 1.3 + b * 1.7), x = Math.cos(a) * 0.9 + w * 0.4, z = Math.sin(a) * 0.9 + Math.cos(k + b) * 0.3;
+    P.push({ geo: sph, matrix: partM(x, 0.9 + k * 1.86, z, 0, a, w * 0.25, 0.46, 1.5, 0.14), color: cols[(b + k) % 4] });
   }
   const g = mergeGeoms(P);
   sph.dispose();
@@ -4636,7 +4673,7 @@ function buildSpaceDecor(Sc, rng, marks) {
 }
 // 산호 해저 도시: 한가운데 산호 궁전 · 가라앉은 배와 보물 · 길가 산호·조개·불가사리 · 위에서 내려오는 빛줄기 · 물고기 떼
 function buildDeepDecor(Sc, rng, marks) {
-  const P = [], box = new THREE.BoxGeometry(1, 1, 1), cyl = new THREE.CylinderGeometry(1, 1, 1, 9), cone = new THREE.ConeGeometry(1, 1, 9), sph = new THREE.SphereGeometry(1, 12, 9);
+  const P = [], box = new THREE.BoxGeometry(1, 1, 1), cyl = new THREE.CylinderGeometry(1, 1, 1, 9), cone = new THREE.ConeGeometry(1, 1, 9), sph = new THREE.SphereGeometry(1, 8, 6), domeSph = new THREE.SphereGeometry(1, 20, 12);
   const C = c => new THREE.Color(c), cols = ['#ff7a8a', '#ff9a5a', '#ffd166', '#c58bff', '#ff8fd0', '#7ae0c8'].map(C), rocks = ['#5a7a8a', '#4a6a7c', '#6f8f9a'].map(C), shell = C('#ffe3d1'), shell2 = C('#ffb8a8'), pearl = C('#ffffff');
   const pal = C('#ffeef4'), pal2 = C('#ff9ac2'), pal3 = C('#8fe0e0'), gold = C('#ffd36e'), hullC = C('#4f3d36'), hull2 = C('#3d2f2a'), sail = C('#a9a48f');
   const branch = (b, c) => {   // 나뭇가지 산호: 굵은 밑동 + 벌어진 가지 다섯 + 둥근 끝
@@ -4661,7 +4698,7 @@ function buildDeepDecor(Sc, rng, marks) {
   if (marks[0]) {   // 산호 궁전: 층층이 둥근 건물 + 진주 돔 + 둘레 뾰족 탑 여섯 + 소라 꼭대기
     const [x, z] = marks[0], b = partM(x, 0, z, 0, 0.5, 0, 1, 1, 1);
     P.push({ geo: cyl, matrix: partAt(b, 0, 3, 0, 0, 0, 0, 27, 6, 27), color: pal3 }, { geo: cyl, matrix: partAt(b, 0, 12, 0, 0, 0, 0, 18, 12, 18), color: pal }, { geo: cyl, matrix: partAt(b, 0, 18.4, 0, 0, 0, 0, 19, 1, 19), color: gold });
-    P.push({ geo: sph, matrix: partAt(b, 0, 19, 0, 0, 0, 0, 15, 15, 15), color: pal2 }, { geo: cone, matrix: partAt(b, 0, 40, 0, 0, 0, 0, 3.6, 14, 3.6), color: shell }, { geo: sph, matrix: partAt(b, 0, 48, 0, 0, 0, 0, 1.8, 1.8, 1.8), color: gold });
+    P.push({ geo: domeSph, matrix: partAt(b, 0, 19, 0, 0, 0, 0, 15, 15, 15), color: pal2 }, { geo: cone, matrix: partAt(b, 0, 40, 0, 0, 0, 0, 3.6, 14, 3.6), color: shell }, { geo: sph, matrix: partAt(b, 0, 48, 0, 0, 0, 0, 1.8, 1.8, 1.8), color: gold });
     for (let k = 0; k < 6; k++) {
       const a = k / 6 * Math.PI * 2, tx = Math.cos(a) * 25, tz = Math.sin(a) * 25;
       P.push({ geo: cyl, matrix: partAt(b, tx, 13, tz, 0, 0, 0, 3, 26, 3), color: pal }, { geo: cone, matrix: partAt(b, tx, 31, tz, 0, 0, 0, 3.8, 10, 3.8), color: k % 2 ? pal2 : pal3 }, { geo: sph, matrix: partAt(b, tx, 36.5, tz, 0, 0, 0, 0.9, 0.9, 0.9), color: gold });
@@ -4700,7 +4737,7 @@ function buildDeepDecor(Sc, rng, marks) {
     }
   }
   Sc.add(new THREE.Mesh(mergeGeoms(P), G3.matLit));
-  box.dispose(); cyl.dispose(); cone.dispose(); sph.dispose();
+  box.dispose(); cyl.dispose(); cone.dispose(); sph.dispose(); domeSph.dispose();
   // 위에서 내려오는 빛줄기 (얇은 판을 더해 그림)
   const cx = MAP.x0 + MAP.w / 2, cz = MAP.z0 + MAP.h / 2, pl = new THREE.PlaneGeometry(1, 1), S = [], glow = new THREE.Color('#ffffff');
   for (let i = 0; i < 26; i++) {
@@ -4737,7 +4774,7 @@ function syncFish(t) {
 }
 // 구름 왕국: 네모 길 안쪽에 하늘 성 · 구름 풍차 둘 · 길을 넘는 무지개 · 길가 뭉게구름 · 떠 있는 섬과 먼 열기구
 function buildSkyDecor(Sc, rng, marks) {
-  const P = [], U = [], box = new THREE.BoxGeometry(1, 1, 1), cyl = new THREE.CylinderGeometry(1, 1, 1, 12), cone = new THREE.ConeGeometry(1, 1, 10), sph = new THREE.SphereGeometry(1, 12, 9);
+  const P = [], U = [], box = new THREE.BoxGeometry(1, 1, 1), cyl = new THREE.CylinderGeometry(1, 1, 1, 12), cone = new THREE.ConeGeometry(1, 1, 10), sph = new THREE.SphereGeometry(1, 8, 6);
   const C = c => new THREE.Color(c), white = C('#ffffff'), cloud = C('#f3f7ff'), cloud2 = C('#e6effc'), stoneC = C('#f6efe2'), stone2 = C('#e8dcc6'), roof = C('#ff8fb0'), roof2 = C('#7cc9f0'), gold = C('#ffd36e'), grass = C('#b6e8a0'), rockC = C('#b8a58c'), wood = C('#b98a5a');
   const puff = (b, w) => { for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2, d = k ? 1.2 * w : 0, r = (k ? 1.2 : 1.7) * w; P.push({ geo: sph, matrix: partAt(b, Math.cos(a) * d, r * 0.55, Math.sin(a) * d, 0, 0, 0, r, r * 0.8, r), color: k % 2 ? cloud : white }); } };
   const tower = (b, x, z, h, r, c) => {
@@ -5624,7 +5661,7 @@ function gpBanner(g, cx, y, u, t) {
   g.save(); g.globalAlpha = left < 0 ? clamp(1 + left, 0, 1) : 1;
   hudPanel(g, cx - w / 2, y, w, h, u);
   g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.font = `800 ${17 * u}px ${FONT}`; g.fillStyle = HUD.orange; g.fillText(`${gpCup().en} · RACE ${gp.race + 1} / ${gpCourses().length}`, cx, y + 20 * u);
+  g.font = `800 ${17 * u}px ${FONT}`; g.fillStyle = HUD.orange; g.fillText(gp.on ? `${gpCup().en} · RACE ${gp.race + 1} / ${gpCourses().length}` : '이번 코스는 여기!', cx, y + 20 * u);
   g.font = `900 ${26 * u}px ${FONT}`; g.fillStyle = HUD.cream; g.fillText(COURSE.name, cx, y + 45 * u);
   g.restore();
 }
@@ -5751,7 +5788,7 @@ function drawView(g, r, p, cs, two, t) {
   }
   if (game.state === 'countdown' || t - game.goT < 1) {   // 위쪽 가운데 일시정지 버튼 아래
     startLights(g, r.x + r.w / 2, by + 46 * u, u, t);
-    if (gp.on) gpBanner(g, r.x + r.w / 2, by + 128 * u, u, t);
+    if (gp.on || game.randomRace) gpBanner(g, r.x + r.w / 2, by + 128 * u, u, t);
   }
   if (game.cutoffAt && !k.finished && game.state === 'race') {   // 시간 제한 마지막 10초
     const left = Math.ceil(game.cutoffAt - t);
@@ -5918,7 +5955,7 @@ function bindMenu() {
   $('btnHome').onclick = () => { location.href = '../../index.html'; };
   $('btnFull').onclick = toggleFull;
   $('btnResume').onclick = resume; $('btnQuit').onclick = toMenu;
-  $('btnRestart').onclick = () => { resume(); startRace(); };   // 이 코스를 처음부터 (그랑프리면 같은 코스, 점수는 그대로)
+  $('btnRestart').onclick = () => { resume(); startRace(true); };   // 이 코스를 처음부터 (그랑프리·랜덤이어도 같은 코스, 점수는 그대로)
   $('btnAgain').onclick = resultNext; $('btnReselect').onclick = openSelect; $('btnMenu').onclick = toMenu;
   $('btnSelBack').onclick = toMenu;
   document.querySelectorAll('#select [data-p]').forEach(b => {
@@ -5965,10 +6002,10 @@ setupRace(true); game.goT = T();
 requestAnimationFrame(frame);
 
 // 테스트용 훅
-window.__KT = { game, karts, settings, T, update, render: renderFrame, startRace, toMenu, openSelect, selMove, selReady, selSet, sel, pause, resume,
+window.__KT = { game, karts, settings, T, update, render: renderFrame, startRace, toMenu, openSelect, selMove, selReady, selSet, sel, pause, resume, resultWait, selBack,
   TRACK, boxes, shots, traps, KART, trackPoint, locate, groundAt, elevAt, elevCurv, sdiff, useItem, spinOut, joySteer, tilt, readInputs, keys, inCreek,
   gfx, G3, Q, applyQuality, autoStep, parts, CHARS, joycon: JC, setDemoPaused, showResult, mergeGeoms, views, humanKart, levelFor,
-  finishKart, trophyOf, newTrophy, hasCrown, recordBoard, TROPHY_NAME,
+  finishKart, lapUp, trophyOf, newTrophy, hasCrown, recordBoard, TROPHY_NAME,
   COURSES, switchCourse, DRIFT, ITEMS, ITEM_KEYS, ATTACK, gp, CUPS, GP_POINTS, resultNext, pathPoint, fmtTime, rockets, tornados, snowballs, bombs, ufos, boomerangs, waters, pows, horns, itemLabel, freezeOut, hitBy, HITCAM, REC, lodFor, rollItem, balls, JET, jetState,
   get JETS() { return JETS; }, get CUTS() { return CUTS; }, get HAZ() { return HAZ; }, hazAt, HZ, HAZ_KIND, get GP_COURSES() { return gp.on ? gpCourses() : (menuCup() || CUPS[0]).courses; },
   get TR() { return TR; }, get L() { return L; }, get RAMP() { return RAMP; }, get PANELS() { return PANELS; }, get ZONES() { return ZONES; },

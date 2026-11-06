@@ -16,6 +16,7 @@
  *                    rocket() 로켓 · whirl() 회오리 · freeze() 꽁꽁 · boom() 꽝 · throw() 휙 · spring() 스프링
  *                    horn() 나팔 · ufo() UFO · ghost() 유령 · steal() 훔침 · plane() 비행기 · boomerang() 부메랑 · cloud() 먹구름
  *                    shrink() 작아짐 · squash() 납작 · wood() 바리케이드 · powWarn() 쿵 블록 경고 · thud() 쿵 · bubble() 물방울
+ *            코스 장애물: hazard(종류, 가까움 0~1) 앞에 장애물이 나타날 때 짧게 알림 (HAZ_CUES: 양·유령·운석·불기둥 등 종류마다 다른 소리)
  *  - 볼링:   roll(빠르기 m/s, 도랑) 공 굴러가는 소리 (계속, roll(null)이면 끔) · pin(세기) 핀 "딱" · pinCrash(세기) "와장창"
  *            bumper(세기) 범퍼 "퉁" · gutter() 도랑 "덜컹" · ballDrop() 공 내려놓기 "쿵" · sweep() 핀 정리 기계
  * ============================================================ */
@@ -744,6 +745,10 @@
       const t = this.ctx.currentTime;
       [0, 0.45, 0.8, 1.05, 1.25].forEach(dt => this.tone(t + dt, 1000, 800, 0.08, 0.1, 'square'));
     },
+    hazard(kind, near = 0.5) {   // 코스 장애물이 앞에 나타날 때 (가까울수록 조금 크게). 음악을 가리지 않게 짧고 작게
+      const f = HAZ_CUES[kind];
+      if (f && this.live()) f(this, this.ctx.currentTime, 0.6 + 0.4 * clamp(near, 0, 1));
+    },
     thud() {   // 쿵! 큰 블록이 떨어짐: 아주 낮은 쿵 + 먼지
       if (!this.live()) return;
       const t = this.ctx.currentTime;
@@ -1147,6 +1152,32 @@
     sky: { bpm: 156, style: 'aurora', chords: SKY_CHORDS, melody: SKY_MELODY },
   };
   A.SONGS = SONGS;   // (테스트에서 곡 목록 확인용)
+
+  // 코스 장애물 알림: (소리 모듈, 시작 시각, 크기). 키는 kart.js HAZ_KIND의 종류와 불기둥 모습(JET_LOOK)
+  const HAZ_CUES = {
+    stomp: (a, t, v) => { a.tone(t, 70, 46, 0.35, 0.2 * v); a.noise(t, 0.3, 300, 0.8, 0.07 * v, null, 'lowpass'); },   // 구구궁
+    swing: (a, t, v) => { a.noise(t, 0.4, 700, 1.4, 0.09 * v).frequency.exponentialRampToValueAtTime(260, t + 0.36); },   // 휘익
+    crab: (a, t, v) => { for (const u of [0, 0.09, 0.2]) a.noise(t + u, 0.035, 3200, 3, 0.1 * v); },   // 딱딱딱
+    gum: (a, t, v) => { a.tone(t, 300, 520, 0.1, 0.09 * v, 'triangle'); a.tone(t + 0.13, 340, 620, 0.1, 0.09 * v, 'triangle'); },   // 통통
+    cart: (a, t, v) => { for (const u of [0, 0.14, 0.28]) a.noise(t + u, 0.08, 420, 1.1, 0.13 * v, null, 'lowpass'); },   // 덜컹덜컹
+    penguin: (a, t, v) => { a.tone(t, 720, 500, 0.09, 0.05 * v, 'square'); a.tone(t + 0.13, 720, 480, 0.11, 0.05 * v, 'square'); },   // 꽉꽉
+    sheep: (a, t, v) => { for (const u of [0, 0.09, 0.18, 0.27]) a.tone(t + u, 430, 400, 0.09, 0.05 * v, 'sawtooth', null, 0.02); },   // 메에에
+    ghost: (a, t, v) => { a.tone(t, 340, 240, 0.7, 0.08 * v, 'triangle', null, 0.14); a.tone(t + 0.1, 1100, 860, 0.5, 0.02 * v, 'sine', null, 0.16); },   // 우~
+    pumpkin: (a, t, v) => { for (const u of [0, 0.13, 0.26]) a.tone(t + u, 150, 90, 0.1, 0.13 * v); },   // 데구르르
+    alien: (a, t, v) => { a.tone(t, 1400, 1800, 0.08, 0.035 * v, 'square'); a.tone(t + 0.1, 1800, 1300, 0.09, 0.035 * v, 'square'); },   // 삐빅
+    meteor: (a, t, v) => { a.tone(t, 1500, 320, 0.6, 0.06 * v, 'sine', null, 0.05); a.noise(t + 0.2, 0.4, 900, 1, 0.05 * v); },   // 휘이잉
+    jelly: (a, t, v) => { a.tone(t, 480, 920, 0.26, 0.07 * v, 'sine', null, 0.03); },   // 뾰롱
+    puffer: (a, t, v) => { for (const u of [0, 0.08, 0.16]) a.tone(t + u, 420, 820, 0.07, 0.07 * v); },   // 뽀글뽀글
+    balloon: (a, t, v) => { a.noise(t, 0.42, 620, 0.7, 0.11 * v, null, 'lowpass'); },   // 후욱
+    car: (a, t, v) => { a.tone(t, 460, 450, 0.16, 0.04 * v, 'square'); a.tone(t, 350, 345, 0.16, 0.04 * v, 'square'); },   // 빵
+    fire: (a, t, v) => { a.noise(t, 0.34, 2300, 1.1, 0.07 * v); },   // 쉬익
+    wisp: (a, t, v) => { a.tone(t, 700, 1000, 0.3, 0.04 * v, 'sine', null, 0.08); a.noise(t, 0.26, 2600, 2, 0.03 * v); },   // 스르륵
+    plasma: (a, t, v) => { a.tone(t, 180, 820, 0.28, 0.035 * v, 'sawtooth', null, 0.04); },   // 위이잉
+    bubble: (a, t, v) => { for (const u of [0, 0.07, 0.14, 0.21]) a.tone(t + u, 340 + u * 900, 700 + u * 1400, 0.06, 0.06 * v); },   // 보글보글
+    thunder: (a, t, v) => { a.noise(t, 0.08, 3600, 1.6, 0.09 * v); a.noise(t + 0.11, 0.1, 3000, 1.4, 0.08 * v); a.tone(t + 0.1, 100, 60, 0.3, 0.11 * v); },   // 지직 우르릉
+  };
+  HAZ_CUES.bus = HAZ_CUES.truck = (a, t, v) => { a.tone(t, 260, 255, 0.28, 0.05 * v, 'sawtooth', null, 0.02); a.tone(t, 195, 192, 0.28, 0.05 * v, 'sawtooth', null, 0.02); };   // 빠앙
+  A.HAZ_CUES = HAZ_CUES;
 
   // 다른 탭으로 가면 소리를 멈췄다가 돌아오면 다시
   if (typeof document !== 'undefined' && document.addEventListener) {

@@ -85,15 +85,28 @@
   new ResizeObserver(() => window.dispatchEvent(new Event('resize'))).observe(preview);
   const joycon = window.Nolja.joycon;
   const updateSlots = joycon.handlers.change;
+  let shownCount = 0;
   function updateConnection() {
     const count = joycon.list.length;
-    $('connectionStatus').textContent = count ? `조이콘 ${count}개 연결됨 · 경기에선 라켓이 조이콘을 그대로 따라가요.` : '키보드만으로도 바로 플레이할 수 있어요.';
+    $('connectionStatus').textContent = count ? `조이콘 ${count}개 연결됨 · 경기에선 라켓이 조이콘을 그대로 따라가요. 메뉴는 스틱으로 골라요.` : '키보드만으로도 바로 플레이할 수 있어요.';
     $('connectionStatus').closest('.connection-card').classList.toggle('is-connected', count > 0);
-    if (count) $('controllerDetails').open = true;
+    if (count > shownCount) $('controllerDetails').open = true;   // 새로 붙었을 때만 펼침 (배터리가 바뀔 때마다 펼치지 않게)
+    shownCount = count;
   }
   joycon.on('change', () => { if (updateSlots) updateSlots(); updateConnection(); });
   const showWarning = () => { if (!$('hidWarn').classList.contains('hidden')) $('controllerDetails').open = true; };
   new MutationObserver(showWarning).observe($('hidWarn'), { attributes: true, childList: true, characterData: true, subtree: true });
+  // 소파에서 컨트롤러만으로: 메뉴·일시정지·결과·창을 스틱과 버튼으로 (shared/couch.js)
+  const couch = window.Nolja.couch, audio = window.Nolja.audio, shown = id => () => !$(id).classList.contains('hidden');
+  couch.attach({
+    audio, tick: () => audio.tick(), skip: '#btnConnect, #btnFull', lost: () => game.pause(),
+    layers: [
+      { el: guide, on: () => guide.open, dialog: true, auto: true },
+      { el: $('pause'), on: shown('pause'), first: '#btnResume', back: '#btnResume', auto: true },
+      { el: $('result'), on: shown('result'), first: '#btnAgain', back: '#btnMenu', auto: true, wait: () => game.resultWait() },
+      { el: menu, on: shown('menu'), first: '#btnStart' },
+    ],
+  });
   showWarning();   // tennis.js may have shown the "no Joy-Con here" warning before this observer existed
   updatePreviewButton();
   updateConnection();

@@ -70,6 +70,7 @@ h1 { font-size: clamp(26px, 3vw, 38px); font-weight: 800; line-height: 1.35; let
 .keyboard-hint > span { display: inline-flex; align-items: center; gap: 5px; }
 kbd { font: inherit; border: 1px solid #d9d4e0; border-bottom-width: 2px; border-radius: 5px; color: #655b74; background: #fffdf9; min-width: 23px; padding: 2px 6px; text-align: center; }
 .selection-status { color: var(--purple); }
+.keyboard-hint > .pad-hint[hidden] { display: none; }
 .club-lounge { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center; padding: 32px; border: 1px solid var(--line); border-radius: 20px; background: #f0eee8; scroll-margin-top: 24px; }
 .lounge-copy h2 { font-size: 25px; letter-spacing: -1px; margin: 0 0 12px; line-height: 1.4; word-break: keep-all; }
 .lounge-copy > p:not(.eyebrow) { color: var(--muted); font-size: 13px; line-height: 1.9; margin: 0; word-break: keep-all; }

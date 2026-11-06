@@ -318,6 +318,72 @@ assert(ST.settings.chars[0] === (c0 + 1) % charCount, '게임패드 → 방향�
 pads = [pad([0])]; step(1 / 60, { render: false }); pads = [];
 assert(ST.sel[0].ready, '게임패드 A → 준비');
 
+// 7-1) 소파에서 컨트롤러만으로: 경기 일시정지 · 선택 화면 스틱과 뒤로 · 결과 직후 연타 무시
+{
+  const JC = ST.joycon, B = JC.BTN, press = m => JC.handlers.buttons(0, m), hidden = id => el(id).classList.contains('hidden');
+  ST.settings.mode = '2p'; ST.toMenu(); ST.openSelect();
+  const fake = { ok: true, player: 0, kind: 'R', stick: { x: 3400, y: 2048 }, accel: { x: 1, y: 0, z: 0 }, hold: 0 }, c1 = ST.settings.chars[0];
+  JC.list.push(fake);
+  step(1 / 60, { render: false }); step(1 / 60, { render: false });
+  assert(ST.settings.chars[0] === (c1 + 1) % charCount, '캐릭터 선택: 조이콘 스틱으로 한 칸 (밀고 있어도 한 칸만)');
+  fake.stick = { x: 2048, y: 2048 }; step(1 / 60, { render: false });
+  fake.stick = { x: 700, y: 2048 }; step(1 / 60, { render: false });
+  assert(ST.settings.chars[0] === c1, '스틱을 놓았다 반대로 밀면 되돌아감');
+  JC.list.length = 0;
+  ST.selReady(1, true); press(B.MINUS);
+  assert(G.state === 'select', '다른 사람이 준비했으면 − 로 메뉴까지 안 나감');
+  ST.selReady(1, false); press(B.X); press(B.MINUS);
+  assert(G.state === 'select' && !ST.sel[0].ready, '− = 준비 취소');
+  press(B.MINUS);
+  assert(!hidden('menu') && hidden('select'), '준비 안 했으면 − = 메뉴로 (컨트롤러만으로 돌아갈 수 있음)');
+  ST.startMatch(); step(0.2);
+  press(B.PLUS);
+  assert(G.paused && !hidden('pause'), '경기 중 조이콘 + = 일시정지');
+  press(B.PLUS);
+  assert(!G.paused && hidden('pause'), '+ 를 또 누르면 계속');
+  press(B.MINUS);
+  assert(G.paused, '조이콘 − 도 일시정지');
+  ST.resume();
+  pads = [pad([9])]; step(1 / 60, { render: false }); pads = [];
+  assert(G.paused, '게임패드 Start = 일시정지');
+  ST.resume();
+  el('result').classList.remove('hidden'); G.state = 'matchEnd'; G.stateT = ST.T();
+  press(B.A);
+  assert(!hidden('result') && ST.resultWait(), '결과가 뜬 직후의 버튼은 무시 (연타하던 아이가 점수를 보기도 전에 다음 판이 시작되지 않게)');
+  G.stateT -= 2; press(B.A);
+  assert(hidden('result') && G.state !== 'matchEnd', '조금 지나면 버튼 = 한 판 더');
+  // 일시정지하면 화면 흔들림도 멈춤
+  G.shake = 0.8; G.paused = false; ST.pause();
+  assert(G.shake === 0, '일시정지하면 화면이 흔들리다 멈춤');
+  ST.resume();
+  // 빠르게 뒤로 빼는 동작을 스윙으로 알아듣지 않음 (뒤로 뺀 뒤 진짜 스윙이 '빠름!'이 되지 않게)
+  ST.toMenu(); ST.settings.mode = '2p'; ST.startMatch();
+  const joy = { cool: 9, lastPath: 0.6 };
+  step(0.7, { render: false });
+  const server = G.server;
+  ST.emitSwing(server, 0.6, now);
+  while (ST.T() < G.toss.t0 + 0.3) step(1 / 60, { render: false });
+  ST.emitSwing(server, 0.6, now, null, null, joy);
+  assert(G.serveStage === 'toss' && joy.cool === 0, '서브: 공이 꼭대기에 닿기 전에 팔을 들어 올리는 빠른 동작은 서브가 아님');
+  while (ST.T() < G.toss.t0 + ST.TOSS.top + lat()) step(1 / 60, { render: false });
+  joy.lastPath = -0.5;
+  ST.emitSwing(server, 0.6, now, null, null, joy);
+  assert(G.state === 'rally', '내려치는 스윙이 서브');
+  let shot = null;
+  for (let i = 0; i < 30 && !shot; i++) {
+    const s = G.shot;
+    if (G.state === 'rally' && s && s.reachable && !s.out && !s.resolved && s.hit.z <= 1.8 && ST.T() < s.hit.t + lat() - s.W - 0.1) shot = s;
+    else { step(4, { render: false }); step(0.7, { render: false }); if (G.state === 'serve') serveBall(G.server); }
+  }
+  while (ST.T() < shot.hit.t + lat() - shot.W - 0.1) step(1 / 60, { render: false });
+  joy.cool = 9;
+  ST.emitSwing(shot.receiver, 0.6, now, 0.2, shot.side === 'fh' ? 'bh' : 'fh', joy);
+  assert(!shot.miss && !shot.resolved && joy.cool === 0, '공 쪽과 반대로 도는 이른 스윙은 뒤로 빼는 동작: 곧이어 오는 진짜 스윙을 받음');
+  ST.emitSwing(shot.receiver, 0.6, now, 0.2, shot.side, joy);
+  assert(shot.miss === '빠름!', '공 쪽으로 도는 이른 스윙은 그대로 빠름!');
+  ST.toMenu();
+}
+
 ST.toMenu(); ST.setDemoPaused(true); step(2);
 const matchResumeT = ST.T(); ST.startMatch(); step(0.25);
 assert(!G.demo && !G.paused && Math.abs(ST.T() - matchResumeT - 0.25) < 1e-8, '정지된 데모에서 바로 경기 시작 시 정지가 자동 해제됨');
@@ -656,6 +722,16 @@ const finishChecks = () => {
   hid.connect({ device: dev('A2') });
   const s3 = slots();
   assert(s1 === 'A:P1 B:P2' && s2 === 'B:P2' && s3 === 'B:P2 A2:P1', `조이콘 하나가 끊겨도 다른 조이콘 자리는 그대로, 다시 붙으면 빈자리로 (${s1} → ${s2} → ${s3})`);
+  J.assign();
+  assert(slots() === 'B:P2 A2:P1', `끊겼다 돌아온 뒤 경기를 새로 시작해도 P1·P2가 안 뒤바뀜 (${slots()})`);
+  J.single = true; J.assign();
+  assert(J.list.every(j => j.player === 0), '혼자 하는 모드: 모두 P1');
+  J.single = false; J.assign();
+  assert(slots() === 'B:P2 A2:P1', '둘이 하는 모드로 돌아오면 원래 자리');
+  J.swapped = true; J.assign();
+  assert(slots() === 'B:P1 A2:P2', 'P1 ↔ P2 바꾸기');
+  J.swapped = false; J.assign();
+  assert(slots() === 'B:P2 A2:P1', '다시 바꾸면 원래대로');
   J.list.length = 0; hid.pick = [dev('X', true)];
   const r = await J.connect();
   assert(!r.ok && /열기 실패/.test(r.error) && J.list.length === 0, '조이콘을 못 열면 오류를 알려주고 목록에서 빠져 다시 연결할 수 있음');

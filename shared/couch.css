@@ -1,0 +1,8 @@
+/* 소파 조작 (shared/couch.js): 컨트롤러로 고른 칸 · 화면 위 알림. TV 앞 소파에서도 보이게 굵고 크게 */
+.pad-focus { outline: 4px solid #e8742a !important; outline-offset: 3px !important; box-shadow: 0 0 0 9px rgba(232, 116, 42, .24) !important; }
+.couch-toasts { position: fixed; top: 16px; left: 50%; z-index: 100000; display: grid; justify-items: center; gap: 8px; width: min(92vw, 760px); transform: translateX(-50%); pointer-events: none; }
+.couch-toast { padding: 12px 22px; border-radius: 14px; background: rgba(36, 30, 54, .95); box-shadow: 0 10px 30px rgba(20, 14, 34, .35); color: #fff6e6; font: 800 20px/1.35 "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; text-align: center; word-break: keep-all; animation: couch-in .22s ease-out; transition: opacity .28s, transform .28s; }
+.couch-toast.out { opacity: 0; transform: translateY(-8px); }
+@keyframes couch-in { from { opacity: 0; transform: translateY(-10px); } }
+@media (max-width: 560px) { .couch-toast { padding: 10px 16px; font-size: 16px; } }
+@media (prefers-reduced-motion: reduce) { .couch-toast { animation: none; transition: none; } }

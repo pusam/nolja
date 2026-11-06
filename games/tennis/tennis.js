@@ -52,6 +52,9 @@ const KEYS = { mode: 'tennis.mode', cpuLevel: 'tennis.cpuLevel', gamesToWin: 'te
   sideCheck: 'tennis.sideCheck', voice: 'tennis.voice' };
 if (!Array.isArray(settings.chars) || settings.chars.length !== 2 || settings.chars.some(k => !Number.isInteger(k) || k < 0 || k >= CHARS.length)) settings.chars = [0, 1];
 settings.lefty = Array.isArray(settings.lefty) && settings.lefty.length === 2 ? settings.lefty.map(v => !!v) : [false, false];
+if (settings.mode !== '2p' && settings.mode !== 'cpu') settings.mode = '2p';
+if (![0, 1, 2].includes(settings.cpuLevel)) settings.cpuLevel = 1;
+if (![1, 2, 3].includes(settings.gamesToWin)) settings.gamesToWin = 2;
 const saveSettings = () => { for (const k in settings) S.set(KEYS[k], settings[k]); JC.sensitivity = settings.sensitivity; };
 const charOf = i => CHARS[settings.chars[i]] || CHARS[0];
 JC.sensitivity = settings.sensitivity;
@@ -433,7 +436,7 @@ function followMotion(t) {
 
 // 모든 스윙 입력(조이콘·키보드·패드·CPU)이 모이는 곳. tSwing은 게임 시간
 // spin·side는 휘두른 방향으로 정한 스핀과 포핸드('fh')·백핸드('bh') (모르면 null)
-function doSwing(pi, pow, tSwing, spin, side = null) {
+function doSwing(pi, pow, tSwing, spin, side = null, jc = null) {
   const p = players[pi], t = T();
   if (spin == null) spin = autoSpin(pow);
   if (t - p.motionT >= 0.4) { p.swingT = t; p.swingLive = false; p.anim = swingAnim(pi, side); }   // 조이콘이면 이미 휘두르는 중
@@ -444,7 +447,10 @@ function doSwing(pi, pow, tSwing, spin, side = null) {
   if (game.state === 'serve') {
     if (game.server !== pi) return;
     if (game.serveStage === 'ready') { if (t - game.stateT > 0.45) tossBall(pi); }
-    else if (game.serveStage === 'toss' && t - game.toss.t0 > 0.18) serve(pi, pow, tSwing);
+    else if (game.serveStage === 'toss' && t - game.toss.t0 > 0.18) {
+      if (jc && jc.lastPath > 0 && t - game.toss.t0 < TOSS.top - 0.12) { jc.cool = 0; return; }   // 공이 꼭대기에 닿기 전에 팔을 들어 올리는 동작: 곧이어 내려치는 스윙을 받음
+      serve(pi, pow, tSwing);
+    }
     return;
   }
   if (game.state !== 'rally') return;
@@ -455,7 +461,10 @@ function doSwing(pi, pow, tSwing, spin, side = null) {
   if (!s.reachable) return;         // 못 따라가는 공
   // 맞힌 순간 = 보정한 스윙 시각. 조이콘은 감지에 0.09초+보정만큼 늦게 알려 주므로 지금 공 위치가 아니라 그때 위치에서 쳐 보냄
   if (Math.abs(d) <= s.W) { hitBall(pi, d / s.W, pow, spin, side, clamp(tSwing - settings.latencyMs / 1000, s.t0, t)); return; }
-  if (d < -s.W) { s.miss = '빠름!'; p.flash = '빠름!'; p.flashT = t; }
+  if (d < -s.W) {
+    if (jc && side && side !== s.side) { jc.cool = 0; return; }   // 공 쪽과 반대로 도는 이른 스윙 = 뒤로 빼는 동작: 곧이어 오는 진짜 스윙을 받음
+    s.miss = '빠름!'; p.flash = '빠름!'; p.flashT = t;
+  }
 }
 
 function hitBall(pi, u, pow, spin, side, tc = T()) {
@@ -607,7 +616,7 @@ function toMenu() {
 
 function pause() {
   if (game.paused || game.demo || game.state === 'matchEnd' || game.state === 'select') return;
-  pausedAt = realNow(); game.paused = true; $('pause').classList.remove('hidden'); hush();
+  pausedAt = realNow(); game.paused = true; game.shake = 0; $('pause').classList.remove('hidden'); hush();
   $('pauseInfo').textContent = gfxInfoText();
 }
 function resume() {
@@ -618,8 +627,10 @@ function resume() {
 const menuOpen = () => !$('menu').classList.contains('hidden');
 const resultOpen = () => !$('result').classList.contains('hidden');
 const selectOpen = () => !$('select').classList.contains('hidden');
+// 결과가 뜬 직후 1.5초는 입력을 무시: 버튼을 연타하던 아이가 점수를 보기도 전에 다음 판이 시작되지 않게
+const resultWait = () => T() - game.stateT <= 1.5;
 function onConfirm() {
-  if (resultOpen()) { startMatch(); return; }
+  if (resultOpen()) { if (!resultWait()) startMatch(); return; }
   if (game.paused) { resume(); return; }
   if (menuOpen()) openSelect();
 }
@@ -659,6 +670,10 @@ function selSet(i, k, force) {
   selStartAt = 0;
   rebuildPlayer3D(i);
   sfx.tick(); renderSelect(); revealRosterCharacter(k); checkSelectStart();
+}
+function selBack(i) {   // 뒤로: 준비했으면 취소, 아무도 준비 안 했으면 메뉴로 (컨트롤러만으로도 돌아갈 수 있게)
+  if (game.state !== 'select') return;
+  if (sel[i].ready) selReady(i, false); else if (!sel[1 - i].ready || selCPU(1 - i)) toMenu();
 }
 function selMove(i, d, force) {
   if (game.state !== 'select') return;
@@ -715,7 +730,7 @@ let lastT = 0;
 function update() {
   const t = T();
   const dt = clamp(t - lastT, 0, 0.1); lastT = t;   // 느린 컴퓨터(10fps)에서도 이동 속도가 실제 시간과 같게
-  pollGamepads();
+  pollGamepads(); pollJoySelect();
   syncSound();
   for (const p of players) updateLive(p, dt, t);   // 일시정지 중에도 라켓은 손을 따라감
   if (game.paused || demoPauseAt !== null) return;
@@ -815,9 +830,9 @@ const inputFlash = [{ pow: 0, t: -9, spin: null }, { pow: 0, t: -9, spin: null }
 function flashInput(pi, pow, spin = null) { inputFlash[pi] = { pow, t: realNow(), spin }; }
 
 // 사람 입력 → 게임. rawT는 performance 기준 초, spin·side는 휘두른 방향으로 정한 스핀과 포핸드·백핸드(모르면 null)
-function emitSwing(pi, pow, rawT, spin = null, side = null) {
+function emitSwing(pi, pow, rawT, spin = null, side = null, jc = null) {
   if (pi == null || pi < 0 || game.paused || isCPU(pi)) return;
-  doSwing(pi, pow, rawT - pauseOffset, spin, side);
+  doSwing(pi, pow, rawT - pauseOffset, spin, side, jc);
 }
 
 // [선수, 세기, 스핀] — S·K 바로 아래 X·쉼표는 깎아 치기(슬라이스)
@@ -873,6 +888,7 @@ function pollGamepads() {
     const prev = padPrev[gp.index] || [];
     const rise = i => !!now[i] && !prev[i];
     padPrev[gp.index] = now;
+    if (window.Nolja.couch && window.Nolja.couch.pad(gp)) continue;   // 메뉴에서 칸을 고르는 중 (shared/couch.js)
     if (selectOpen()) {
       const ax = gp.axes && gp.axes.length ? gp.axes[0] : 0, std = gp.mapping === 'standard';
       const left = (std && !!now[14]) || ax < -0.6, right = (std && !!now[15]) || ax > 0.6;
@@ -881,9 +897,10 @@ function pollGamepads() {
       if (right && !st.r) selMove(pi, 1);
       st.l = left; st.r = right;
       if (rise(0) || rise(9)) selReady(pi, true);
-      if (rise(1)) selReady(pi, false);
+      if (rise(1)) selBack(pi);
       continue;
     }
+    if (rise(9) && !game.paused && !menuOpen() && !resultOpen()) { pause(); continue; }   // Start = 일시정지
     let swing = -1, spin = null, confirm = false;
     if (gp.mapping === 'standard') {
       if (rise(0)) swing = 0.55;
@@ -902,18 +919,32 @@ function pollGamepads() {
 // ---------- 조이콘 (공용 모듈 shared/joycon.js) ----------
 function assignJoyCons() { JC.single = settings.mode === 'cpu'; JC.assign(); }
 function rumblePlayer(pi, amp, ms) { if (!game.demo) JC.rumble(pi, amp, ms); }
-function onJoyButtons(pi, m) {
+function onJoyButtons(pi, m, jc) {
+  const plusMinus = m & (JC.BTN.PLUS | JC.BTN.MINUS);
   if (selectOpen()) {
-    if (JC.isPrev(m)) selMove(pi, -1);          // Y · ←
+    if ((m & JC.BTN.MINUS) || (jc && JC.faceOf(jc, m).back)) selBack(pi);   // − 또는 아래 자리 버튼 = 준비 취소·메뉴로 (오른쪽 조이콘엔 − 가 없음)
+    else if (JC.isPrev(m)) selMove(pi, -1);     // Y · ←
     else if (JC.isNext(m)) selMove(pi, 1);      // A · →
     else selReady(pi, true);                    // 그 밖의 버튼 = 준비
     return;
   }
+  if (plusMinus && !game.paused && !menuOpen() && !resultOpen()) { pause(); return; }   // 경기 중 +/− = 일시정지
   onConfirm();
 }
+// 캐릭터 선택: 조이콘 스틱으로도 고르기 (세로로 쥐든 가로로 쥐든 쥔 방향대로)
+const jcSel = new Map();
+function pollJoySelect() {
+  if (!selectOpen()) { jcSel.clear(); return; }
+  for (const jc of JC.list) {
+    if (!jc.ok || !jc.stick) continue;
+    const x = JC.stickAxes(jc).x, sx = x > 0.6 ? 1 : x < -0.6 ? -1 : 0;
+    if (sx && sx !== jcSel.get(jc)) selMove(jc.player, sx);
+    jcSel.set(jc, sx);
+  }
+}
 JC.on('swingstart', (pi, t, jc) => motionStart(pi, jc));
-JC.on('swing', (pi, pow, t, jc) => emitSwing(pi, pow, t, jc ? jc.lastSpin : null, jc ? handSide(pi, jc.lastSide) : null));
-JC.on('buttons', (pi, m) => onJoyButtons(pi, m));
+JC.on('swing', (pi, pow, t, jc) => emitSwing(pi, pow, t, jc ? jc.lastSpin : null, jc ? handSide(pi, jc.lastSide) : null, jc));
+JC.on('buttons', (pi, m, jc) => onJoyButtons(pi, m, jc));
 JC.on('change', () => renderSlots());
 
 // ============================================================
@@ -923,7 +954,7 @@ function inputLabel(pi) {
   if (isCPU(pi)) return `CPU 실력 ${['쉬움', '보통', '어려움'][settings.cpuLevel]}`;
   const j = JC.list.find(j => j.player === pi);
   if (j) return j.name;
-  if (game.padCount > (settings.mode === 'cpu' ? 0 : pi)) return '게임패드';
+  if (settings.mode === 'cpu' ? game.padCount > 0 : Object.values(padSlot).includes(pi)) return '게임패드';
   return pi === 0 ? '키보드 A·S·D' : '키보드 J·K·L';
 }
 function renderSlots() {
@@ -931,7 +962,7 @@ function renderSlots() {
   el.innerHTML = [0, 1].map(pi => {
     const cpu = settings.mode === 'cpu' && pi === 1;
     const jcs = JC.list.filter(j => j.player === pi);
-    const inputs = cpu ? ['CPU'] : [...jcs.map(j => j.name + (j.err ? ` ⚠ ${j.err}` : j.ok ? ' ✓' : ' (연결 중)')), pi === 0 ? '키보드 A·S·D' : '키보드 J·K·L'];
+    const inputs = cpu ? ['CPU'] : [...jcs.map(j => j.name + (j.err ? ` ⚠ ${j.err}` : j.ok ? ` ✓ ${JC.batteryText(j)}`.trimEnd() : ' (연결 중)')), pi === 0 ? '키보드 A·S·D' : '키보드 J·K·L'];
     return `<div class="slot"><span class="badge b${pi + 1}">${pi === 0 ? 'P1' : cpu ? 'CPU' : 'P2'}</span>
       <div style="flex:1;min-width:0"><div style="font-size:15px">${inputs.join(' · ')}</div>
       <div class="row" style="margin-top:6px;flex-wrap:nowrap"><div class="meter"><i id="m${pi}"></i></div><span id="s${pi}" class="small" style="min-width:118px"></span></div></div></div>`;
@@ -2063,7 +2094,7 @@ startServe();
 requestAnimationFrame(frame);
 
 // 테스트용 훅
-window.__ST = { game, players, settings, T, update, render: renderFrame, startMatch, toMenu, openSelect, selMove, selReady, selSet, sel,
+window.__ST = { game, players, settings, T, update, render: renderFrame, startMatch, toMenu, openSelect, selMove, selReady, selSet, sel, pause, resume, resultWait,
   doSwing, emitSwing, startServe, isCPU, ballPos, planShot, spinLabel, handSide, scoreCall, TOSS, C, gfx, G3, Q, applyQuality, parts, CHARS, autoStep, joycon: JC, setDemoPaused,
   setClock: f => { realNow = f; }, armPose, liveJoy };
 })();
